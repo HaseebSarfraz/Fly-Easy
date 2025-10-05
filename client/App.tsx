@@ -1,20 +1,9 @@
-import { StatusBar } from 'expo-status-bar';
-import { StyleSheet, Text, View } from 'react-native';
+// App.tsx
+import React from 'react';
+import HotelsScreen from './src/screens/Hotels/HotelsScreen';
+import HotelSearchScreen from './src/screens/HotelSearchScreen';
 
 export default function App() {
-  return (
-    <View style={styles.container}>
-      <Text>Lets begin 392!!! !</Text>
-      <StatusBar style="auto" />
-    </View>
-  );
+  return <HotelSearchScreen />;
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#fff',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-});
