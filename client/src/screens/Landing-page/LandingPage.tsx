@@ -24,7 +24,7 @@ export default function LandingPageScreen({ navigation }) {
 
                     <Pressable
                         style={[styles.button, styles.secondaryButton]}
-                        onPress={() => navigation?.navigate("Restaurants")}
+                        onPress={() => navigation.navigate("RestaurantsSearch")}
                     >
                         <Text style={[styles.buttonText, styles.secondaryText]}>
                            Search Restaurants
