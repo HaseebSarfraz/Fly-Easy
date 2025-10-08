@@ -4,6 +4,7 @@ import { createNativeStackNavigator } from "@react-navigation/native-stack";
 
 import LandingPageScreen from "./src/screens/Landing-page/LandingPage";
 import HotelSearchScreen from "./src/screens/Hotels/HotelSearchScreen";
+import RestaurantsScreen from "./src/screens/RestaurantSearchScreen";
 
 const Stack = createNativeStackNavigator();
 
