@@ -1,9 +1,19 @@
-// App.tsx
-import React from 'react';
-import HotelsScreen from './src/screens/Hotels/HotelsScreen';
-import HotelSearchScreen from './src/screens/HotelSearchScreen';
+import React from "react";
+import { NavigationContainer } from "@react-navigation/native";
+import { createNativeStackNavigator } from "@react-navigation/native-stack";
+
+import LandingPageScreen from "./src/screens/Landing-page/LandingPage";
+import HotelSearchScreen from "./src/screens/Hotels/HotelSearchScreen";
+
+const Stack = createNativeStackNavigator();
 
 export default function App() {
-  return <HotelSearchScreen />;
+    return (
+        <NavigationContainer>
+            <Stack.Navigator>
+                <Stack.Screen name="LandingPage" component={LandingPageScreen} />
+                <Stack.Screen name="HotelSearch" component={HotelSearchScreen} />
+            </Stack.Navigator>
+        </NavigationContainer>
+    );
 }
-
