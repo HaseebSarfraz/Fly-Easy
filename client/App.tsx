@@ -1,4 +1,3 @@
-<<<<<<< Updated upstream
 // App.tsx
 import React from 'react';
 import HotelsScreen from './src/screens/Hotels/HotelsScreen';
@@ -40,4 +39,3 @@ export default function App() {
     );
 >>>>>>> Stashed changes
 }
-
