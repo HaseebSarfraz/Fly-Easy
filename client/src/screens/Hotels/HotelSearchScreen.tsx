@@ -2,17 +2,32 @@ import React from "react";
 import { SafeAreaView, Text, StyleSheet, View, TextInput} from "react-native";
 import {useState} from "react";
 import {Pressable} from "react-native";
+import { NativeStackScreenProps } from "@react-navigation/native-stack";
 
-export default function HotelSearchScreen() {
+type RootStackParamList = {
+  LandingPage: undefined;
+  HotelSearch: undefined;
+  HotelPreferences: { location: string; travellers: number; checkIn: string; checkOut: string };
+  RestaurantsSearch: undefined;
+};
 
-    const [city, setCity] = useState(""); // THe state lives here. 
+type Props = NativeStackScreenProps<RootStackParamList, "HotelSearch">;
 
-    <TextInput
-        placeholder="City or airport"
-        value={city}
-        onChangeText={setCity}
-        style={styles.input}
-    />
+export default function HotelSearchScreen({ navigation }: Props) {
+
+    const [city, setCity] = useState("");
+    const [travellers, setTravellers] = useState("1");
+    const [checkIn, setCheckIn] = useState("");
+    const [checkOut, setCheckOut] = useState("");
+
+    const onContinue = () => {
+        navigation.navigate("HotelPreferences", {
+        location: city.trim(),
+        travellers: Number(travellers),
+        checkIn,
+        checkOut,
+        });
+    };
 
     return (
         
@@ -51,15 +66,14 @@ export default function HotelSearchScreen() {
                    
             </View>
 
-            <Pressable style={styles.button}>
-                
-                <Text style={styles.buttonText}>Search</Text>
+            <Pressable style={styles.button}
+             onPress={onContinue}>
+
+                <Text style={styles.buttonText}>Continue</Text>
 
             </Pressable>
 
-            
-
-        </View>
+          </View>
         </SafeAreaView>
     );
 

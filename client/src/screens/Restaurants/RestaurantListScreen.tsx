@@ -1,6 +1,6 @@
 import React from "react"
 import { StyleSheet, SafeAreaView, Text, View, Dimensions, FlatList} from 'react-native'
-import CreateRestaurantCard from '../components/restaurant-components/RestaurantCard'
+import CreateRestaurantCard from '../../components/restaurant-components/RestaurantCard'
 
 const rest_list = [
                   { id: "1",
