@@ -1,6 +1,6 @@
 import React from "react"
-import { StyleSheet, SafeAreaView, Text, View, Dimensions, FlatList} from 'react-native'
-import CreateRestaurantCard from '../components/restaurant-components/RestaurantCard'
+import { StyleSheet, SafeAreaView, Text, View, FlatList} from 'react-native'
+import CreateRestaurantCard from '../../components/restaurant-components/RestaurantCard'
 
 const rest_list = [
                   { id: "1",
@@ -8,7 +8,7 @@ const rest_list = [
                     terminal: 1,
                     type: "Fast food",
                     distance: 0.3,
-                    imagepath: require('../../assets/McDonalds-Logo.jpg')
+                    imagepath: require('../../../assets/McDonalds-Logo.jpg')
                   },
                   {
                     id: "2",
@@ -16,7 +16,7 @@ const rest_list = [
                     terminal: 3,
                     type: "Fast food",
                     distance: 1.0,
-                    imagepath: require('../../assets/McDonalds-Logo.jpg')
+                    imagepath: require('../../../assets/McDonalds-Logo.jpg')
                   }];
 
 export default function RestaurantListScreen() {
@@ -24,7 +24,7 @@ export default function RestaurantListScreen() {
     <SafeAreaView style={styles.sav}>
       <View style={styles.top_banner}>
         <Text style={styles.airport_text}>Foods at Toronto Pearson Intl.</Text>
-        <Text style={styles.terminal_text}>Your location: terminal 1, gate</Text>
+        <Text style={styles.terminal_text}>Your location: terminal 1, gate 3</Text>
       </View>
       <FlatList
         data={rest_list}
@@ -63,11 +63,13 @@ const styles = StyleSheet.create({
     airport_text:{
         fontSize: 18,
         fontWeight: "bold",
-        color: "#fff"
+        color: "#fff",
+        marginLeft: 10
     },
     terminal_text:{
       fontSize: 14,
-      color: "#fff"
+      color: "#fff",
+      marginLeft: 10
     },
     restaurantList: {
       gap: 10,
