@@ -44,10 +44,10 @@ export default function RestaurantListScreen() {
   const [value1, setValue1] = useState(null);
   const [items1, setItems1] = useState([
     { label: 'Any distance', value: "any" },
-    { label: 'Within 0.25 miles', value: "0.25" },
-    { label: 'Within 0.5 miles', value: "0.5" },
-    { label: 'Within 1 mile', value: "1" },
-    { label: 'Within 2 miles', value: "2" },
+    { label: '1 km', value: "1" },
+    { label: '2 km', value: "2" },
+    { label: '3 km', value: "3" },
+    { label: '3+ km', value: "3.1" },
   ]);
 
   // Food ready in dropdown
@@ -55,10 +55,10 @@ export default function RestaurantListScreen() {
   const [value2, setValue2] = useState(null);
   const [items2, setItems2] = useState([
     { label: 'Any time', value: "any" },
-    { label: 'Within 10 min', value: "10" },
-    { label: 'Within 15 min', value: "15" },
-    { label: 'Within 20 min', value: "20" },
-    { label: 'Within 30 min', value: "30" },
+    { label: 'Within 10 minutes', value: "10" },
+    { label: 'Within 15 minutes', value: "15" },
+    { label: 'Within 20 minutes', value: "20" },
+    { label: 'Within 30 minutes', value: "30" },
   ]);
 
   // Rating dropdown
@@ -69,6 +69,8 @@ export default function RestaurantListScreen() {
     { label: '4+ stars', value: "4" },
     { label: '3+ stars', value: "3" },
     { label: '2+ stars', value: "2" },
+    { label: '1+ stars', value: "1" },
+    { label: '0-1 stars', value: "0" },
   ]);
 
   // Price range dropdown
@@ -86,24 +88,24 @@ export default function RestaurantListScreen() {
   const [open5, setOpen5] = useState(false);
   const [value5, setValue5] = useState(null);
   const [items5, setItems5] = useState([
-    { label: 'Price: Low to High', value: "asc" },
-    { label: 'Price: High to Low', value: "desc" },
+    { label: 'low to high', value: "asc" },
+    { label: 'high to low', value: "desc" },
   ]);
 
   // Distance sort dropdown
   const [open6, setOpen6] = useState(false);
   const [value6, setValue6] = useState(null);
   const [items6, setItems6] = useState([
-    { label: 'Distance: Nearest', value: "asc" },
-    { label: 'Distance: Farthest', value: "desc" },
+    { label: 'low to high', value: "asc" },
+    { label: 'high to low', value: "desc" },
   ]);
 
   // Duration sort dropdown
   const [open7, setOpen7] = useState(false);
   const [value7, setValue7] = useState(null);
   const [items7, setItems7] = useState([
-    { label: 'Duration: Fastest', value: "asc" },
-    { label: 'Duration: Slowest', value: "desc" },
+    { label: 'low to high', value: "asc" },
+    { label: 'high to low', value: "desc" },
   ]);
 
   const applyFilters = () => {
@@ -155,25 +157,25 @@ export default function RestaurantListScreen() {
       filters.push(<View key="openNow" style={styles.filterChip}><Text style={styles.filterChipText}>Open now</Text></View>);
     }
     if (appliedFilters.distance && appliedFilters.distance !== "any") {
-      filters.push(<View key="distance" style={styles.filterChip}><Text style={styles.filterChipText}>{getFilterLabel(items1, appliedFilters.distance)}</Text></View>);
+      filters.push(<View key="distance" style={styles.filterChip}><Text style={styles.filterChipText}>Max distance: {getFilterLabel(items1, appliedFilters.distance)}</Text></View>);
     }
     if (appliedFilters.foodReady && appliedFilters.foodReady !== "any") {
-      filters.push(<View key="foodReady" style={styles.filterChip}><Text style={styles.filterChipText}>{getFilterLabel(items2, appliedFilters.foodReady)}</Text></View>);
+      filters.push(<View key="foodReady" style={styles.filterChip}><Text style={styles.filterChipText}>Time for food preparation: {getFilterLabel(items2, appliedFilters.foodReady)}</Text></View>);
     }
     if (appliedFilters.rating && appliedFilters.rating !== "any") {
-      filters.push(<View key="rating" style={styles.filterChip}><Text style={styles.filterChipText}>{getFilterLabel(items3, appliedFilters.rating)}</Text></View>);
+      filters.push(<View key="rating" style={styles.filterChip}><Text style={styles.filterChipText}>Rating: {getFilterLabel(items3, appliedFilters.rating)}</Text></View>);
     }
     if (appliedFilters.price && appliedFilters.price !== "any") {
-      filters.push(<View key="price" style={styles.filterChip}><Text style={styles.filterChipText}>{getFilterLabel(items4, appliedFilters.price)}</Text></View>);
+      filters.push(<View key="price" style={styles.filterChip}><Text style={styles.filterChipText}>Price: {getFilterLabel(items4, appliedFilters.price)}</Text></View>);
     }
     if (appliedFilters.priceSort) {
-      filters.push(<View key="priceSort" style={styles.filterChip}><Text style={styles.filterChipText}>{getFilterLabel(items5, appliedFilters.priceSort)}</Text></View>);
+      filters.push(<View key="priceSort" style={styles.filterChip}><Text style={styles.filterChipText}>Sort by price: {getFilterLabel(items5, appliedFilters.priceSort)}</Text></View>);
     }
     if (appliedFilters.distanceSort) {
-      filters.push(<View key="distanceSort" style={styles.filterChip}><Text style={styles.filterChipText}>{getFilterLabel(items6, appliedFilters.distanceSort)}</Text></View>);
+      filters.push(<View key="distanceSort" style={styles.filterChip}><Text style={styles.filterChipText}>Sort by distance: {getFilterLabel(items6, appliedFilters.distanceSort)}</Text></View>);
     }
     if (appliedFilters.durationSort) {
-      filters.push(<View key="durationSort" style={styles.filterChip}><Text style={styles.filterChipText}>{getFilterLabel(items7, appliedFilters.durationSort)}</Text></View>);
+      filters.push(<View key="durationSort" style={styles.filterChip}><Text style={styles.filterChipText}>Sort by food preparation time: {getFilterLabel(items7, appliedFilters.durationSort)}</Text></View>);
     }
 
     return filters.length > 0 ? (
@@ -201,15 +203,10 @@ export default function RestaurantListScreen() {
 
         {isExpanded && (
           <View style={styles.collapsibleContent}>
-            <Text style={styles.sortLabel}>Filter options</Text>
-            <ScrollView 
-              horizontal 
-              showsHorizontalScrollIndicator={false}
-              style={styles.filterScrollView}
-              contentContainerStyle={styles.filterScrollContent}
-            >
+            <Text style={styles.sectionLabel}>Filters:</Text>
+            <View style={[styles.filterSection, {zIndex: 5000}]}>
               <View style={styles.dropdownContainer}>
-                <Text style={styles.dropdownLabel}>Distance</Text>
+                <Text style={styles.dropdownLabel}>Max distance</Text>
                 <DropDownPicker
                   open={open1}
                   value={value1}
@@ -240,8 +237,10 @@ export default function RestaurantListScreen() {
                   zIndexInverse={2000}
                   dropDownDirection="BOTTOM"
                 />
+                </View>
               </View>
 
+              <View style={[styles.filterSection, {zIndex: 3000}]}>
               <View style={styles.dropdownContainer}>
                 <Text style={styles.dropdownLabel}>Rating</Text>
                 <DropDownPicker
@@ -275,8 +274,9 @@ export default function RestaurantListScreen() {
                   dropDownDirection="BOTTOM"
                 />
               </View>
-            </ScrollView>
-            <Text style={styles.sortLabel}>Sorting options</Text>
+            </View>
+
+            <Text style={styles.sectionLabel}>Sort by:</Text>
             <View style={[styles.sortSection, {zIndex: 1000}]}>
               <View style={styles.dropdownContainer}>
                 <Text style={styles.dropdownLabel}>Price</Text>
@@ -313,8 +313,7 @@ export default function RestaurantListScreen() {
               </View>
 
               <View style={styles.dropdownContainer}>
-                <Text style={styles.dropdownLabel}>Food prep time
-                </Text>
+                <Text style={styles.dropdownLabel}>Food prep time</Text>
                 <DropDownPicker
                   open={open7}
                   value={value7}
@@ -342,20 +341,20 @@ export default function RestaurantListScreen() {
               </Pressable>
 
               <Pressable 
+                style={[styles.actionButton, styles.applyButton]} 
+                onPress={applyFilters}
+              >
+                <Text style={[styles.actionButtonText, styles.applyButtonText]}>
+                  Apply Filters
+                </Text>
+              </Pressable>
+
+              <Pressable 
                 style={[styles.actionButton, styles.clearButton]} 
                 onPress={clearAllFilters}
               >
                 <Text style={[styles.actionButtonText, styles.clearButtonText]}>
                   Clear All
-                </Text>
-              </Pressable>
-
-              <Pressable 
-                style={[styles.actionButton, styles.applyButton]} 
-                onPress={applyFilters}
-              >
-                <Text style={[styles.actionButtonText, styles.applyButtonText]}>
-                  Apply
                 </Text>
               </Pressable>
             </View>
@@ -433,20 +432,13 @@ const styles = StyleSheet.create({
     },
     collapsibleContent: {
       marginTop: 8,
-      gap: 3
-    },
-    filterScrollView: {
-      zIndex: 5000,
-    },
-    filterScrollContent: {
-      flexDirection: "row",
-      gap: 12
+      gap: 2,
     },
     filterSection: {
       flexDirection: "row",
       alignItems: "flex-end",
       gap: 12,
-      paddingTop: 6,
+      // paddingTop: 6
     },
     sortSection: {
       flexDirection: "row",
@@ -461,7 +453,7 @@ const styles = StyleSheet.create({
     actionButton: {
       flex: 1,
       height: 48,
-      paddingHorizontal: 16,
+      paddingHorizontal: 8,
       paddingVertical: 12,
       borderRadius: 8,
       borderWidth: 1,
@@ -478,10 +470,6 @@ const styles = StyleSheet.create({
       backgroundColor: "#28a745",
       borderColor: "#28a745",
     },
-    clearButton: {
-      backgroundColor: "#dc3545",
-      borderColor: "#dc3545",
-    },
     actionButtonText: {
       fontSize: 14,
       fontWeight: "500",
@@ -493,19 +481,16 @@ const styles = StyleSheet.create({
     applyButtonText: {
       color: "#fff",
     },
-    clearButtonText: {
-      color: "#fff",
-    },
     dropdownContainer: {
       flex: 1,
-      minWidth: 100
+      minWidth: 100,
     },
     dropdownLabel: {
       fontSize: 14,
       marginLeft: 2, 
       fontWeight: "500",
       marginBottom: 4,
-      color: "#fff"
+      color: "#fff",
     },
     dropdown: {
       minHeight: 48,
@@ -534,10 +519,18 @@ const styles = StyleSheet.create({
       color: "#333",
       fontWeight: "500",
     },
-    sortLabel: {
+    clearButton: {
+      backgroundColor: "#dc3545",
+      borderColor: "#dc3545",
+    },
+    clearButtonText: {
       color: "#fff",
-      fontSize: 15,
-      fontWeight: "bold",
-      marginTop: 4
+    },
+    sectionLabel: {
+      fontSize: 17,
+      fontWeight: "700",
+      color: "#fff",
+      marginBottom: 0,
+      marginTop: 5
     }
 })
