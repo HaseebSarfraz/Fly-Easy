@@ -1,0 +1,1083 @@
+[
+  {
+    "id": "1",
+    "name": "Bagel House",
+    "airport": "HND",
+    "terminal": 1,
+    "type": "fast food",
+    "distance": [
+      1.0,
+      0.9,
+      0.2,
+      1.6
+    ],
+    "food_type": "vegan",
+    "hours": "09:30-20:30",
+    "rating": 0.3,
+    "prep_time": 12.5,
+    "cheapest_item": 13.66,
+    "num_ratings": 490
+  },
+  {
+    "id": "2",
+    "name": "Sushi World",
+    "airport": "FRA",
+    "terminal": 2,
+    "type": "coffee",
+    "distance": [
+      0.2,
+      0.3,
+      1.6
+    ],
+    "food_type": "vegan",
+    "hours": "09:00-20:00",
+    "rating": 3.7,
+    "prep_time": 29.5,
+    "cheapest_item": 13.33,
+    "num_ratings": 41
+  },
+  {
+    "id": "3",
+    "name": "Sushi World",
+    "airport": "HND",
+    "terminal": 3,
+    "type": "lunch",
+    "distance": [
+      0.6,
+      0.9,
+      1.4,
+      0.8
+    ],
+    "food_type": "vegetarian",
+    "hours": "05:00-20:30",
+    "rating": 4.4,
+    "prep_time": 43.7,
+    "cheapest_item": 3.95,
+    "num_ratings": 620
+  },
+  {
+    "id": "4",
+    "name": "Sandwich Stop",
+    "airport": "FRA",
+    "terminal": 2,
+    "type": "fast food",
+    "distance": [
+      0.7,
+      0.4
+    ],
+    "food_type": "vegan",
+    "hours": "08:30-21:30",
+    "rating": 2.6,
+    "prep_time": 31.9,
+    "cheapest_item": 5.28,
+    "num_ratings": 821
+  },
+  {
+    "id": "5",
+    "name": "Subway",
+    "airport": "HND",
+    "terminal": 3,
+    "type": "fast food",
+    "distance": [
+      1.7,
+      1.6
+    ],
+    "food_type": "vegan",
+    "hours": "09:30-20:30",
+    "rating": 3.1,
+    "prep_time": 11.7,
+    "cheapest_item": 5.86,
+    "num_ratings": 726
+  },
+  {
+    "id": "6",
+    "name": "Healthy Eats",
+    "airport": "JFK",
+    "terminal": 3,
+    "type": "lunch",
+    "distance": [
+      0.9,
+      1.1
+    ],
+    "food_type": "vegetarian",
+    "hours": "10:00-20:30",
+    "rating": 1.0,
+    "prep_time": 10.6,
+    "cheapest_item": 13.78,
+    "num_ratings": 162
+  },
+  {
+    "id": "7",
+    "name": "Juice Bar",
+    "airport": "SIN",
+    "terminal": 2,
+    "type": "lunch",
+    "distance": [
+      1.0,
+      1.6
+    ],
+    "food_type": "vegan",
+    "hours": "08:30-20:30",
+    "rating": 4.4,
+    "prep_time": 20.0,
+    "cheapest_item": 3.85,
+    "num_ratings": 124
+  },
+  {
+    "id": "8",
+    "name": "Panda Express",
+    "airport": "CDG",
+    "terminal": 2,
+    "type": "lunch",
+    "distance": [
+      1.5,
+      2.0,
+      0.2,
+      2.0
+    ],
+    "food_type": "vegan",
+    "hours": "11:30-23:30",
+    "rating": 4.8,
+    "prep_time": 41.7,
+    "cheapest_item": 5.79,
+    "num_ratings": 639
+  },
+  {
+    "id": "9",
+    "name": "Panda Express",
+    "airport": "YYZ",
+    "terminal": 3,
+    "type": "coffee",
+    "distance": [
+      1.7,
+      1.5,
+      1.0
+    ],
+    "food_type": "vegetarian",
+    "hours": "06:30-22:00",
+    "rating": 1.4,
+    "prep_time": 36.7,
+    "cheapest_item": 6.37,
+    "num_ratings": 345
+  },
+  {
+    "id": "10",
+    "name": "Juice Bar",
+    "airport": "LHR",
+    "terminal": 3,
+    "type": "fast food",
+    "distance": [
+      1.4,
+      1.2,
+      1.6
+    ],
+    "food_type": "halal",
+    "hours": "05:00-23:00",
+    "rating": 2.3,
+    "prep_time": 36.7,
+    "cheapest_item": 3.49,
+    "num_ratings": 902
+  },
+  {
+    "id": "11",
+    "name": "Coffee Corner",
+    "airport": "HND",
+    "terminal": 2,
+    "type": "lunch",
+    "distance": [
+      0.8,
+      1.0,
+      1.8,
+      1.1
+    ],
+    "food_type": "vegan",
+    "hours": "07:30-20:30",
+    "rating": 0.1,
+    "prep_time": 40.6,
+    "cheapest_item": 14.06,
+    "num_ratings": 238
+  },
+  {
+    "id": "12",
+    "name": "Healthy Eats",
+    "airport": "JFK",
+    "terminal": 2,
+    "type": "fast food",
+    "distance": [
+      0.6,
+      1.0,
+      1.8,
+      0.6
+    ],
+    "food_type": "vegan",
+    "hours": "07:30-21:00",
+    "rating": 0.2,
+    "prep_time": 26.3,
+    "cheapest_item": 11.04,
+    "num_ratings": 772
+  },
+  {
+    "id": "13",
+    "name": "Juice Bar",
+    "airport": "JFK",
+    "terminal": 1,
+    "type": "lunch",
+    "distance": [
+      1.6,
+      1.8,
+      0.2
+    ],
+    "food_type": "vegan",
+    "hours": "09:30-22:30",
+    "rating": 1.7,
+    "prep_time": 40.1,
+    "cheapest_item": 9.5,
+    "num_ratings": 301
+  },
+  {
+    "id": "14",
+    "name": "Juice Bar",
+    "airport": "JFK",
+    "terminal": 3,
+    "type": "fast food",
+    "distance": [
+      0.4,
+      0.2
+    ],
+    "food_type": "halal",
+    "hours": "09:30-23:30",
+    "rating": 2.5,
+    "prep_time": 39.7,
+    "cheapest_item": 7.08,
+    "num_ratings": 175
+  },
+  {
+    "id": "15",
+    "name": "Bagel House",
+    "airport": "YYZ",
+    "terminal": 1,
+    "type": "coffee",
+    "distance": [
+      0.2,
+      0.5,
+      1.0
+    ],
+    "food_type": "vegetarian",
+    "hours": "05:30-22:00",
+    "rating": 3.2,
+    "prep_time": 26.0,
+    "cheapest_item": 7.83,
+    "num_ratings": 699
+  },
+  {
+    "id": "16",
+    "name": "Wrap It Up",
+    "airport": "HND",
+    "terminal": 3,
+    "type": "coffee",
+    "distance": [
+      0.8,
+      0.6,
+      1.3
+    ],
+    "food_type": "halal",
+    "hours": "11:30-21:30",
+    "rating": 3.8,
+    "prep_time": 15.1,
+    "cheapest_item": 4.34,
+    "num_ratings": 525
+  },
+  {
+    "id": "17",
+    "name": "Taco Bell",
+    "airport": "LHR",
+    "terminal": 2,
+    "type": "lunch",
+    "distance": [
+      0.2,
+      1.1,
+      0.9,
+      0.3
+    ],
+    "food_type": "vegetarian",
+    "hours": "05:30-22:00",
+    "rating": 4.3,
+    "prep_time": 22.3,
+    "cheapest_item": 10.05,
+    "num_ratings": 734
+  },
+  {
+    "id": "18",
+    "name": "Pizza Hut",
+    "airport": "DXB",
+    "terminal": 1,
+    "type": "lunch",
+    "distance": [
+      1.6,
+      0.2,
+      0.2,
+      1.1
+    ],
+    "food_type": "halal",
+    "hours": "08:30-20:00",
+    "rating": 0.5,
+    "prep_time": 28.5,
+    "cheapest_item": 9.4,
+    "num_ratings": 734
+  },
+  {
+    "id": "19",
+    "name": "Bagel House",
+    "airport": "SIN",
+    "terminal": 1,
+    "type": "fast food",
+    "distance": [
+      1.3,
+      1.4
+    ],
+    "food_type": "halal",
+    "hours": "09:30-20:30",
+    "rating": 0.6,
+    "prep_time": 14.0,
+    "cheapest_item": 8.98,
+    "num_ratings": 508
+  },
+  {
+    "id": "20",
+    "name": "Burger King",
+    "airport": "LHR",
+    "terminal": 2,
+    "type": "fast food",
+    "distance": [
+      1.6,
+      1.8,
+      1.1,
+      0.5
+    ],
+    "food_type": "halal",
+    "hours": "06:00-20:30",
+    "rating": 4.7,
+    "prep_time": 29.9,
+    "cheapest_item": 13.57,
+    "num_ratings": 62
+  },
+  {
+    "id": "21",
+    "name": "Green Leaf",
+    "airport": "FRA",
+    "terminal": 1,
+    "type": "coffee",
+    "distance": [
+      1.5,
+      0.9
+    ],
+    "food_type": "vegan",
+    "hours": "05:30-20:30",
+    "rating": 0.7,
+    "prep_time": 40.0,
+    "cheapest_item": 10.95,
+    "num_ratings": 772
+  },
+  {
+    "id": "22",
+    "name": "Bistro Cafe",
+    "airport": "SIN",
+    "terminal": 1,
+    "type": "fast food",
+    "distance": [
+      0.4,
+      0.3
+    ],
+    "food_type": "vegetarian",
+    "hours": "06:00-22:30",
+    "rating": 3.6,
+    "prep_time": 44.1,
+    "cheapest_item": 7.39,
+    "num_ratings": 593
+  },
+  {
+    "id": "23",
+    "name": "Taco Bell",
+    "airport": "SIN",
+    "terminal": 1,
+    "type": "lunch",
+    "distance": [
+      1.2,
+      1.8,
+      0.9,
+      0.9
+    ],
+    "food_type": "halal",
+    "hours": "09:00-21:30",
+    "rating": 4.5,
+    "prep_time": 24.4,
+    "cheapest_item": 14.29,
+    "num_ratings": 640
+  },
+  {
+    "id": "24",
+    "name": "Sandwich Stop",
+    "airport": "DXB",
+    "terminal": 2,
+    "type": "fast food",
+    "distance": [
+      1.2,
+      0.5,
+      1.8
+    ],
+    "food_type": "vegan",
+    "hours": "06:00-20:00",
+    "rating": 1.3,
+    "prep_time": 32.0,
+    "cheapest_item": 13.44,
+    "num_ratings": 413
+  },
+  {
+    "id": "25",
+    "name": "Taco Bell",
+    "airport": "HND",
+    "terminal": 1,
+    "type": "lunch",
+    "distance": [
+      1.3,
+      0.1,
+      1.8
+    ],
+    "food_type": "halal",
+    "hours": "08:00-23:30",
+    "rating": 2.9,
+    "prep_time": 42.5,
+    "cheapest_item": 12.24,
+    "num_ratings": 157
+  },
+  {
+    "id": "26",
+    "name": "Taco Bell",
+    "airport": "JFK",
+    "terminal": 3,
+    "type": "lunch",
+    "distance": [
+      1.4,
+      1.2,
+      1.6,
+      0.3
+    ],
+    "food_type": "vegan",
+    "hours": "09:00-20:00",
+    "rating": 4.8,
+    "prep_time": 12.5,
+    "cheapest_item": 13.1,
+    "num_ratings": 238
+  },
+  {
+    "id": "27",
+    "name": "Vegan Delight",
+    "airport": "SIN",
+    "terminal": 2,
+    "type": "coffee",
+    "distance": [
+      1.4,
+      1.2,
+      1.2
+    ],
+    "food_type": "vegan",
+    "hours": "11:00-20:00",
+    "rating": 1.8,
+    "prep_time": 22.3,
+    "cheapest_item": 3.93,
+    "num_ratings": 508
+  },
+  {
+    "id": "28",
+    "name": "Pizza Hut",
+    "airport": "CDG",
+    "terminal": 3,
+    "type": "lunch",
+    "distance": [
+      1.6,
+      1.8,
+      1.8
+    ],
+    "food_type": "halal",
+    "hours": "05:00-20:30",
+    "rating": 1.6,
+    "prep_time": 37.9,
+    "cheapest_item": 4.93,
+    "num_ratings": 475
+  },
+  {
+    "id": "29",
+    "name": "Taco Bell",
+    "airport": "YYZ",
+    "terminal": 3,
+    "type": "lunch",
+    "distance": [
+      0.3,
+      0.3
+    ],
+    "food_type": "halal",
+    "hours": "11:00-21:30",
+    "rating": 3.2,
+    "prep_time": 37.8,
+    "cheapest_item": 2.97,
+    "num_ratings": 189
+  },
+  {
+    "id": "30",
+    "name": "Green Leaf",
+    "airport": "FRA",
+    "terminal": 1,
+    "type": "lunch",
+    "distance": [
+      0.7,
+      1.3,
+      1.5
+    ],
+    "food_type": "halal",
+    "hours": "07:00-22:30",
+    "rating": 1.7,
+    "prep_time": 27.2,
+    "cheapest_item": 3.62,
+    "num_ratings": 996
+  },
+  {
+    "id": "31",
+    "name": "Juice Bar",
+    "airport": "HND",
+    "terminal": 3,
+    "type": "lunch",
+    "distance": [
+      0.8,
+      0.6
+    ],
+    "food_type": "halal",
+    "hours": "07:30-22:30",
+    "rating": 4.4,
+    "prep_time": 11.5,
+    "cheapest_item": 13.41,
+    "num_ratings": 343
+  },
+  {
+    "id": "32",
+    "name": "Pizza Hut",
+    "airport": "LHR",
+    "terminal": 3,
+    "type": "fast food",
+    "distance": [
+      1.9,
+      1.7,
+      0.5,
+      0.8
+    ],
+    "food_type": "halal",
+    "hours": "08:00-23:30",
+    "rating": 3.3,
+    "prep_time": 20.1,
+    "cheapest_item": 8.44,
+    "num_ratings": 595
+  },
+  {
+    "id": "33",
+    "name": "Juice Bar",
+    "airport": "FRA",
+    "terminal": 1,
+    "type": "coffee",
+    "distance": [
+      1.5,
+      1.6
+    ],
+    "food_type": "vegan",
+    "hours": "07:00-21:00",
+    "rating": 0.7,
+    "prep_time": 16.7,
+    "cheapest_item": 14.22,
+    "num_ratings": 991
+  },
+  {
+    "id": "34",
+    "name": "Burger King",
+    "airport": "CDG",
+    "terminal": 2,
+    "type": "fast food",
+    "distance": [
+      0.6,
+      1.8,
+      1.4,
+      0.2
+    ],
+    "food_type": "halal",
+    "hours": "06:30-21:30",
+    "rating": 3.1,
+    "prep_time": 38.0,
+    "cheapest_item": 9.67,
+    "num_ratings": 567
+  },
+  {
+    "id": "35",
+    "name": "Noodle Express",
+    "airport": "HND",
+    "terminal": 1,
+    "type": "coffee",
+    "distance": [
+      0.4,
+      0.3,
+      0.9,
+      0.2
+    ],
+    "food_type": "vegetarian",
+    "hours": "06:30-22:00",
+    "rating": 0.8,
+    "prep_time": 33.5,
+    "cheapest_item": 9.37,
+    "num_ratings": 682
+  },
+  {
+    "id": "36",
+    "name": "Coffee Corner",
+    "airport": "SIN",
+    "terminal": 2,
+    "type": "lunch",
+    "distance": [
+      1.9,
+      1.5
+    ],
+    "food_type": "halal",
+    "hours": "07:30-21:30",
+    "rating": 2.2,
+    "prep_time": 26.1,
+    "cheapest_item": 3.09,
+    "num_ratings": 747
+  },
+  {
+    "id": "37",
+    "name": "Burger King",
+    "airport": "LHR",
+    "terminal": 1,
+    "type": "coffee",
+    "distance": [
+      1.8,
+      0.2,
+      1.2
+    ],
+    "food_type": "halal",
+    "hours": "11:30-23:30",
+    "rating": 2.4,
+    "prep_time": 15.3,
+    "cheapest_item": 9.37,
+    "num_ratings": 965
+  },
+  {
+    "id": "38",
+    "name": "Pizza Hut",
+    "airport": "HND",
+    "terminal": 3,
+    "type": "fast food",
+    "distance": [
+      0.6,
+      1.0,
+      1.4
+    ],
+    "food_type": "vegan",
+    "hours": "06:30-21:30",
+    "rating": 2.4,
+    "prep_time": 29.7,
+    "cheapest_item": 11.43,
+    "num_ratings": 385
+  },
+  {
+    "id": "39",
+    "name": "KFC",
+    "airport": "YYZ",
+    "terminal": 2,
+    "type": "lunch",
+    "distance": [
+      0.9,
+      1.9,
+      0.4
+    ],
+    "food_type": "vegetarian",
+    "hours": "11:00-22:00",
+    "rating": 2.8,
+    "prep_time": 21.7,
+    "cheapest_item": 12.92,
+    "num_ratings": 940
+  },
+  {
+    "id": "40",
+    "name": "Healthy Eats",
+    "airport": "HND",
+    "terminal": 1,
+    "type": "lunch",
+    "distance": [
+      0.1,
+      1.9,
+      1.6,
+      1.4
+    ],
+    "food_type": "vegan",
+    "hours": "11:00-21:30",
+    "rating": 5.0,
+    "prep_time": 32.9,
+    "cheapest_item": 10.98,
+    "num_ratings": 729
+  },
+  {
+    "id": "41",
+    "name": "Burger King",
+    "airport": "JFK",
+    "terminal": 2,
+    "type": "lunch",
+    "distance": [
+      0.6,
+      1.6
+    ],
+    "food_type": "vegetarian",
+    "hours": "05:30-22:00",
+    "rating": 4.0,
+    "prep_time": 15.7,
+    "cheapest_item": 10.36,
+    "num_ratings": 535
+  },
+  {
+    "id": "42",
+    "name": "Sandwich Stop",
+    "airport": "FRA",
+    "terminal": 1,
+    "type": "coffee",
+    "distance": [
+      0.2,
+      0.4
+    ],
+    "food_type": "vegetarian",
+    "hours": "10:30-23:30",
+    "rating": 5.0,
+    "prep_time": 37.8,
+    "cheapest_item": 3.79,
+    "num_ratings": 340
+  },
+  {
+    "id": "43",
+    "name": "Fast Feast",
+    "airport": "YYZ",
+    "terminal": 3,
+    "type": "lunch",
+    "distance": [
+      1.2,
+      0.7,
+      1.9
+    ],
+    "food_type": "halal",
+    "hours": "06:00-22:00",
+    "rating": 1.2,
+    "prep_time": 15.8,
+    "cheapest_item": 14.05,
+    "num_ratings": 262
+  },
+  {
+    "id": "44",
+    "name": "Pizza Hut",
+    "airport": "HND",
+    "terminal": 2,
+    "type": "coffee",
+    "distance": [
+      1.2,
+      0.5
+    ],
+    "food_type": "vegetarian",
+    "hours": "11:00-23:30",
+    "rating": 1.1,
+    "prep_time": 22.1,
+    "cheapest_item": 9.81,
+    "num_ratings": 924
+  },
+  {
+    "id": "45",
+    "name": "Sushi World",
+    "airport": "SIN",
+    "terminal": 3,
+    "type": "fast food",
+    "distance": [
+      0.1,
+      1.2
+    ],
+    "food_type": "vegan",
+    "hours": "07:30-23:30",
+    "rating": 4.5,
+    "prep_time": 22.3,
+    "cheapest_item": 6.57,
+    "num_ratings": 279
+  },
+  {
+    "id": "46",
+    "name": "Sandwich Stop",
+    "airport": "HND",
+    "terminal": 3,
+    "type": "lunch",
+    "distance": [
+      0.5,
+      0.7,
+      0.5,
+      1.6
+    ],
+    "food_type": "vegan",
+    "hours": "10:00-22:30",
+    "rating": 2.3,
+    "prep_time": 27.4,
+    "cheapest_item": 7.41,
+    "num_ratings": 968
+  },
+  {
+    "id": "47",
+    "name": "Burger King",
+    "airport": "FRA",
+    "terminal": 1,
+    "type": "lunch",
+    "distance": [
+      1.2,
+      1.7
+    ],
+    "food_type": "halal",
+    "hours": "05:00-23:30",
+    "rating": 3.6,
+    "prep_time": 28.7,
+    "cheapest_item": 3.35,
+    "num_ratings": 31
+  },
+  {
+    "id": "48",
+    "name": "Juice Bar",
+    "airport": "YYZ",
+    "terminal": 1,
+    "type": "lunch",
+    "distance": [
+      1.3,
+      0.4,
+      1.5
+    ],
+    "food_type": "halal",
+    "hours": "05:30-22:00",
+    "rating": 3.6,
+    "prep_time": 19.9,
+    "cheapest_item": 2.57,
+    "num_ratings": 228
+  },
+  {
+    "id": "49",
+    "name": "Wrap It Up",
+    "airport": "HND",
+    "terminal": 1,
+    "type": "coffee",
+    "distance": [
+      2.0,
+      1.8,
+      1.0
+    ],
+    "food_type": "halal",
+    "hours": "11:00-22:00",
+    "rating": 2.9,
+    "prep_time": 19.8,
+    "cheapest_item": 2.95,
+    "num_ratings": 714
+  },
+  {
+    "id": "50",
+    "name": "Starbucks",
+    "airport": "DXB",
+    "terminal": 1,
+    "type": "lunch",
+    "distance": [
+      1.3,
+      0.3,
+      1.1,
+      2.0
+    ],
+    "food_type": "vegan",
+    "hours": "07:30-23:00",
+    "rating": 0.2,
+    "prep_time": 42.2,
+    "cheapest_item": 7.92,
+    "num_ratings": 698
+  },
+  {
+    "id": "51",
+    "name": "Fast Feast",
+    "airport": "JFK",
+    "terminal": 3,
+    "type": "coffee",
+    "distance": [
+      1.1,
+      1.0,
+      1.2,
+      0.9
+    ],
+    "food_type": "halal",
+    "hours": "07:00-20:30",
+    "rating": 4.9,
+    "prep_time": 31.6,
+    "cheapest_item": 7.65,
+    "num_ratings": 232
+  },
+  {
+    "id": "52",
+    "name": "Sandwich Stop",
+    "airport": "HND",
+    "terminal": 2,
+    "type": "coffee",
+    "distance": [
+      1.0,
+      1.4,
+      1.2,
+      1.7
+    ],
+    "food_type": "halal",
+    "hours": "05:00-23:30",
+    "rating": 2.2,
+    "prep_time": 22.5,
+    "cheapest_item": 7.16,
+    "num_ratings": 661
+  },
+  {
+    "id": "53",
+    "name": "Panda Express",
+    "airport": "SIN",
+    "terminal": 3,
+    "type": "fast food",
+    "distance": [
+      0.6,
+      0.5,
+      0.7,
+      0.4
+    ],
+    "food_type": "halal",
+    "hours": "05:00-22:30",
+    "rating": 0.1,
+    "prep_time": 15.2,
+    "cheapest_item": 9.15,
+    "num_ratings": 261
+  },
+  {
+    "id": "54",
+    "name": "Wrap It Up",
+    "airport": "LHR",
+    "terminal": 1,
+    "type": "fast food",
+    "distance": [
+      1.7,
+      1.5,
+      0.3
+    ],
+    "food_type": "halal",
+    "hours": "05:30-23:00",
+    "rating": 4.1,
+    "prep_time": 44.9,
+    "cheapest_item": 13.6,
+    "num_ratings": 939
+  },
+  {
+    "id": "55",
+    "name": "Panda Express",
+    "airport": "YYZ",
+    "terminal": 3,
+    "type": "lunch",
+    "distance": [
+      0.6,
+      0.8,
+      0.3,
+      1.7
+    ],
+    "food_type": "vegan",
+    "hours": "06:30-23:30",
+    "rating": 0.8,
+    "prep_time": 14.2,
+    "cheapest_item": 6.73,
+    "num_ratings": 673
+  },
+  {
+    "id": "56",
+    "name": "Vegan Delight",
+    "airport": "LHR",
+    "terminal": 3,
+    "type": "fast food",
+    "distance": [
+      1.5,
+      1.8,
+      1.7,
+      0.5
+    ],
+    "food_type": "vegetarian",
+    "hours": "11:30-22:00",
+    "rating": 3.7,
+    "prep_time": 37.4,
+    "cheapest_item": 3.44,
+    "num_ratings": 729
+  },
+  {
+    "id": "57",
+    "name": "Green Leaf",
+    "airport": "DXB",
+    "terminal": 1,
+    "type": "lunch",
+    "distance": [
+      0.3,
+      1.4
+    ],
+    "food_type": "vegetarian",
+    "hours": "06:00-23:30",
+    "rating": 3.4,
+    "prep_time": 17.9,
+    "cheapest_item": 6.1,
+    "num_ratings": 978
+  },
+  {
+    "id": "58",
+    "name": "Bistro Cafe",
+    "airport": "CDG",
+    "terminal": 2,
+    "type": "coffee",
+    "distance": [
+      1.2,
+      1.7,
+      0.7
+    ],
+    "food_type": "vegetarian",
+    "hours": "10:30-23:30",
+    "rating": 1.6,
+    "prep_time": 17.6,
+    "cheapest_item": 6.51,
+    "num_ratings": 678
+  },
+  {
+    "id": "59",
+    "name": "Coffee Corner",
+    "airport": "HND",
+    "terminal": 2,
+    "type": "coffee",
+    "distance": [
+      0.8,
+      0.6
+    ],
+    "food_type": "vegan",
+    "hours": "09:30-23:30",
+    "rating": 0.3,
+    "prep_time": 13.4,
+    "cheapest_item": 4.83,
+    "num_ratings": 173
+  },
+  {
+    "id": "60",
+    "name": "Healthy Eats",
+    "airport": "CDG",
+    "terminal": 2,
+    "type": "coffee",
+    "distance": [
+      1.4,
+      0.7
+    ],
+    "food_type": "vegan",
+    "hours": "05:00-20:00",
+    "rating": 2.4,
+    "prep_time": 36.8,
+    "cheapest_item": 5.74,
+    "num_ratings": 957
+  }
+]
