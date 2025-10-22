@@ -10,20 +10,12 @@
     "rating": 3.2,
     "reviewsCount": 851,
     "pricePerNight": 169,
-    "amenities": [
-      "gym",
-      "kitchenette",
-      "wifi",
-      "shuttle"
-    ],
+    "amenities": ["gym", "kitchenette", "wifi", "shuttle"],
     "cancellationPolicy": "Any",
-    "paymentOptions": [
-      "Online",
-      "In-person"
-    ],
+    "paymentOptions": ["Online", "In-person"],
     "roomOccupancyMax": 2,
     "shuttleHours": "04:00-23:30",
-    "thumbnailUrl": "https://picsum.photos/seed/h1/640/360",
+    "thumbnailUrl": "https://source.unsplash.com/640x360/?airport,hotel,exterior&sig=1",
     "provider": "mock"
   },
   {
@@ -37,22 +29,12 @@
     "rating": 3.8,
     "reviewsCount": 586,
     "pricePerNight": 229,
-    "amenities": [
-      "breakfast",
-      "gym",
-      "kitchenette",
-      "pet",
-      "pool",
-      "wifi",
-      "shuttle"
-    ],
+    "amenities": ["breakfast", "gym", "kitchenette", "pet", "pool", "wifi", "shuttle"],
     "cancellationPolicy": "Any",
-    "paymentOptions": [
-      "Online"
-    ],
+    "paymentOptions": ["Online"],
     "roomOccupancyMax": 4,
     "shuttleHours": "04:00-23:30",
-    "thumbnailUrl": "https://picsum.photos/seed/h2/640/360",
+    "thumbnailUrl": "https://source.unsplash.com/640x360/?hotel,lobby,modern&sig=2",
     "provider": "mock"
   },
   {
@@ -66,20 +48,12 @@
     "rating": 5.0,
     "reviewsCount": 1619,
     "pricePerNight": 169,
-    "amenities": [
-      "breakfast",
-      "pool",
-      "wifi",
-      "shuttle"
-    ],
+    "amenities": ["breakfast", "pool", "wifi", "shuttle"],
     "cancellationPolicy": "48h",
-    "paymentOptions": [
-      "In-person",
-      "Online"
-    ],
+    "paymentOptions": ["In-person", "Online"],
     "roomOccupancyMax": 3,
     "shuttleHours": "04:00-23:30",
-    "thumbnailUrl": "https://picsum.photos/seed/h3/640/360",
+    "thumbnailUrl": "https://source.unsplash.com/640x360/?hotel,room,lakeview&sig=3",
     "provider": "mock"
   },
   {
@@ -93,20 +67,12 @@
     "rating": 3.5,
     "reviewsCount": 2079,
     "pricePerNight": 99,
-    "amenities": [
-      "gym",
-      "kitchenette",
-      "parking",
-      "pet",
-      "shuttle"
-    ],
+    "amenities": ["gym", "kitchenette", "parking", "pet", "shuttle"],
     "cancellationPolicy": "24h",
-    "paymentOptions": [
-      "In-person"
-    ],
+    "paymentOptions": ["In-person"],
     "roomOccupancyMax": 2,
     "shuttleHours": "04:00-23:30",
-    "thumbnailUrl": "https://picsum.photos/seed/h4/640/360",
+    "thumbnailUrl": "https://source.unsplash.com/640x360/?hotel,exterior,night&sig=4",
     "provider": "mock"
   },
   {
@@ -120,20 +86,12 @@
     "rating": 3.0,
     "reviewsCount": 715,
     "pricePerNight": 209,
-    "amenities": [
-      "gym",
-      "parking",
-      "pet",
-      "pool",
-      "shuttle"
-    ],
+    "amenities": ["gym", "parking", "pet", "pool", "shuttle"],
     "cancellationPolicy": "Any",
-    "paymentOptions": [
-      "Online"
-    ],
+    "paymentOptions": ["Online"],
     "roomOccupancyMax": 3,
     "shuttleHours": "04:00-23:30",
-    "thumbnailUrl": "https://picsum.photos/seed/h5/640/360",
+    "thumbnailUrl": "https://source.unsplash.com/640x360/?hotel,suite,bedroom&sig=5",
     "provider": "mock"
   },
   {
@@ -147,22 +105,12 @@
     "rating": 4.0,
     "reviewsCount": 3730,
     "pricePerNight": 149,
-    "amenities": [
-      "breakfast",
-      "gym",
-      "parking",
-      "pool",
-      "shuttle",
-      "wifi"
-    ],
+    "amenities": ["breakfast", "gym", "parking", "pool", "shuttle", "wifi"],
     "cancellationPolicy": "24h",
-    "paymentOptions": [
-      "Online",
-      "In-person"
-    ],
+    "paymentOptions": ["Online", "In-person"],
     "roomOccupancyMax": 3,
     "shuttleHours": "04:00-23:30",
-    "thumbnailUrl": "https://picsum.photos/seed/h6/640/360",
+    "thumbnailUrl": "https://source.unsplash.com/640x360/?hotel,runway,airport&sig=6",
     "provider": "mock"
   },
   {
@@ -176,22 +124,12 @@
     "rating": 4.6,
     "reviewsCount": 740,
     "pricePerNight": 119,
-    "amenities": [
-      "breakfast",
-      "gym",
-      "kitchenette",
-      "parking",
-      "pool",
-      "shuttle"
-    ],
+    "amenities": ["breakfast", "gym", "kitchenette", "parking", "pool", "shuttle"],
     "cancellationPolicy": "Free",
-    "paymentOptions": [
-      "In-person",
-      "Online"
-    ],
+    "paymentOptions": ["In-person", "Online"],
     "roomOccupancyMax": 2,
     "shuttleHours": "04:00-23:30",
-    "thumbnailUrl": "https://picsum.photos/seed/h7/640/360",
+    "thumbnailUrl": "https://source.unsplash.com/640x360/?hotel,entrance,modern&sig=7",
     "provider": "mock"
   },
   {
@@ -205,20 +143,12 @@
     "rating": 3.8,
     "reviewsCount": 178,
     "pricePerNight": 189,
-    "amenities": [
-      "breakfast",
-      "pool",
-      "shuttle",
-      "wifi"
-    ],
+    "amenities": ["breakfast", "pool", "shuttle", "wifi"],
     "cancellationPolicy": "Any",
-    "paymentOptions": [
-      "In-person",
-      "Online"
-    ],
+    "paymentOptions": ["In-person", "Online"],
     "roomOccupancyMax": 4,
     "shuttleHours": "04:00-23:30",
-    "thumbnailUrl": "https://picsum.photos/seed/h8/640/360",
+    "thumbnailUrl": "https://source.unsplash.com/640x360/?hotel,lounge,interior&sig=8",
     "provider": "mock"
   },
   {
@@ -232,21 +162,12 @@
     "rating": 3.0,
     "reviewsCount": 3820,
     "pricePerNight": 249,
-    "amenities": [
-      "gym",
-      "kitchenette",
-      "parking",
-      "pet",
-      "shuttle",
-      "wifi"
-    ],
+    "amenities": ["gym", "kitchenette", "parking", "pet", "shuttle", "wifi"],
     "cancellationPolicy": "Any",
-    "paymentOptions": [
-      "Online"
-    ],
+    "paymentOptions": ["Online"],
     "roomOccupancyMax": 2,
     "shuttleHours": "04:00-23:30",
-    "thumbnailUrl": "https://picsum.photos/seed/h9/640/360",
+    "thumbnailUrl": "https://source.unsplash.com/640x360/?hotel,building,glass&sig=9",
     "provider": "mock"
   },
   {
@@ -260,18 +181,12 @@
     "rating": 5.0,
     "reviewsCount": 510,
     "pricePerNight": 99,
-    "amenities": [
-      "pool",
-      "shuttle",
-      "wifi"
-    ],
+    "amenities": ["pool", "shuttle", "wifi"],
     "cancellationPolicy": "Free",
-    "paymentOptions": [
-      "Online"
-    ],
+    "paymentOptions": ["Online"],
     "roomOccupancyMax": 2,
     "shuttleHours": "04:00-23:30",
-    "thumbnailUrl": "https://picsum.photos/seed/h10/640/360",
+    "thumbnailUrl": "https://source.unsplash.com/640x360/?hotel,pool,daylight&sig=10",
     "provider": "mock"
   },
   {
@@ -285,19 +200,12 @@
     "rating": 5.0,
     "reviewsCount": 3063,
     "pricePerNight": 189,
-    "amenities": [
-      "breakfast",
-      "gym",
-      "kitchenette"
-    ],
+    "amenities": ["breakfast", "gym", "kitchenette"],
     "cancellationPolicy": "Any",
-    "paymentOptions": [
-      "In-person",
-      "Online"
-    ],
+    "paymentOptions": ["In-person", "Online"],
     "roomOccupancyMax": 2,
     "shuttleHours": null,
-    "thumbnailUrl": "https://picsum.photos/seed/h11/640/360",
+    "thumbnailUrl": "https://source.unsplash.com/640x360/?hotel,skyline,city&sig=11",
     "provider": "mock"
   },
   {
@@ -311,18 +219,12 @@
     "rating": 4.6,
     "reviewsCount": 1402,
     "pricePerNight": 209,
-    "amenities": [
-      "gym",
-      "pool",
-      "shuttle"
-    ],
+    "amenities": ["gym", "pool", "shuttle"],
     "cancellationPolicy": "48h",
-    "paymentOptions": [
-      "In-person"
-    ],
+    "paymentOptions": ["In-person"],
     "roomOccupancyMax": 4,
     "shuttleHours": "04:00-23:30",
-    "thumbnailUrl": "https://picsum.photos/seed/h12/640/360",
+    "thumbnailUrl": "https://source.unsplash.com/640x360/?hotel,room,interior&sig=12",
     "provider": "mock"
   },
   {
@@ -336,19 +238,12 @@
     "rating": 4.2,
     "reviewsCount": 1448,
     "pricePerNight": 169,
-    "amenities": [
-      "breakfast",
-      "parking",
-      "pet",
-      "pool"
-    ],
+    "amenities": ["breakfast", "parking", "pet", "pool"],
     "cancellationPolicy": "48h",
-    "paymentOptions": [
-      "In-person"
-    ],
+    "paymentOptions": ["In-person"],
     "roomOccupancyMax": 4,
     "shuttleHours": null,
-    "thumbnailUrl": "https://picsum.photos/seed/h13/640/360",
+    "thumbnailUrl": "https://source.unsplash.com/640x360/?hotel,facade,modern&sig=13",
     "provider": "mock"
   },
   {
@@ -362,22 +257,12 @@
     "rating": 3.0,
     "reviewsCount": 308,
     "pricePerNight": 149,
-    "amenities": [
-      "breakfast",
-      "kitchenette",
-      "parking",
-      "pet",
-      "pool",
-      "shuttle"
-    ],
+    "amenities": ["breakfast", "kitchenette", "parking", "pet", "pool", "shuttle"],
     "cancellationPolicy": "Free",
-    "paymentOptions": [
-      "Online",
-      "In-person"
-    ],
+    "paymentOptions": ["Online", "In-person"],
     "roomOccupancyMax": 2,
     "shuttleHours": "04:00-23:30",
-    "thumbnailUrl": "https://picsum.photos/seed/h14/640/360",
+    "thumbnailUrl": "https://source.unsplash.com/640x360/?hotel,reception,lobby&sig=14",
     "provider": "mock"
   },
   {
@@ -391,21 +276,12 @@
     "rating": 5.0,
     "reviewsCount": 95,
     "pricePerNight": 189,
-    "amenities": [
-      "breakfast",
-      "gym",
-      "kitchenette",
-      "parking",
-      "wifi"
-    ],
+    "amenities": ["breakfast", "gym", "kitchenette", "parking", "wifi"],
     "cancellationPolicy": "48h",
-    "paymentOptions": [
-      "Online",
-      "In-person"
-    ],
+    "paymentOptions": ["Online", "In-person"],
     "roomOccupancyMax": 4,
     "shuttleHours": null,
-    "thumbnailUrl": "https://picsum.photos/seed/h15/640/360",
+    "thumbnailUrl": "https://source.unsplash.com/640x360/?hotel,modern,interior&sig=15",
     "provider": "mock"
   },
   {
@@ -419,18 +295,12 @@
     "rating": 4.6,
     "reviewsCount": 3368,
     "pricePerNight": 289,
-    "amenities": [
-      "breakfast",
-      "kitchenette",
-      "shuttle"
-    ],
+    "amenities": ["breakfast", "kitchenette", "shuttle"],
     "cancellationPolicy": "24h",
-    "paymentOptions": [
-      "In-person"
-    ],
+    "paymentOptions": ["In-person"],
     "roomOccupancyMax": 4,
     "shuttleHours": "04:00-23:30",
-    "thumbnailUrl": "https://picsum.photos/seed/h16/640/360",
+    "thumbnailUrl": "https://source.unsplash.com/640x360/?hotel,entrance,luxury&sig=16",
     "provider": "mock"
   },
   {
@@ -444,20 +314,12 @@
     "rating": 4.2,
     "reviewsCount": 1357,
     "pricePerNight": 209,
-    "amenities": [
-      "kitchenette",
-      "parking",
-      "pet",
-      "wifi"
-    ],
+    "amenities": ["kitchenette", "parking", "pet", "wifi"],
     "cancellationPolicy": "48h",
-    "paymentOptions": [
-      "Online",
-      "In-person"
-    ],
+    "paymentOptions": ["Online", "In-person"],
     "roomOccupancyMax": 2,
     "shuttleHours": null,
-    "thumbnailUrl": "https://picsum.photos/seed/h17/640/360",
+    "thumbnailUrl": "https://source.unsplash.com/640x360/?hotel,bedroom,cozy&sig=17",
     "provider": "mock"
   },
   {
@@ -471,21 +333,12 @@
     "rating": 5.0,
     "reviewsCount": 2750,
     "pricePerNight": 149,
-    "amenities": [
-      "gym",
-      "parking",
-      "pet",
-      "pool",
-      "shuttle",
-      "wifi"
-    ],
+    "amenities": ["gym", "parking", "pet", "pool", "shuttle", "wifi"],
     "cancellationPolicy": "Any",
-    "paymentOptions": [
-      "Online"
-    ],
+    "paymentOptions": ["Online"],
     "roomOccupancyMax": 4,
     "shuttleHours": "04:00-23:30",
-    "thumbnailUrl": "https://picsum.photos/seed/h18/640/360",
+    "thumbnailUrl": "https://source.unsplash.com/640x360/?hotel,room,modern&sig=18",
     "provider": "mock"
   },
   {
@@ -499,20 +352,12 @@
     "rating": 3.0,
     "reviewsCount": 1307,
     "pricePerNight": 119,
-    "amenities": [
-      "parking",
-      "pet",
-      "pool",
-      "wifi"
-    ],
+    "amenities": ["parking", "pet", "pool", "wifi"],
     "cancellationPolicy": "24h",
-    "paymentOptions": [
-      "In-person",
-      "Online"
-    ],
+    "paymentOptions": ["In-person", "Online"],
     "roomOccupancyMax": 4,
     "shuttleHours": null,
-    "thumbnailUrl": "https://picsum.photos/seed/h19/640/360",
+    "thumbnailUrl": "https://source.unsplash.com/640x360/?hotel,exterior,day&sig=19",
     "provider": "mock"
   },
   {
@@ -526,19 +371,12 @@
     "rating": 3.2,
     "reviewsCount": 3784,
     "pricePerNight": 209,
-    "amenities": [
-      "breakfast",
-      "gym",
-      "shuttle"
-    ],
+    "amenities": ["breakfast", "gym", "shuttle"],
     "cancellationPolicy": "48h",
-    "paymentOptions": [
-      "In-person",
-      "Online"
-    ],
+    "paymentOptions": ["In-person", "Online"],
     "roomOccupancyMax": 4,
     "shuttleHours": "04:00-23:30",
-    "thumbnailUrl": "https://picsum.photos/seed/h20/640/360",
+    "thumbnailUrl": "https://source.unsplash.com/640x360/?hotel,runway,exterior&sig=20",
     "provider": "mock"
   },
   {
@@ -552,22 +390,12 @@
     "rating": 3.8,
     "reviewsCount": 3746,
     "pricePerNight": 119,
-    "amenities": [
-      "breakfast",
-      "gym",
-      "kitchenette",
-      "pool",
-      "shuttle",
-      "wifi"
-    ],
+    "amenities": ["breakfast", "gym", "kitchenette", "pool", "shuttle", "wifi"],
     "cancellationPolicy": "48h",
-    "paymentOptions": [
-      "Online",
-      "In-person"
-    ],
+    "paymentOptions": ["Online", "In-person"],
     "roomOccupancyMax": 4,
     "shuttleHours": "04:00-23:30",
-    "thumbnailUrl": "https://picsum.photos/seed/h21/640/360",
+    "thumbnailUrl": "https://source.unsplash.com/640x360/?hotel,city,view&sig=21",
     "provider": "mock"
   },
   {
@@ -581,20 +409,12 @@
     "rating": 4.2,
     "reviewsCount": 1251,
     "pricePerNight": 149,
-    "amenities": [
-      "breakfast",
-      "parking",
-      "pet",
-      "wifi"
-    ],
+    "amenities": ["breakfast", "parking", "pet", "wifi"],
     "cancellationPolicy": "Any",
-    "paymentOptions": [
-      "Online",
-      "In-person"
-    ],
+    "paymentOptions": ["Online", "In-person"],
     "roomOccupancyMax": 2,
     "shuttleHours": null,
-    "thumbnailUrl": "https://picsum.photos/seed/h22/640/360",
+    "thumbnailUrl": "https://source.unsplash.com/640x360/?hotel,cozy,room&sig=22",
     "provider": "mock"
   },
   {
@@ -608,21 +428,12 @@
     "rating": 4.4,
     "reviewsCount": 1683,
     "pricePerNight": 169,
-    "amenities": [
-      "breakfast",
-      "kitchenette",
-      "parking",
-      "shuttle",
-      "wifi"
-    ],
+    "amenities": ["breakfast", "kitchenette", "parking", "shuttle", "wifi"],
     "cancellationPolicy": "Any",
-    "paymentOptions": [
-      "Online",
-      "In-person"
-    ],
+    "paymentOptions": ["Online", "In-person"],
     "roomOccupancyMax": 3,
     "shuttleHours": "04:00-23:30",
-    "thumbnailUrl": "https://picsum.photos/seed/h23/640/360",
+    "thumbnailUrl": "https://source.unsplash.com/640x360/?hotel,entrance,evening&sig=23",
     "provider": "mock"
   },
   {
@@ -636,21 +447,12 @@
     "rating": 3.8,
     "reviewsCount": 938,
     "pricePerNight": 99,
-    "amenities": [
-      "breakfast",
-      "parking",
-      "pool",
-      "shuttle",
-      "wifi"
-    ],
+    "amenities": ["breakfast", "parking", "pool", "shuttle", "wifi"],
     "cancellationPolicy": "Any",
-    "paymentOptions": [
-      "In-person",
-      "Online"
-    ],
+    "paymentOptions": ["In-person", "Online"],
     "roomOccupancyMax": 4,
     "shuttleHours": "04:00-23:30",
-    "thumbnailUrl": "https://picsum.photos/seed/h24/640/360",
+    "thumbnailUrl": "https://source.unsplash.com/640x360/?hotel,pool,night&sig=24",
     "provider": "mock"
   },
   {
@@ -664,20 +466,12 @@
     "rating": 3.2,
     "reviewsCount": 2366,
     "pricePerNight": 89,
-    "amenities": [
-      "kitchenette",
-      "pet",
-      "shuttle",
-      "wifi"
-    ],
+    "amenities": ["kitchenette", "pet", "shuttle", "wifi"],
     "cancellationPolicy": "24h",
-    "paymentOptions": [
-      "Online",
-      "In-person"
-    ],
+    "paymentOptions": ["Online", "In-person"],
     "roomOccupancyMax": 2,
     "shuttleHours": "04:00-23:30",
-    "thumbnailUrl": "https://picsum.photos/seed/h25/640/360",
+    "thumbnailUrl": "https://source.unsplash.com/640x360/?hotel,standard,room&sig=25",
     "provider": "mock"
   },
   {
@@ -691,19 +485,12 @@
     "rating": 4.8,
     "reviewsCount": 3502,
     "pricePerNight": 149,
-    "amenities": [
-      "breakfast",
-      "parking",
-      "pool",
-      "wifi"
-    ],
+    "amenities": ["breakfast", "parking", "pool", "wifi"],
     "cancellationPolicy": "24h",
-    "paymentOptions": [
-      "In-person"
-    ],
+    "paymentOptions": ["In-person"],
     "roomOccupancyMax": 2,
     "shuttleHours": null,
-    "thumbnailUrl": "https://picsum.photos/seed/h26/640/360",
+    "thumbnailUrl": "https://source.unsplash.com/640x360/?hotel,exterior,classic&sig=26",
     "provider": "mock"
   },
   {
@@ -717,21 +504,12 @@
     "rating": 4.8,
     "reviewsCount": 1766,
     "pricePerNight": 149,
-    "amenities": [
-      "kitchenette",
-      "parking",
-      "pet",
-      "pool",
-      "shuttle",
-      "wifi"
-    ],
+    "amenities": ["kitchenette", "parking", "pet", "pool", "shuttle", "wifi"],
     "cancellationPolicy": "24h",
-    "paymentOptions": [
-      "Online"
-    ],
+    "paymentOptions": ["Online"],
     "roomOccupancyMax": 4,
     "shuttleHours": "04:00-23:30",
-    "thumbnailUrl": "https://picsum.photos/seed/h27/640/360",
+    "thumbnailUrl": "https://source.unsplash.com/640x360/?hotel,brand,exterior&sig=27",
     "provider": "mock"
   },
   {
@@ -745,22 +523,12 @@
     "rating": 4.4,
     "reviewsCount": 4135,
     "pricePerNight": 209,
-    "amenities": [
-      "breakfast",
-      "kitchenette",
-      "parking",
-      "pool",
-      "shuttle",
-      "wifi"
-    ],
+    "amenities": ["breakfast", "kitchenette", "parking", "pool", "shuttle", "wifi"],
     "cancellationPolicy": "48h",
-    "paymentOptions": [
-      "In-person",
-      "Online"
-    ],
+    "paymentOptions": ["In-person", "Online"],
     "roomOccupancyMax": 2,
     "shuttleHours": "04:00-23:30",
-    "thumbnailUrl": "https://picsum.photos/seed/h28/640/360",
+    "thumbnailUrl": "https://source.unsplash.com/640x360/?hotel,luxury,lobby&sig=28",
     "provider": "mock"
   },
   {
@@ -774,21 +542,12 @@
     "rating": 3.5,
     "reviewsCount": 533,
     "pricePerNight": 99,
-    "amenities": [
-      "breakfast",
-      "parking",
-      "pet",
-      "pool",
-      "shuttle",
-      "wifi"
-    ],
+    "amenities": ["breakfast", "parking", "pet", "pool", "shuttle", "wifi"],
     "cancellationPolicy": "48h",
-    "paymentOptions": [
-      "In-person"
-    ],
+    "paymentOptions": ["In-person"],
     "roomOccupancyMax": 3,
     "shuttleHours": "04:00-23:30",
-    "thumbnailUrl": "https://picsum.photos/seed/h29/640/360",
+    "thumbnailUrl": "https://source.unsplash.com/640x360/?hotel,city,exterior&sig=29",
     "provider": "mock"
   },
   {
@@ -802,20 +561,12 @@
     "rating": 4.2,
     "reviewsCount": 2082,
     "pricePerNight": 89,
-    "amenities": [
-      "breakfast",
-      "gym",
-      "kitchenette",
-      "shuttle",
-      "wifi"
-    ],
+    "amenities": ["breakfast", "gym", "kitchenette", "shuttle", "wifi"],
     "cancellationPolicy": "Any",
-    "paymentOptions": [
-      "In-person"
-    ],
+    "paymentOptions": ["In-person"],
     "roomOccupancyMax": 3,
     "shuttleHours": "04:00-23:30",
-    "thumbnailUrl": "https://picsum.photos/seed/h30/640/360",
+    "thumbnailUrl": "https://source.unsplash.com/640x360/?hotel,harbour,view&sig=30",
     "provider": "mock"
   }
 ]
