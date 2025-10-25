@@ -1,3 +1,4 @@
+// src/screens/Hotels/HotelPreferencesScreen.tsx
 import React, { useMemo, useState } from "react";
 import { SafeAreaView, View, Text, TextInput, Pressable, StyleSheet } from "react-native";
 import { NativeStackScreenProps } from "@react-navigation/native-stack";
@@ -5,7 +6,17 @@ import { NativeStackScreenProps } from "@react-navigation/native-stack";
 type RootStackParamList = {
   HotelSearch: undefined;
   HotelPreferences: { location: string; travellers: number; checkIn: string; checkOut: string };
-  HotelsScreen: any;
+  HotelResults: {
+    location: string;
+    travellers: number;
+    checkIn: string;
+    checkOut: string;
+    budgetMin?: number;
+    budgetMax?: number;
+    minRating?: number;
+    cancellation?: "24h" | "48h" | "Free" | "Any";
+    payment?: "Online" | "In-person" | "Any";
+  };
 };
 
 type Props = NativeStackScreenProps<RootStackParamList, "HotelPreferences">;
@@ -23,41 +34,40 @@ function Chip({
 }
 
 export default function HotelPreferencesScreen({ route, navigation }: Props) {
-  // SAFE read (no crash if dev navigates without params)
   const { location = "", travellers = 1, checkIn = "", checkOut = "" } = route?.params ?? {};
 
-  // ---- Budget (min/max) ----
-  const [minBudget, setMinBudget] = useState<string>("");
-  const [maxBudget, setMaxBudget] = useState<string>("");
+  // Budget (min/max)
+  const [minBudget, setMinBudget] = useState("");
+  const [maxBudget, setMaxBudget] = useState("");
 
-  // ---- Rating: 1★–5★ ----
-  const [rating, setRating] = useState<number>(4); // default 4+
+  // Rating
+  const [rating, setRating] = useState<number>(4);
 
-  // ---- Cancellation options ----
+  // Cancellation + Payment
   type CancelOpt = "24h" | "48h" | "Free" | "Any";
   const [cancelOpt, setCancelOpt] = useState<CancelOpt>("Free");
 
-  // ---- Payment options ----
-  type PaymentOpt = "Online" | "In-person";
+  type PaymentOpt = "Online" | "In-person" | "Any";
   const [payOpt, setPayOpt] = useState<PaymentOpt>("Online");
 
   const canSeeResults = useMemo(() => true, []);
 
   const onSeeResults = () => {
-    navigation.navigate("HotelsScreen", {
+    const budgetMin = minBudget.trim() ? Number(minBudget) : undefined;
+    const budgetMax = maxBudget.trim() ? Number(maxBudget) : undefined;
+
+    navigation.navigate("HotelResults", {
       // base
       location,
       travellers,
       checkIn,
       checkOut,
-      // preferences to feed the AI
-      budgetPerNightRange: [
-        minBudget.trim() ? Number(minBudget) : undefined,
-        maxBudget.trim() ? Number(maxBudget) : undefined,
-      ],
-      minRating: rating, // 1..5
-      cancellationPreference: cancelOpt, // "24h" | "48h" | "Free" | "Any"
-      paymentPreference: payOpt, // "Online" | "In-person"
+      // params expected by HotelResultsScreen
+      budgetMin,
+      budgetMax,
+      minRating: rating,
+      cancellation: cancelOpt,
+      payment: payOpt,
     });
   };
 
@@ -66,7 +76,7 @@ export default function HotelPreferencesScreen({ route, navigation }: Props) {
       <View style={styles.content}>
         <Text style={styles.title}>Tailor Your Stay</Text>
 
-        {/* Budget range */}
+        {/* Budget */}
         <Text style={styles.sectionTitle}>Budget per night (CAD)</Text>
         <View style={styles.row}>
           <View style={[styles.field, { marginRight: 8 }]}>
@@ -91,7 +101,7 @@ export default function HotelPreferencesScreen({ route, navigation }: Props) {
           </View>
         </View>
 
-        {/* Rating 1★–5★ */}
+        {/* Rating */}
         <Text style={[styles.sectionTitle, { marginTop: 16 }]}>Minimum rating</Text>
         <View style={styles.rowWrap}>
           {[1, 2, 3, 4, 5].map((r) => (
@@ -99,7 +109,7 @@ export default function HotelPreferencesScreen({ route, navigation }: Props) {
           ))}
         </View>
 
-        {/* Cancellation options */}
+        {/* Cancellation */}
         <Text style={[styles.sectionTitle, { marginTop: 16 }]}>Cancellation</Text>
         <View style={styles.rowWrap}>
           {(["24h", "48h", "Free", "Any"] as CancelOpt[]).map((c) => (
@@ -112,7 +122,7 @@ export default function HotelPreferencesScreen({ route, navigation }: Props) {
           ))}
         </View>
 
-        {/* Payment options */}
+        {/* Payment */}
         <Text style={[styles.sectionTitle, { marginTop: 16 }]}>Preferred Payment Method</Text>
         <View style={styles.rowWrap}>
           {(["Online", "In-person", "Any"] as PaymentOpt[]).map((p) => (
@@ -134,12 +144,9 @@ const styles = StyleSheet.create({
   title: { fontSize: 26, fontWeight: "700", marginBottom: 12 },
   sectionTitle: { fontSize: 16, fontWeight: "700", marginBottom: 8 },
   label: { fontSize: 13, color: "#6b7280", marginBottom: 6 },
-
   row: { flexDirection: "row" },
   field: { flex: 1, minWidth: 0 },
-
   rowWrap: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
-
   input: {
     height: 48,
     borderRadius: 12,
@@ -149,19 +156,11 @@ const styles = StyleSheet.create({
     backgroundColor: "#fff",
     marginBottom: 12,
   },
-
-  chip: {
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 999,
-    borderWidth: 1,
-    marginBottom: 8,
-  },
+  chip: { paddingHorizontal: 12, paddingVertical: 8, borderRadius: 999, borderWidth: 1, marginBottom: 8 },
   chipSelected: { backgroundColor: "#3B82F6", borderColor: "#3B82F6" },
   chipUnselected: { backgroundColor: "#fff", borderColor: "#CFCFD6" },
   chipText: { fontSize: 14, fontWeight: "600", color: "#111827" },
   chipTextSelected: { color: "#fff" },
-
   primaryBtn: {
     marginTop: 22,
     backgroundColor: "#3B82F6",
