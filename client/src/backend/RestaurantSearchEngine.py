@@ -1,6 +1,9 @@
+import copy
 import datetime
 import json
 from typing import Optional
+import os
+from flask import Flask
 
 
 class RestaurantSearchEngine:
@@ -10,7 +13,9 @@ class RestaurantSearchEngine:
     current_location: tuple[Optional[str], Optional[int]]
 
     def __init__(self):
-        with open("RestaurantSearchAndFilter.py") as r:
+        file_path = os.path.join(os.path.dirname(__file__), "data", "airport_restaurants_mock.json")
+
+        with open(file_path, encoding="utf-8") as r:
             self.restaurants = json.load(r)
 
         # 1. PRIMARY SEARCH PARAMETERS ON THE FIRST SCREEN
@@ -26,10 +31,10 @@ class RestaurantSearchEngine:
         self.budget = None
         self.wants_open_now = False
         # 3. SORTING PARAMETERS
-        self.sort_price = "asc"
-        self.sort_distance = "asc"
-        self.sort_prep_time = "asc"
-        self.sort_rating = "desc"
+        self.sort_price = 1
+        self.sort_distance = 1
+        self.sort_prep_time = 1
+        self.sort_rating = -1
 
         # USED FOR SEARCHING RESTAURANTS THAT ARE CURRENTLY OPEN
         self.time = datetime.datetime.now().time()
@@ -111,24 +116,16 @@ class RestaurantSearchEngine:
         self.wants_open_now = not self.wants_open_now
 
     def set_sort_price(self, sort_by: str) -> None:
-        self.sort_price = None
-        if sort_by != "none":
-            self.sort_price = sort_by
+        self.sort_price = 1 if sort_by in ["asc", "none"] else -1
 
     def set_sort_dist(self, sort_by: str) -> None:
-        self.sort_distance = None
-        if sort_by != "none":
-            self.sort_distance = sort_by
+        self.sort_distance = 1 if sort_by in ["asc", "none"] else -1
 
     def set_sort_rating(self, sort_by: str) -> None:
-        self.sort_rating = None
-        if sort_by != "none":
-            self.sort_rating = sort_by
+        self.sort_rating = 1 if sort_by in ["asc", "none"] else -1
 
     def set_sort_prep_time(self, sort_by: str) -> None:
-        self.sort_prep_time = None
-        if sort_by != "none":
-            self.sort_prep_time = sort_by
+        self.sort_prep_time = 1 if sort_by in ["asc", "none"] else -1
 
     def search_restaurants(self) -> list:
         result = []
@@ -143,14 +140,19 @@ class RestaurantSearchEngine:
 
     def filter_and_sort_restaurants(self) -> list:
         try:
+            restaurant_groupings = {}
+            sorted_restaurants = []
             filtered_restaurants = []
             main_restaurants = []
-            user_search_info = self.current_location[0] + self.food_category + self.cuisine + self.diet_restriction
+            user_search_info = self.current_location[0], self.food_category, self.cuisine, self.diet_restriction
             for restaurant in self.restaurants:
                 restaurant_info = (restaurant["airport"], restaurant["category"], restaurant["cuisine"],
                                    restaurant["food_type"])
-                if ((user_search_info[3] is None and user_search_info[:3] == restaurant_info[:3])
-                        or (user_search_info[3] is not None and user_search_info == restaurant_info)):
+
+                if user_search_info[0] == restaurant_info[0]:
+                    for i in range(1, 4):
+                        if user_search_info[i] and user_search_info[i] != restaurant_info[i]:
+                            break
                     main_restaurants.append(restaurant)
 
             if main_restaurants:
@@ -161,24 +163,72 @@ class RestaurantSearchEngine:
 
                     open_time = datetime.datetime.strptime(opening_time, "%H:%M").time()
                     close_time = datetime.datetime.strptime(closing_time, "%H:%M").time()
-
+                    r_dict = copy.copy(restaurant)
+                    r_dict["distance"] = r_dict["distance"][self.current_location[1] - 1]
                     if self.restaurant_name is None or self.restaurant_name == restaurant["name"]:
-                        if self.max_distance is None or int(restaurant["distance"][self.current_location[1] - 1]) <= self.max_distance:
-                            if self.max_prep_time is None or float(restaurant["prep_time"]) <= self.max_distance:
-                                if self.min_rating is None or float(restaurant["rating"]) >= self.min_rating:
-                                    if self.budget is None or float(restaurant["cheapest_item"]) >= self.budget:
-                                        if (self.wants_open_now and open_time <= self.time <= close_time) or not self.wants_open_now:
-                                            filtered_restaurants.append(restaurant)
-
-            if filtered_restaurants:
-                if self.sort_price:
-                    if self.sor
-
+                        if self.max_distance is None or float(r_dict["distance"]) <= self.max_distance:
+                            if self.max_prep_time is None or float(r_dict["prep_time"]) <= self.max_prep_time:
+                                if self.min_rating is None or float(r_dict["rating"]) >= self.min_rating:
+                                    if self.budget is None or float(r_dict["cheapest_item"]) >= self.budget:
+                                        if ((self.wants_open_now and open_time <= self.time <= close_time) or
+                                                not self.wants_open_now):
+                                            filtered_restaurants.append(r_dict)
+                filtered_restaurants.sort(key=self._rank_key)
+                return filtered_restaurants
         except IndexError:
             return []
 
+    def _rank_key(self, r):
+        # 1) price in ascending order
+        price = r["cheapest_item"] * self.sort_price
 
-    def _bayesian_review_weight(self, rating: float, reviews: int, prior: float = 3.9, m: int = 150) -> float:
-        # Higher reviews pull the score toward the true rating; low-review items get pulled toward the prior.
-        v = max(0, int(reviews))
-        return (v / (v + m)) * float(rating) + (m / (v + m)) * float(prior)
+        # 2) review weight (descending) via negative sign)
+        rating = r["rating"]
+        reviews = r["review_count"]
+        review_weight = bayesian_review_weight(rating, reviews)
+
+        # 3) food prep time
+        prep_time = r["prep_time"] * self.sort_prep_time
+
+        # 4) distance (asc)
+        dist = r["distance"] * self.sort_distance
+
+        # Tuple order enforces priorities; negate where we want descending
+        return price, review_weight * self.sort_rating, prep_time, dist
+    
+
+def bayesian_review_weight(rating: float, reviews: int, prior: float = 3.9, m: int = 150) -> float:
+    # Higher reviews pull the score toward the true rating; low-review items get pulled toward the prior.
+    v = max(0, int(reviews))
+    return (v / (v + m)) * float(rating) + (m / (v + m)) * float(prior)
+
+
+if __name__ == "__main__":
+    eng = RestaurantSearchEngine()
+    eng.set_location("CDG", 2)
+    # eng.set_food_category("lunch")    # UNCOMMENT THESE ONE BY ONE FOR THE DEMO
+    # eng.set_min_rating("2")
+    # eng.set_distance("2")
+    # eng.set_cuisine("american")
+    # eng.set_sort_dist("asc")
+    # eng.set_sort_prep_time("asc")
+    eng.toggle_wants_open_now()
+    results = eng.filter_and_sort_restaurants()  # NOTE, SORTING IS NOT DONE YET
+    print("sorting options:")
+    print("price = " + ("increasing" if eng.sort_price == 1 else "decreasing").upper())
+    print("rating = " + ("increasing" if eng.sort_rating  == 1 else "decreasing").upper())
+    print("prep time = " + ("increasing" if eng.sort_prep_time == 1 else "decreasing").upper())
+    print("distance = " + ("increasing" if eng.sort_distance == 1 else "decreasing").upper())
+
+    if not results:
+        print("No such restaurants")
+    else:
+        print(f"\nFOUND {len(results)} RESTAURANTS")
+        for h in results:
+            print("\nRestaurant: " + h["name"] +
+                  "\nRestaurant cheapest item price: $" + str(h["cheapest_item"]) +
+                  "\nRestaurant rating: " + str(h["rating"]) +
+                  "\nRestaurant food prep time: " + str(h["prep_time"]) +
+                  "\nRestaurant distance from you: " + str(h["distance"])
+                  # "\nRestaurant hours: " + h["hours"])
+                  )

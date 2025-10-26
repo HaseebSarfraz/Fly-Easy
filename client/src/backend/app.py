@@ -2,9 +2,11 @@
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 from hotel_search_engine import HotelSearchEngine
+from RestaurantSearchEngine import RestaurantSearchEngine
 
 app = Flask(__name__)
 CORS(app)
+
 
 @app.post("/search")
 def search():

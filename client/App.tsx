@@ -9,11 +9,18 @@ import RestaurantSearchScreen from "./src/screens/Restaurants/RestaurantSearchSc
 import RestaurantListScreen from "./src/screens/Restaurants/RestaurantListScreen";
 import HotelPreferencesScreen from "./src/screens/Hotels/HotelPreferencesScreen";
 
-type RootStackParamList = {
+export type RootStackParamList = {
   LandingPage: undefined;
   HotelSearch: undefined;
   RestaurantsSearch: undefined;
-  RestaurantList: undefined;
+  RestaurantList: {
+    iata: string,
+    airport: string,
+    terminal: string,
+    food_category: string,
+    cuisine: string, 
+    dietary_restriction: string
+  };
   HotelPreferences: {
     location: string; travellers: number; checkIn: string; checkOut: string;
   };
