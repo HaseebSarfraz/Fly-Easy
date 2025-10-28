@@ -1,0 +1,34 @@
+[
+    {
+        "name": "Tokyo Haneda Airport",
+        "iata": "HND"
+    },
+    {
+        "name": "Frankfurt Airport",
+        "iata": "FRA"
+    },
+    {
+        "name": "John F. Kennedy Airport",
+        "iata": "JFK"
+    },
+    {
+        "name": "Singapore Changi Airport",
+        "iata": "SIN"
+    },
+    {
+        "name": "Toronto Pearson Intl.",
+        "iata": "YYZ"
+    },
+    {
+        "name": "London Heathrow AIrport",
+        "iata": "LHR"
+    },
+    {
+        "name": "Dubai International Airport",
+        "iata": "DXB"
+    },
+    {
+        "name": "Paris-Charles de Gaulle Airport",
+        "iata": "CDG"
+    }
+]

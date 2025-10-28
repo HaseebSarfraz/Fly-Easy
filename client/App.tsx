@@ -14,12 +14,24 @@ export type RootStackParamList = {
   HotelSearch: undefined;
   RestaurantsSearch: undefined;
   RestaurantList: {
-    iata: string,
-    airport: string,
-    terminal: string,
-    food_category: string,
-    cuisine: string, 
-    dietary_restriction: string
+    // SEARCH PARAMS FROM FIRST PAGE
+    iata: string;
+    airport: string;
+    terminal: string;
+    food_category: string;
+    cuisine: string; 
+    dietary_restriction: string;
+    // FILTER AND SORT PARAMS FROM SECOND PAGE
+    restaurant: string;
+    max_distance: number;
+    prep_time: number;
+    min_rating: number;
+    max_price: number;
+    p_sort: number;
+    d_sort: number;
+    r_sort: number;
+    t_sort: number;
+    wants_open: boolean;
   };
   HotelPreferences: {
     location: string; travellers: number; checkIn: string; checkOut: string;

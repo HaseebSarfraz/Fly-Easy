@@ -15,8 +15,9 @@
     "hours": "09:30-20:30",
     "rating": 0.3,
     "prep_time": 9.2,
-    "cheapest_item": 6.88,
-    "review_count": 1487
+    "avg_meal_cost": 6.88,
+    "review_count": 1487,
+    "link": "https://img.freepik.com/premium-vector/bagel-restaurant-logo_9975-3.jpg"
   },
   {
     "id": "2",
@@ -34,8 +35,9 @@
     "hours": "09:00-20:00",
     "rating": 3.7,
     "prep_time": 6.3,
-    "cheapest_item": 2.47,
-    "review_count": 760
+    "avg_meal_cost": 2.47,
+    "review_count": 760,
+    "link": "https://tse1.mm.bing.net/th/id/OIP.u-eGs5Lyzn18CAbT9iTSdgHaHa?rs=1&pid=ImgDetMain&o=7&rm=3"
   },
   {
     "id": "3",
@@ -53,8 +55,9 @@
     "hours": "05:00-20:30",
     "rating": 4.4,
     "prep_time": 10.1,
-    "cheapest_item": 3.7,
-    "review_count": 586
+    "avg_meal_cost": 3.7,
+    "review_count": 586,
+    "link": "https://tse1.mm.bing.net/th/id/OIP.u-eGs5Lyzn18CAbT9iTSdgHaHa?rs=1&pid=ImgDetMain&o=7&rm=3"
   },
   {
     "id": "4",
@@ -72,8 +75,9 @@
     "hours": "08:30-21:30",
     "rating": 3.0,
     "prep_time": 12.3,
-    "cheapest_item": 5.09,
-    "review_count": 140
+    "avg_meal_cost": 5.09,
+    "review_count": 140,
+    "link": "https://static.vecteezy.com/system/resources/previews/015/096/548/non_2x/food-sandwich-icon-color-outline-vector.jpg"
   },
   {
     "id": "5",
@@ -91,8 +95,9 @@
     "hours": "09:30-20:30",
     "rating": 3.1,
     "prep_time": 7.0,
-    "cheapest_item": 2.5,
-    "review_count": 999
+    "avg_meal_cost": 2.5,
+    "review_count": 999,
+    "link": "https://tse3.mm.bing.net/th/id/OIP.idvkdzofqc_eEdZWOiV5oQHaHa?rs=1&pid=ImgDetMain&o=7&rm=3"
   },
   {
     "id": "6",
@@ -110,8 +115,9 @@
     "hours": "10:00-20:30",
     "rating": 1.0,
     "prep_time": 4.8,
-    "cheapest_item": 5.46,
-    "review_count": 955
+    "avg_meal_cost": 5.46,
+    "review_count": 955,
+    "link": "https://tse2.mm.bing.net/th/id/OIP.23KRPd0_0wmGFpUlNBH_HQHaHa?rs=1&pid=ImgDetMain&o=7&rm=3"
   },
   {
     "id": "7",
@@ -129,8 +135,9 @@
     "hours": "08:30-20:30",
     "rating": 4.4,
     "prep_time": 8.0,
-    "cheapest_item": 6.79,
-    "review_count": 1447
+    "avg_meal_cost": 6.79,
+    "review_count": 1447,
+    "link": "https://d1csarkz8obe9u.cloudfront.net/posterpreviews/juice-bar-logo-template-design-9142d42c4a712b249a37353422727f97_screen.jpg?ts=1613072725"
   },
   {
     "id": "9",
@@ -148,8 +155,9 @@
     "hours": "06:30-22:00",
     "rating": 1.4,
     "prep_time": 9.9,
-    "cheapest_item": 2.5,
-    "review_count": 1847
+    "avg_meal_cost": 2.5,
+    "review_count": 1847,
+    "link": "https://thundervalleyresort.com/media/panda-express-pod-jpg"
   },
   {
     "id": "10",
@@ -167,8 +175,9 @@
     "hours": "05:00-23:00",
     "rating": 2.3,
     "prep_time": 14.8,
-    "cheapest_item": 5.9,
-    "review_count": 653
+    "avg_meal_cost": 5.9,
+    "review_count": 653,
+    "link": "https://d1csarkz8obe9u.cloudfront.net/posterpreviews/juice-bar-logo-template-design-9142d42c4a712b249a37353422727f97_screen.jpg?ts=1613072725"
   },
   {
     "id": "11",
@@ -186,8 +195,9 @@
     "hours": "07:30-20:30",
     "rating": 0.1,
     "prep_time": 7.3,
-    "cheapest_item": 2.39,
-    "review_count": 1053
+    "avg_meal_cost": 2.39,
+    "review_count": 1053,
+    "link": "https://static.vecteezy.com/system/resources/previews/014/151/476/original/cup-of-coffee-icon-flat-style-vector.jpg"
   },
   {
     "id": "12",
@@ -205,8 +215,9 @@
     "hours": "07:30-21:00",
     "rating": 0.8,
     "prep_time": 10.9,
-    "cheapest_item": 5.09,
-    "review_count": 814
+    "avg_meal_cost": 5.09,
+    "review_count": 814,
+    "link": "https://tse2.mm.bing.net/th/id/OIP.23KRPd0_0wmGFpUlNBH_HQHaHa?rs=1&pid=ImgDetMain&o=7&rm=3"
   },
   {
     "id": "13",
@@ -224,8 +235,9 @@
     "hours": "09:30-22:30",
     "rating": 1.7,
     "prep_time": 4.1,
-    "cheapest_item": 5.61,
-    "review_count": 905
+    "avg_meal_cost": 5.61,
+    "review_count": 905,
+    "link": "https://d1csarkz8obe9u.cloudfront.net/posterpreviews/juice-bar-logo-template-design-9142d42c4a712b249a37353422727f97_screen.jpg?ts=1613072725"
   },
   {
     "id": "14",
@@ -243,8 +255,9 @@
     "hours": "09:30-23:30",
     "rating": 2.5,
     "prep_time": 13.9,
-    "cheapest_item": 5.76,
-    "review_count": 284
+    "avg_meal_cost": 5.76,
+    "review_count": 284,
+    "link": "https://d1csarkz8obe9u.cloudfront.net/posterpreviews/juice-bar-logo-template-design-9142d42c4a712b249a37353422727f97_screen.jpg?ts=1613072725"
   },
   {
     "id": "15",
@@ -262,8 +275,9 @@
     "hours": "05:30-22:00",
     "rating": 3.2,
     "prep_time": 14.1,
-    "cheapest_item": 5.11,
-    "review_count": 1490
+    "avg_meal_cost": 5.11,
+    "review_count": 1490,
+    "link": "https://img.freepik.com/premium-vector/bagel-restaurant-logo_9975-3.jpg"
   },
   {
     "id": "16",
@@ -281,8 +295,9 @@
     "hours": "11:30-21:30",
     "rating": 3.8,
     "prep_time": 13.7,
-    "cheapest_item": 5.58,
-    "review_count": 1224
+    "avg_meal_cost": 5.58,
+    "review_count": 1224,
+    "link": "https://tse4.mm.bing.net/th/id/OIP.zW5zr8Yt4_DqniRf8FT9wwHaHa?rs=1&pid=ImgDetMain&o=7&rm=3"
   },
   {
     "id": "17",
@@ -300,8 +315,9 @@
     "hours": "05:30-22:00",
     "rating": 4.3,
     "prep_time": 4.9,
-    "cheapest_item": 4.34,
-    "review_count": 1554
+    "avg_meal_cost": 4.34,
+    "review_count": 1554,
+    "link": "https://tse2.mm.bing.net/th/id/OIP.GtyoQr6kbI0fwe_ICNRFbgHaGw?rs=1&pid=ImgDetMain&o=7&rm=3"
   },
   {
     "id": "18",
@@ -319,8 +335,9 @@
     "hours": "08:30-20:00",
     "rating": 0.5,
     "prep_time": 12.0,
-    "cheapest_item": 6.94,
-    "review_count": 1714
+    "avg_meal_cost": 6.94,
+    "review_count": 1714,
+    "link": "https://www.logotypes101.com/logos/313/3828B0779486EBD66ADC464D3DEA416B/Pizza_Hut149.png"
   },
   {
     "id": "19",
@@ -338,8 +355,9 @@
     "hours": "09:30-20:30",
     "rating": 0.6,
     "prep_time": 11.4,
-    "cheapest_item": 3.8,
-    "review_count": 271
+    "avg_meal_cost": 3.8,
+    "review_count": 271,
+    "link": "https://img.freepik.com/premium-vector/bagel-restaurant-logo_9975-3.jpg"
   },
   {
     "id": "20",
@@ -357,8 +375,9 @@
     "hours": "06:00-20:30",
     "rating": 4.7,
     "prep_time": 8.7,
-    "cheapest_item": 2.21,
-    "review_count": 108
+    "avg_meal_cost": 2.21,
+    "review_count": 108,
+    "link": "https://cdn.freebiesupply.com/images/large/2x/burger-king-logo-png-transparent.png"
   },
   {
     "id": "21",
@@ -376,27 +395,9 @@
     "hours": "05:30-20:30",
     "rating": 0.7,
     "prep_time": 11.2,
-    "cheapest_item": 3.97,
-    "review_count": 812
-  },
-  {
-    "id": "22",
-    "name": "Bistro Cafe",
-    "airport": "SIN",
-    "terminal": 1,
-    "category": "fast food",
-    "cuisine": "korean",
-    "distance": [
-      0.7,
-      0.9,
-      0.5
-    ],
-    "food_type": "vegetarian",
-    "hours": "06:00-22:30",
-    "rating": 3.6,
-    "prep_time": 13.0,
-    "cheapest_item": 4.67,
-    "review_count": 977
+    "avg_meal_cost": 3.97,
+    "review_count": 812,
+    "link": "https://tse2.mm.bing.net/th/id/OIP.gcw0W2dnzwJKsXId20e5RQHaHa?rs=1&pid=ImgDetMain&o=7&rm=3"
   },
   {
     "id": "23",
@@ -414,8 +415,9 @@
     "hours": "09:00-21:30",
     "rating": 4.5,
     "prep_time": 8.5,
-    "cheapest_item": 6.96,
-    "review_count": 921
+    "avg_meal_cost": 6.96,
+    "review_count": 921,
+    "link": "https://tse2.mm.bing.net/th/id/OIP.GtyoQr6kbI0fwe_ICNRFbgHaGw?rs=1&pid=ImgDetMain&o=7&rm=3"
   },
   {
     "id": "24",
@@ -433,8 +435,9 @@
     "hours": "06:00-20:00",
     "rating": 1.3,
     "prep_time": 11.7,
-    "cheapest_item": 6.64,
-    "review_count": 1588
+    "avg_meal_cost": 6.64,
+    "review_count": 1588,
+    "link": "https://static.vecteezy.com/system/resources/previews/015/096/548/non_2x/food-sandwich-icon-color-outline-vector.jpg"
   },
   {
     "id": "25",
@@ -452,8 +455,9 @@
     "hours": "08:00-23:30",
     "rating": 2.9,
     "prep_time": 11.6,
-    "cheapest_item": 5.86,
-    "review_count": 636
+    "avg_meal_cost": 5.86,
+    "review_count": 636,
+    "link": "https://tse2.mm.bing.net/th/id/OIP.GtyoQr6kbI0fwe_ICNRFbgHaGw?rs=1&pid=ImgDetMain&o=7&rm=3"
   },
   {
     "id": "26",
@@ -471,27 +475,9 @@
     "hours": "09:00-20:00",
     "rating": 4.8,
     "prep_time": 10.6,
-    "cheapest_item": 3.23,
-    "review_count": 1246
-  },
-  {
-    "id": "27",
-    "name": "Vegan Delight",
-    "airport": "SIN",
-    "terminal": 2,
-    "category": "cafe",
-    "cuisine": "thai",
-    "distance": [
-      1.4,
-      1.2,
-      1.0
-    ],
-    "food_type": "vegan",
-    "hours": "11:00-20:00",
-    "rating": 1.8,
-    "prep_time": 6.1,
-    "cheapest_item": 2.23,
-    "review_count": 1170
+    "avg_meal_cost": 3.23,
+    "review_count": 1246,
+    "link": "https://tse2.mm.bing.net/th/id/OIP.GtyoQr6kbI0fwe_ICNRFbgHaGw?rs=1&pid=ImgDetMain&o=7&rm=3"
   },
   {
     "id": "29",
@@ -509,8 +495,9 @@
     "hours": "11:00-21:30",
     "rating": 3.2,
     "prep_time": 9.7,
-    "cheapest_item": 4.13,
-    "review_count": 534
+    "avg_meal_cost": 4.13,
+    "review_count": 534,
+    "link": "https://tse2.mm.bing.net/th/id/OIP.GtyoQr6kbI0fwe_ICNRFbgHaGw?rs=1&pid=ImgDetMain&o=7&rm=3"
   },
   {
     "id": "30",
@@ -528,8 +515,9 @@
     "hours": "07:00-22:30",
     "rating": 1.7,
     "prep_time": 7.0,
-    "cheapest_item": 6.84,
-    "review_count": 1139
+    "avg_meal_cost": 6.84,
+    "review_count": 1139,
+    "link": "https://tse2.mm.bing.net/th/id/OIP.gcw0W2dnzwJKsXId20e5RQHaHa?rs=1&pid=ImgDetMain&o=7&rm=3"
   },
   {
     "id": "31",
@@ -547,8 +535,9 @@
     "hours": "07:30-22:30",
     "rating": 4.4,
     "prep_time": 14.2,
-    "cheapest_item": 5.58,
-    "review_count": 1041
+    "avg_meal_cost": 5.58,
+    "review_count": 1041,
+    "link": "https://d1csarkz8obe9u.cloudfront.net/posterpreviews/juice-bar-logo-template-design-9142d42c4a712b249a37353422727f97_screen.jpg?ts=1613072725"
   },
   {
     "id": "32",
@@ -566,8 +555,9 @@
     "hours": "08:00-23:30",
     "rating": 3.3,
     "prep_time": 10.5,
-    "cheapest_item": 5.48,
-    "review_count": 111
+    "avg_meal_cost": 5.48,
+    "review_count": 111,
+    "link": "https://www.logotypes101.com/logos/313/3828B0779486EBD66ADC464D3DEA416B/Pizza_Hut149.png"
   },
   {
     "id": "33",
@@ -585,27 +575,9 @@
     "hours": "07:00-21:00",
     "rating": 0.7,
     "prep_time": 7.2,
-    "cheapest_item": 5.1,
-    "review_count": 58
-  },
-  {
-    "id": "35",
-    "name": "Noodle Express",
-    "airport": "HND",
-    "terminal": 1,
-    "category": "cafe",
-    "cuisine": "mexican",
-    "distance": [
-      0.2,
-      0.4,
-      0.6
-    ],
-    "food_type": "vegetarian",
-    "hours": "06:30-22:00",
-    "rating": 0.8,
-    "prep_time": 13.9,
-    "cheapest_item": 4.31,
-    "review_count": 494
+    "avg_meal_cost": 5.1,
+    "review_count": 58,
+    "link": "https://d1csarkz8obe9u.cloudfront.net/posterpreviews/juice-bar-logo-template-design-9142d42c4a712b249a37353422727f97_screen.jpg?ts=1613072725"
   },
   {
     "id": "36",
@@ -623,8 +595,9 @@
     "hours": "07:30-21:30",
     "rating": 2.2,
     "prep_time": 13.4,
-    "cheapest_item": 4.33,
-    "review_count": 1797
+    "avg_meal_cost": 4.33,
+    "review_count": 1797,
+    "link": "https://static.vecteezy.com/system/resources/previews/014/151/476/original/cup-of-coffee-icon-flat-style-vector.jpg"
   },
   {
     "id": "37",
@@ -642,8 +615,9 @@
     "hours": "11:30-23:30",
     "rating": 2.4,
     "prep_time": 9.2,
-    "cheapest_item": 2.5,
-    "review_count": 482
+    "avg_meal_cost": 2.5,
+    "review_count": 482,
+    "link": "https://cdn.freebiesupply.com/images/large/2x/burger-king-logo-png-transparent.png"
   },
   {
     "id": "38",
@@ -661,27 +635,9 @@
     "hours": "06:30-21:30",
     "rating": 2.4,
     "prep_time": 11.0,
-    "cheapest_item": 6.13,
-    "review_count": 968
-  },
-  {
-    "id": "39",
-    "name": "KFC",
-    "airport": "YYZ",
-    "terminal": 2,
-    "category": "lunch",
-    "cuisine": "french",
-    "distance": [
-      0.5,
-      0.7,
-      0.9
-    ],
-    "food_type": "vegetarian",
-    "hours": "11:00-22:00",
-    "rating": 2.8,
-    "prep_time": 12.8,
-    "cheapest_item": 6.27,
-    "review_count": 929
+    "avg_meal_cost": 6.13,
+    "review_count": 968,
+    "link": "https://www.logotypes101.com/logos/313/3828B0779486EBD66ADC464D3DEA416B/Pizza_Hut149.png"
   },
   {
     "id": "40",
@@ -699,8 +655,9 @@
     "hours": "11:00-21:30",
     "rating": 5.0,
     "prep_time": 4.1,
-    "cheapest_item": 3.73,
-    "review_count": 891
+    "avg_meal_cost": 3.73,
+    "review_count": 891,
+    "link": "https://tse2.mm.bing.net/th/id/OIP.23KRPd0_0wmGFpUlNBH_HQHaHa?rs=1&pid=ImgDetMain&o=7&rm=3"
   },
   {
     "id": "41",
@@ -718,8 +675,9 @@
     "hours": "05:30-22:00",
     "rating": 4.0,
     "prep_time": 13.9,
-    "cheapest_item": 2.1,
-    "review_count": 1593
+    "avg_meal_cost": 2.1,
+    "review_count": 1593,
+    "link": "https://cdn.freebiesupply.com/images/large/2x/burger-king-logo-png-transparent.png"
   },
   {
     "id": "42",
@@ -737,27 +695,9 @@
     "hours": "10:30-23:30",
     "rating": 5.0,
     "prep_time": 7.7,
-    "cheapest_item": 6.03,
-    "review_count": 1619
-  },
-  {
-    "id": "43",
-    "name": "Fast Feast",
-    "airport": "YYZ",
-    "terminal": 3,
-    "category": "lunch",
-    "cuisine": "korean",
-    "distance": [
-      0.7,
-      0.3,
-      0.5
-    ],
-    "food_type": "halal",
-    "hours": "06:00-22:00",
-    "rating": 1.2,
-    "prep_time": 10.4,
-    "cheapest_item": 5.9,
-    "review_count": 1382
+    "avg_meal_cost": 6.03,
+    "review_count": 1619,
+    "link": "https://static.vecteezy.com/system/resources/previews/015/096/548/non_2x/food-sandwich-icon-color-outline-vector.jpg"
   },
   {
     "id": "44",
@@ -775,8 +715,9 @@
     "hours": "11:00-23:30",
     "rating": 1.1,
     "prep_time": 6.6,
-    "cheapest_item": 6.47,
-    "review_count": 755
+    "avg_meal_cost": 6.47,
+    "review_count": 755,
+    "link": "https://www.logotypes101.com/logos/313/3828B0779486EBD66ADC464D3DEA416B/Pizza_Hut149.png"
   },
   {
     "id": "45",
@@ -794,8 +735,9 @@
     "hours": "07:30-23:30",
     "rating": 4.5,
     "prep_time": 9.4,
-    "cheapest_item": 4.98,
-    "review_count": 641
+    "avg_meal_cost": 4.98,
+    "review_count": 641,
+    "link": "https://tse1.mm.bing.net/th/id/OIP.u-eGs5Lyzn18CAbT9iTSdgHaHa?rs=1&pid=ImgDetMain&o=7&rm=3"
   },
   {
     "id": "46",
@@ -813,8 +755,9 @@
     "hours": "10:00-22:30",
     "rating": 2.3,
     "prep_time": 10.1,
-    "cheapest_item": 2.21,
-    "review_count": 684
+    "avg_meal_cost": 2.21,
+    "review_count": 684,
+    "link": "https://static.vecteezy.com/system/resources/previews/015/096/548/non_2x/food-sandwich-icon-color-outline-vector.jpg"
   },
   {
     "id": "47",
@@ -832,8 +775,9 @@
     "hours": "05:00-23:30",
     "rating": 3.6,
     "prep_time": 5.8,
-    "cheapest_item": 6.27,
-    "review_count": 481
+    "avg_meal_cost": 6.27,
+    "review_count": 481,
+    "link": "https://cdn.freebiesupply.com/images/large/2x/burger-king-logo-png-transparent.png"
   },
   {
     "id": "48",
@@ -851,8 +795,9 @@
     "hours": "05:30-22:00",
     "rating": 3.6,
     "prep_time": 10.6,
-    "cheapest_item": 4.29,
-    "review_count": 1469
+    "avg_meal_cost": 4.29,
+    "review_count": 1469,
+    "link": "https://d1csarkz8obe9u.cloudfront.net/posterpreviews/juice-bar-logo-template-design-9142d42c4a712b249a37353422727f97_screen.jpg?ts=1613072725"
   },
   {
     "id": "49",
@@ -870,46 +815,9 @@
     "hours": "11:00-22:00",
     "rating": 2.9,
     "prep_time": 14.8,
-    "cheapest_item": 4.41,
-    "review_count": 1001
-  },
-  {
-    "id": "50",
-    "name": "Starbucks",
-    "airport": "DXB",
-    "terminal": 1,
-    "category": "lunch",
-    "cuisine": "chinese",
-    "distance": [
-      1.6,
-      1.8,
-      1.4
-    ],
-    "food_type": "vegan",
-    "hours": "07:30-23:00",
-    "rating": 0.2,
-    "prep_time": 8.0,
-    "cheapest_item": 4.97,
-    "review_count": 263
-  },
-  {
-    "id": "51",
-    "name": "Fast Feast",
-    "airport": "JFK",
-    "terminal": 3,
-    "category": "cafe",
-    "cuisine": "italian",
-    "distance": [
-      0.7,
-      0.3,
-      0.5
-    ],
-    "food_type": "halal",
-    "hours": "07:00-20:30",
-    "rating": 4.9,
-    "prep_time": 13.2,
-    "cheapest_item": 5.48,
-    "review_count": 368
+    "avg_meal_cost": 4.41,
+    "review_count": 1001,
+    "link": "https://tse4.mm.bing.net/th/id/OIP.zW5zr8Yt4_DqniRf8FT9wwHaHa?rs=1&pid=ImgDetMain&o=7&rm=3"
   },
   {
     "id": "52",
@@ -927,8 +835,9 @@
     "hours": "05:00-23:30",
     "rating": 2.2,
     "prep_time": 7.4,
-    "cheapest_item": 2.15,
-    "review_count": 967
+    "avg_meal_cost": 2.15,
+    "review_count": 967,
+    "link": "https://static.vecteezy.com/system/resources/previews/015/096/548/non_2x/food-sandwich-icon-color-outline-vector.jpg"
   },
   {
     "id": "53",
@@ -946,8 +855,9 @@
     "hours": "05:00-22:30",
     "rating": 0.1,
     "prep_time": 4.1,
-    "cheapest_item": 6.86,
-    "review_count": 1875
+    "avg_meal_cost": 6.86,
+    "review_count": 1875,
+    "link": "https://thundervalleyresort.com/media/panda-express-pod-jpg"
   },
   {
     "id": "54",
@@ -965,8 +875,9 @@
     "hours": "05:30-23:00",
     "rating": 4.1,
     "prep_time": 10.3,
-    "cheapest_item": 3.79,
-    "review_count": 1464
+    "avg_meal_cost": 3.79,
+    "review_count": 1464,
+    "link": "https://tse4.mm.bing.net/th/id/OIP.zW5zr8Yt4_DqniRf8FT9wwHaHa?rs=1&pid=ImgDetMain&o=7&rm=3"
   },
   {
     "id": "55",
@@ -984,27 +895,9 @@
     "hours": "06:30-23:30",
     "rating": 0.8,
     "prep_time": 12.0,
-    "cheapest_item": 4.95,
-    "review_count": 582
-  },
-  {
-    "id": "56",
-    "name": "Vegan Delight",
-    "airport": "LHR",
-    "terminal": 3,
-    "category": "fast food",
-    "cuisine": "middle-eastern",
-    "distance": [
-      0.8,
-      0.4,
-      0.6
-    ],
-    "food_type": "vegetarian",
-    "hours": "11:30-22:00",
-    "rating": 3.7,
-    "prep_time": 13.9,
-    "cheapest_item": 2.41,
-    "review_count": 780
+    "avg_meal_cost": 4.95,
+    "review_count": 582,
+    "link": "https://thundervalleyresort.com/media/panda-express-pod-jpg"
   },
   {
     "id": "57",
@@ -1022,8 +915,9 @@
     "hours": "06:00-23:30",
     "rating": 3.4,
     "prep_time": 8.0,
-    "cheapest_item": 4,
-    "review_count": 1655
+    "avg_meal_cost": 4,
+    "review_count": 1655,
+    "link": "https://tse2.mm.bing.net/th/id/OIP.gcw0W2dnzwJKsXId20e5RQHaHa?rs=1&pid=ImgDetMain&o=7&rm=3"
   },
   {
     "id": "59",
@@ -1041,8 +935,9 @@
     "hours": "09:30-23:30",
     "rating": 0.3,
     "prep_time": 7.4,
-    "cheapest_item": 4.3,
-    "review_count": 208
+    "avg_meal_cost": 4.3,
+    "review_count": 208,
+    "link": "https://static.vecteezy.com/system/resources/previews/014/151/476/original/cup-of-coffee-icon-flat-style-vector.jpg"
   },
   {
     "id": "60",
@@ -1060,8 +955,9 @@
     "hours": "05:00-10:00",
     "rating": 2.4,
     "prep_time": 6.9,
-    "cheapest_item": 4,
-    "review_count": 115
+    "avg_meal_cost": 4,
+    "review_count": 115,
+    "link": "https://tse2.mm.bing.net/th/id/OIP.23KRPd0_0wmGFpUlNBH_HQHaHa?rs=1&pid=ImgDetMain&o=7&rm=3"
   },
   {
     "id": "8",
@@ -1079,27 +975,9 @@
     "hours": "11:30-23:30",
     "rating": 4.8,
     "prep_time": 7.4,
-    "cheapest_item": 4.63,
-    "review_count": 1644
-  },
-  {
-    "id": "58",
-    "name": "Bistro Cafe",
-    "airport": "CDG",
-    "terminal": 2,
-    "category": "cafe",
-    "cuisine": "american",
-    "distance": [
-      1.4,
-      1.6,
-      1.8
-    ],
-    "food_type": "vegetarian",
-    "hours": "10:30-23:30",
-    "rating": 1.6,
-    "prep_time": 10.6,
-    "cheapest_item": 4,
-    "review_count": 386
+    "avg_meal_cost": 4.63,
+    "review_count": 1644,
+    "link": "https://thundervalleyresort.com/media/panda-express-pod-jpg"
   },
   {
     "id": "34",
@@ -1117,8 +995,9 @@
     "hours": "06:30-21:30",
     "rating": 3.1,
     "prep_time": 8.0,
-    "cheapest_item": 4,
-    "review_count": 1009
+    "avg_meal_cost": 4,
+    "review_count": 1009,
+    "link": "https://cdn.freebiesupply.com/images/large/2x/burger-king-logo-png-transparent.png"
   },
   {
     "id": "28",
@@ -1136,7 +1015,8 @@
     "hours": "05:00-20:30",
     "rating": 1.6,
     "prep_time": 9.4,
-    "cheapest_item": 4,
-    "review_count": 1072
+    "avg_meal_cost": 4,
+    "review_count": 1072,
+    "link": "https://www.logotypes101.com/logos/313/3828B0779486EBD66ADC464D3DEA416B/Pizza_Hut149.png"
   }
 ]

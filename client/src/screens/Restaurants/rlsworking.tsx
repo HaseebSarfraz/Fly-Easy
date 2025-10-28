@@ -1,5 +1,5 @@
-import React, {useState, useEffect} from "react"
-import { StyleSheet, SafeAreaView, Text, View, FlatList, Pressable, ScrollView, TextInput, ActivityIndicator} from 'react-native'
+import React, {useState} from "react"
+import { StyleSheet, SafeAreaView, Text, View, FlatList, Pressable, ScrollView, TextInput} from 'react-native'
 
 import DropDownPicker from "react-native-dropdown-picker"
 import CreateRestaurantCard from '../../components/restaurant-components/RestaurantCard'
@@ -7,63 +7,57 @@ import CreateRestaurantCard from '../../components/restaurant-components/Restaur
 import { RootStackParamList } from "../../../App";
 import { RouteProp, useRoute } from "@react-navigation/native"
 
+const rest_list = [
+                  { id: "1",
+                    name: "McDonald's",
+                    terminal: 1,
+                    type: "Fast food",
+                    distance: 0.3,
+                    imagepath: require('../../../assets/McDonalds-Logo.jpg')
+                  },
+                  {
+                    id: "2",
+                    name: "McDonald's",
+                    terminal: 3,
+                    type: "Fast food",
+                    distance: 1.0,
+                    imagepath: require('../../../assets/McDonalds-Logo.jpg')
+                  }];
+
 type RestaurantListRouteProp = RouteProp<RootStackParamList, "RestaurantList">;
 
-// @ts-ignore
+//@ts-ignore
 export default function RestaurantListScreen({ navigation }) {
   const route = useRoute<RestaurantListRouteProp>();
 
-  const {
-    iata,
-    airport,
-    terminal,
-    food_category,
-    cuisine,
-    dietary_restriction,
-    restaurant = "",
-    max_distance = 0,
-    prep_time = 0,
-    min_rating = 0,
-    max_price = 0,
-    p_sort = 0,
-    d_sort = 0,
-    r_sort = 0,
-    t_sort = 0,
-    wants_open = false,
-  } = route.params;
-
-  // Restaurant list state
-  const [restaurants, setRestaurants] = useState<any[] | null>(null);
-  const [err, setErr] = useState<string | null>(null);
+  const { iata, airport, terminal, food_category, cuisine, dietary_restriction } = route.params;
 
   // Search state
-  const [searchQuery, setSearchQuery] = useState(restaurant);
+  const [searchQuery, setSearchQuery] = useState("");
 
   // Collapsible state
   const [isExpanded, setIsExpanded] = useState(false);
 
   // Open now toggle
-  const [openNow, setOpenNow] = useState(wants_open);
+  const [openNow, setOpenNow] = useState(false);
 
   // Applied filters state
   const [appliedFilters, setAppliedFilters] = useState({
-    openNow: wants_open,
-    searchQuery: restaurant,
-    distance: max_distance || null,
-    foodReady: prep_time || null,
-    rating: min_rating || null,
-    price: max_price || null,
-    priceSort: p_sort || null,
-    distanceSort: d_sort || null,
-    durationSort: t_sort || null,
-    ratingSort: r_sort || null,
+    openNow: false,
+    distance: null,
+    foodReady: null,
+    rating: null,
+    price: null,
+    priceSort: null,
+    distanceSort: null,
+    durationSort: null,
+    ratingSort: null,
   });
 
   // Distance dropdown
   const [open1, setOpen1] = useState(false);
-  const [value1, setValue1] = useState(max_distance || null);
+  const [value1, setValue1] = useState(null);
   const [items1, setItems1] = useState([
-    { label: 'Any', value: 0 },
     { label: '1 km', value: 1 },
     { label: '2 km', value: 2 },
     { label: '3 km', value: 3 }
@@ -71,9 +65,8 @@ export default function RestaurantListScreen({ navigation }) {
 
   // Food ready in dropdown
   const [open2, setOpen2] = useState(false);
-  const [value2, setValue2] = useState(prep_time || null);
+  const [value2, setValue2] = useState(null);
   const [items2, setItems2] = useState([
-    { label: 'Any', value: 0 },
     { label: '10 minutes', value: 10 },
     { label: '15 minutes', value: 15 },
     { label: '20 minutes', value: 20 },
@@ -82,9 +75,8 @@ export default function RestaurantListScreen({ navigation }) {
 
   // Rating dropdown
   const [open3, setOpen3] = useState(false);
-  const [value3, setValue3] = useState(min_rating || null);
+  const [value3, setValue3] = useState(null);
   const [items3, setItems3] = useState([
-    { label: 'Any', value: 0 },
     { label: '4+ stars', value: 4 },
     { label: '3+ stars', value: 3 },
     { label: '2+ stars', value: 2 },
@@ -93,9 +85,8 @@ export default function RestaurantListScreen({ navigation }) {
 
   // Price range dropdown
   const [open4, setOpen4] = useState(false);
-  const [value4, setValue4] = useState(max_price || null);
+  const [value4, setValue4] = useState(null);
   const [items4, setItems4] = useState([
-    { label: 'Any', value: 0 },
     { label: '$10', value: 10 },
     { label: '$20', value: 20 },
     { label: '$30', value: 30 },
@@ -104,87 +95,39 @@ export default function RestaurantListScreen({ navigation }) {
 
   // Price sort dropdown
   const [open5, setOpen5] = useState(false);
-  const [value5, setValue5] = useState(p_sort || null);
+  const [value5, setValue5] = useState(null);
   const [items5, setItems5] = useState([
-    { label: 'No sort', value: 0 },
     { label: 'low to high', value: 1 },
     { label: 'high to low', value: -1 },
   ]);
 
   // Distance sort dropdown
   const [open6, setOpen6] = useState(false);
-  const [value6, setValue6] = useState(d_sort || null);
+  const [value6, setValue6] = useState(null);
   const [items6, setItems6] = useState([
-    { label: 'No sort', value: 0 },
     { label: 'low to high', value: 1 },
     { label: 'high to low', value: -1 },
   ]);
 
   // Duration sort dropdown
   const [open7, setOpen7] = useState(false);
-  const [value7, setValue7] = useState(t_sort || null);
+  const [value7, setValue7] = useState(null);
   const [items7, setItems7] = useState([
-    { label: 'No sort', value: 0 },
     { label: 'low to high', value: 1 },
     { label: 'high to low', value: -1 },
   ]);
 
   // Rating sort dropdown
   const [open8, setOpen8] = useState(false);
-  const [value8, setValue8] = useState(r_sort || null);
+  const [value8, setValue8] = useState(null);
   const [items8, setItems8] = useState([
-    { label: 'No sort', value: 0 },
     { label: 'low to high', value: 1 },
     { label: 'high to low', value: -1 },
   ]);
 
-  // Fetch restaurants whenever route params change
-  useEffect(() => {
-    (async () => {
-      try {
-        setErr(null);
-        setRestaurants(null);
-        
-        const response = await fetch("http://localhost:5001/search_restaurants", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            iata,
-            terminal: parseInt(terminal),
-            food_category,
-            cuisine,
-            dietary_restriction,
-            restaurant: searchQuery,
-            max_distance,
-            prep_time,
-            min_rating,
-            max_price,
-            p_sort,
-            d_sort,
-            r_sort,
-            t_sort,
-            wants_open
-          }),
-        });
-        
-        if (!response.ok) {
-          throw new Error(`HTTP ${response.status}`);
-        }
-        
-        const data = await response.json();
-        setRestaurants(data);
-      } catch (error: any) {
-        setErr(error.message);
-      }
-    })();
-  }, [iata, terminal, food_category, cuisine, dietary_restriction, max_distance, prep_time, min_rating, max_price, p_sort, d_sort, r_sort, t_sort, wants_open]);
-
   const applyFilters = () => {
-    const filters = {
+    setAppliedFilters({
       openNow: openNow,
-      searchQuery: restaurant,
       distance: value1,
       foodReady: value2,
       rating: value3,
@@ -192,31 +135,9 @@ export default function RestaurantListScreen({ navigation }) {
       priceSort: value5,
       distanceSort: value6,
       durationSort: value7,
-      ratingSort: value8,
-    };
-    
-    setAppliedFilters(filters);
-    setIsExpanded(false);
-    
-    // Navigate with new filter parameters
-    navigation.push('RestaurantList', {
-      iata,
-      airport,
-      terminal,
-      food_category,
-      cuisine,
-      dietary_restriction,
-      restaurant: searchQuery,
-      max_distance: value1 ?? 0,
-      prep_time: value2 ?? 0,
-      min_rating: value3 ?? 0,
-      max_price: value4 ?? 0,
-      p_sort: value5 ?? 0,
-      d_sort: value6 ?? 0,
-      r_sort: value8 ?? 0,
-      t_sort: value7 ?? 0,
-      wants_open: openNow,
+      ratingSort: value8
     });
+    setIsExpanded(false);
   };
 
   const clearAllFilters = () => {
@@ -231,7 +152,6 @@ export default function RestaurantListScreen({ navigation }) {
     setValue8(null);
     setAppliedFilters({
       openNow: false,
-      searchQuery: "",
       distance: null,
       foodReady: null,
       rating: null,
@@ -240,26 +160,6 @@ export default function RestaurantListScreen({ navigation }) {
       distanceSort: null,
       durationSort: null,
       ratingSort: null,
-    });
-    
-    // Navigate back with only original search params (no filters)
-    navigation.push('RestaurantList', {
-      iata,
-      airport,
-      terminal,
-      food_category,
-      cuisine,
-      dietary_restriction,
-      restaurant: "",
-      max_distance: 0,
-      prep_time: 0,
-      min_rating: 0,
-      max_price: 0,
-      p_sort: 0,
-      d_sort: 0,
-      r_sort: 0,
-      t_sort: 0,
-      wants_open: false,
     });
   };
 
@@ -272,36 +172,35 @@ export default function RestaurantListScreen({ navigation }) {
 
   const renderAppliedFilters = () => {
     const filters = [];
-    if (appliedFilters.searchQuery && appliedFilters.searchQuery !== "") {
-      filters.push(<View key="searchQuery" style={styles.filterChip}><Text style={styles.filterChipText}>Restaurant: {searchQuery}</Text></View>);
-    }
+    
     if (appliedFilters.openNow) {
       filters.push(<View key="openNow" style={styles.filterChip}><Text style={styles.filterChipText}>Open now</Text></View>);
     }
-    if (appliedFilters.distance && appliedFilters.distance !== 0) {
+    if (appliedFilters.distance && appliedFilters.distance !== "any") {
       filters.push(<View key="distance" style={styles.filterChip}><Text style={styles.filterChipText}>Max distance: {getFilterLabel(items1, appliedFilters.distance)}</Text></View>);
     }
-    if (appliedFilters.foodReady && appliedFilters.foodReady !== 0) {
+    if (appliedFilters.foodReady && appliedFilters.foodReady !== "any") {
       filters.push(<View key="foodReady" style={styles.filterChip}><Text style={styles.filterChipText}>Time for food preparation: {getFilterLabel(items2, appliedFilters.foodReady)}</Text></View>);
     }
-    if (appliedFilters.rating && appliedFilters.rating !== 0) {
+    if (appliedFilters.rating && appliedFilters.rating !== "any") {
       filters.push(<View key="rating" style={styles.filterChip}><Text style={styles.filterChipText}>Rating: {getFilterLabel(items3, appliedFilters.rating)}</Text></View>);
     }
-    if (appliedFilters.price && appliedFilters.price !== 0) {
+    if (appliedFilters.price && appliedFilters.price !== "any") {
       filters.push(<View key="price" style={styles.filterChip}><Text style={styles.filterChipText}>Price: {getFilterLabel(items4, appliedFilters.price)}</Text></View>);
     }
-    if (appliedFilters.priceSort && appliedFilters.priceSort !== 0) {
+    if (appliedFilters.priceSort) {
       filters.push(<View key="priceSort" style={styles.filterChip}><Text style={styles.filterChipText}>Sort by price: {getFilterLabel(items5, appliedFilters.priceSort)}</Text></View>);
     }
-    if (appliedFilters.distanceSort && appliedFilters.distanceSort !== 0) {
+    if (appliedFilters.distanceSort) {
       filters.push(<View key="distanceSort" style={styles.filterChip}><Text style={styles.filterChipText}>Sort by distance: {getFilterLabel(items6, appliedFilters.distanceSort)}</Text></View>);
     }
-    if (appliedFilters.durationSort && appliedFilters.durationSort !== 0) {
+    if (appliedFilters.durationSort) {
       filters.push(<View key="durationSort" style={styles.filterChip}><Text style={styles.filterChipText}>Sort by food preparation time: {getFilterLabel(items7, appliedFilters.durationSort)}</Text></View>);
     }
-    if (appliedFilters.ratingSort && appliedFilters.ratingSort !== 0) {
+    if (appliedFilters.ratingSort) {
       filters.push(<View key="ratingSort" style={styles.filterChip}><Text style={styles.filterChipText}>Sort by rating: {getFilterLabel(items8, appliedFilters.ratingSort)}</Text></View>);
     }
+
     return filters.length > 0 ? (
       <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.appliedFiltersContainer}>
         {filters}
@@ -309,29 +208,22 @@ export default function RestaurantListScreen({ navigation }) {
     ) : null;
   };
 
-  // Loading state
-  if (!restaurants && !err) {
-    return (
-      <SafeAreaView style={styles.sav}>
-        <ActivityIndicator size="large" style={{ marginTop: 50 }} />
-      </SafeAreaView>
-    );
-  }
-
-  // Error state
-  if (err) {
-    return (
-      <SafeAreaView style={styles.sav}>
-        <Text style={{ padding: 16, color: 'red' }}>Error: {err}</Text>
-      </SafeAreaView>
-    );
-  }
-
   return (
     <SafeAreaView style={styles.sav}>
       <View style={styles.top_banner}>
         <Text style={styles.airport_text}>Foods at {airport}</Text>
         <Text style={styles.terminal_text}>Your location: terminal {terminal}</Text>
+        
+        <View style={styles.searchContainer}>
+          <Text style={styles.searchLabel}>Search for specific restaurants</Text>
+          <TextInput
+            style={styles.searchInput}
+            placeholder="search for a restaurant..."
+            placeholderTextColor="#999"
+            value={searchQuery}
+            onChangeText={setSearchQuery}
+          />
+        </View>
 
         <Pressable 
           style={styles.collapsibleHeader}
@@ -345,16 +237,6 @@ export default function RestaurantListScreen({ navigation }) {
 
         {isExpanded && (
           <View style={styles.collapsibleContent}>
-            <View style={styles.searchContainer}>
-              <Text style={styles.searchLabel}>Search for specific restaurants</Text>
-              <TextInput
-                style={styles.searchInput}
-                placeholder="search for a restaurant..."
-                placeholderTextColor="#999"
-                value={searchQuery}
-                onChangeText={setSearchQuery}
-              />
-            </View>
             <Text style={styles.sectionLabel}>Filters:</Text>
             <View style={[styles.filterSection, {zIndex: 5000}]}>
               <View style={styles.dropdownContainer}>
@@ -513,7 +395,9 @@ export default function RestaurantListScreen({ navigation }) {
 
               <Pressable 
                 style={[styles.actionButton, styles.applyButton]} 
-                onPress={applyFilters}
+                onPress={
+                  applyFilters
+                }
               >
                 <Text style={[styles.actionButtonText, styles.applyButtonText]}>
                   Apply Filters
@@ -535,25 +419,17 @@ export default function RestaurantListScreen({ navigation }) {
 
       <View style={styles.listContainer}>
         <FlatList
-          data={restaurants}
-          keyExtractor={(item, index) => item.id || index.toString()}
+          data={rest_list}
+          keyExtractor={(item) => item.id}
           showsVerticalScrollIndicator={false}
           contentContainerStyle={styles.restaurantList}
           renderItem={({ item }) => (
             <CreateRestaurantCard
               name={item.name}
               terminal={item.terminal}
-              type={item.category}
-              cuisine={item.cuisine}
-              restriction={item.food_type}
+              type={item.type}
               distance={item.distance}
-              rating={item.rating}
-              price={item.avg_meal_cost}
-              prep_time={item.prep_time}
-              open_time={item.open_time}
-              close_time={item.close_time}
-              open_now={item.open_now}
-              imagepath={item.link}
+              imagepath={item.imagepath}
             />
           )}
         />
@@ -634,6 +510,7 @@ const styles = StyleSheet.create({
       flexDirection: "row",
       alignItems: "flex-end",
       gap: 12,
+      // paddingTop: 6
     },
     sortSection: {
       flexDirection: "row",
