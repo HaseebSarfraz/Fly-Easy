@@ -9,11 +9,30 @@ import RestaurantSearchScreen from "./src/screens/Restaurants/RestaurantSearchSc
 import RestaurantListScreen from "./src/screens/Restaurants/RestaurantListScreen";
 import HotelPreferencesScreen from "./src/screens/Hotels/HotelPreferencesScreen";
 
-type RootStackParamList = {
+export type RootStackParamList = {
   LandingPage: undefined;
   HotelSearch: undefined;
   RestaurantsSearch: undefined;
-  RestaurantList: undefined;
+  RestaurantList: {
+    // SEARCH PARAMS FROM FIRST PAGE
+    iata: string;
+    airport: string;
+    terminal: string;
+    food_category: string;
+    cuisine: string; 
+    dietary_restriction: string;
+    // FILTER AND SORT PARAMS FROM SECOND PAGE
+    restaurant: string;
+    max_distance: number;
+    prep_time: number;
+    min_rating: number;
+    max_price: number;
+    p_sort: number;
+    d_sort: number;
+    r_sort: number;
+    t_sort: number;
+    wants_open: boolean;
+  };
   HotelPreferences: {
     location: string; travellers: number; checkIn: string; checkOut: string;
   };
