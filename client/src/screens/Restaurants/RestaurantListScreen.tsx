@@ -145,7 +145,7 @@ export default function RestaurantListScreen({ navigation }) {
         setErr(null);
         setRestaurants(null);
         
-        const response = await fetch("http://localhost:5001/search_restaurants", {
+        const response = await fetch("http://127.0.0.1:5001/search_restaurants", {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
