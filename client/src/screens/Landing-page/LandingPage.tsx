@@ -30,6 +30,13 @@ export default function LandingPageScreen({ navigation }) {
                            Search Restaurants
                         </Text>
                     </Pressable>
+
+                    <Pressable
+                        style={[styles.button, styles.walletButton]}
+                        onPress={() => navigation.navigate("DigitalWallet")}
+                    >
+                        <Text style={styles.buttonText}>💳 Digital Wallet</Text>
+                    </Pressable>
                 </View>
             </View>
         </SafeAreaView>
@@ -82,6 +89,9 @@ const styles = StyleSheet.create({
     secondaryButton: {
         borderWidth: 1.5,
         borderColor: "#2F6BFF",
+    },
+    walletButton: {
+        backgroundColor: "#4CAF50",
     },
     buttonText: {
         fontSize: 16,
