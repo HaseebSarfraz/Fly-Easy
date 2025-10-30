@@ -1,6 +1,7 @@
 // src/screens/Hotels/HotelSearchScreen.tsx
 import React, { useMemo, useState } from "react";
-import { SafeAreaView, Text, StyleSheet, View, TextInput, Pressable } from "react-native";
+import { Text, StyleSheet, View, TextInput, Pressable } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { NativeStackScreenProps } from "@react-navigation/native-stack";
 
 type RootStackParamList = {
