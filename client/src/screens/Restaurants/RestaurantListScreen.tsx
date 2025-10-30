@@ -1,5 +1,6 @@
 import React, {useState, useEffect} from "react"
-import { StyleSheet, SafeAreaView, Text, View, FlatList, Pressable, ScrollView, TextInput, ActivityIndicator} from 'react-native'
+import { StyleSheet, Text, View, FlatList, Pressable, ScrollView, TextInput, ActivityIndicator} from 'react-native'
+import { SafeAreaView } from "react-native-safe-area-context"
 
 import DropDownPicker from "react-native-dropdown-picker"
 import CreateRestaurantCard from '../../components/restaurant-components/RestaurantCard'

@@ -1,5 +1,6 @@
 import React from "react";
-import { SafeAreaView, Text, StyleSheet, View, Pressable, Image } from "react-native";
+import { Text, StyleSheet, View, Pressable, Image } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 
 // @ts-ignore
 export default function LandingPageScreen({ navigation }) {
@@ -29,6 +30,13 @@ export default function LandingPageScreen({ navigation }) {
                         <Text style={[styles.buttonText, styles.secondaryText]}>
                            Search Restaurants
                         </Text>
+                    </Pressable>
+
+                    <Pressable
+                        style={[styles.button, styles.walletButton]}
+                        onPress={() => navigation.navigate("DigitalWallet")}
+                    >
+                        <Text style={styles.buttonText}>💳 Digital Wallet</Text>
                     </Pressable>
                 </View>
             </View>
@@ -82,6 +90,9 @@ const styles = StyleSheet.create({
     secondaryButton: {
         borderWidth: 1.5,
         borderColor: "#2F6BFF",
+    },
+    walletButton: {
+        backgroundColor: "#4CAF50",
     },
     buttonText: {
         fontSize: 16,

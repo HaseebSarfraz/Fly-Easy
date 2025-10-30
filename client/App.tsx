@@ -8,6 +8,9 @@ import HotelSearchScreen from "./src/screens/Hotels/HotelSearchScreen";
 import RestaurantSearchScreen from "./src/screens/Restaurants/RestaurantSearchScreen";
 import RestaurantListScreen from "./src/screens/Restaurants/RestaurantListScreen";
 import HotelPreferencesScreen from "./src/screens/Hotels/HotelPreferencesScreen";
+import DigitalWalletScreen from "./src/screens/Wallet/DigitalWalletScreen";
+import Scanner from "./src/components/wallet-components/Scanner";
+
 
 export type RootStackParamList = {
   LandingPage: undefined;
@@ -47,6 +50,10 @@ export type RootStackParamList = {
     cancellation?: "24h" | "48h" | "Free" | "Any";
     payment?: "Online" | "In-person" | "Any";
   };
+  DigitalWallet: undefined;
+  BoardingPassScanner: {
+    onSave?: () => void;
+  };
 };
 
 const Stack = createNativeStackNavigator<RootStackParamList>(); // <-- add the generic
@@ -61,6 +68,16 @@ export default function App() {
                 <Stack.Screen name="RestaurantList" component={RestaurantListScreen} />
                 <Stack.Screen name="HotelPreferences" component={HotelPreferencesScreen} />
                 <Stack.Screen name="HotelResults" component={HotelResultsScreen} />
+                <Stack.Screen 
+                    name="DigitalWallet" 
+                    component={DigitalWalletScreen}
+                    options={{ title: "Digital Wallet" }}
+                />
+                <Stack.Screen 
+                    name="BoardingPassScanner" 
+                    component={Scanner}
+                    options={{ title: "Scan Boarding Pass" }}
+                />
             </Stack.Navigator>
         </NavigationContainer>
     );
