@@ -15,7 +15,7 @@
     "paymentOptions": ["Online", "In-person"],
     "roomOccupancyMax": 2,
     "shuttleHours": "04:00-23:30",
-    "thumbnailUrl": "https://source.unsplash.com/640x360/?airport,hotel,exterior&sig=1",
+    "thumbnailUrl": "https://source.unsplash.com/640x360/?airporthotelexterior&sig=1",
     "provider": "mock"
   },
   {
@@ -129,7 +129,7 @@
     "paymentOptions": ["In-person", "Online"],
     "roomOccupancyMax": 2,
     "shuttleHours": "04:00-23:30",
-    "thumbnailUrl": "https://source.unsplash.com/640x360/?hotel,entrance,modern&sig=7",
+    "thumbnailUrl": "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/12/bb/c2/8d/yogyakarta-marriott-hotel.jpg?w=900&h=500&s=1",
     "provider": "mock"
   },
   {
