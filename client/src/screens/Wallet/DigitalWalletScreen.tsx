@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from "react";
 import {
-    SafeAreaView,
     Text,
     StyleSheet,
     View,
@@ -8,8 +7,11 @@ import {
     FlatList,
     Image,
     Alert,
+    Modal,
+    ScrollView,
 } from "react-native";
-import * as FileSystem from "expo-file-system";
+import { SafeAreaView } from "react-native-safe-area-context";
+import * as FileSystem from "expo-file-system/legacy";
 import { NativeStackScreenProps } from "@react-navigation/native-stack";
 
 type RootStackParamList = {
@@ -21,8 +23,20 @@ type RootStackParamList = {
 
 type Props = NativeStackScreenProps<RootStackParamList, 'DigitalWallet'>;
 
+interface BoardingPass {
+    id: string;
+    imageUri: string;
+    passengerName: string;
+    flightNumber: string;
+    seatNumber?: string;
+    gateNumber?: string;
+    timestamp: string;
+}
+
 export default function DigitalWalletScreen({ navigation }: Props) {
-    const [boardingPasses, setBoardingPasses] = useState<any[]>([]);
+    const [boardingPasses, setBoardingPasses] = useState<BoardingPass[]>([]);
+    const [selectedPass, setSelectedPass] = useState<BoardingPass | null>(null);
+    const [modalVisible, setModalVisible] = useState(false);
 
     useEffect(() => {
         loadBoardingPasses();
@@ -31,36 +45,48 @@ export default function DigitalWalletScreen({ navigation }: Props) {
     const loadBoardingPasses = async () => {
         try {
             const walletDir = (FileSystem as any).documentDirectory + "wallet/";
+            console.log("Loading from wallet directory:", walletDir);
+            
             const dirInfo = await FileSystem.getInfoAsync(walletDir);
+            console.log("Directory exists:", dirInfo.exists);
 
             if (!dirInfo.exists) {
+                console.log("Creating wallet directory...");
                 await FileSystem.makeDirectoryAsync(walletDir, { intermediates: true });
                 return;
             }
 
             const files = await FileSystem.readDirectoryAsync(walletDir);
+            console.log("Files in wallet directory:", files);
+            
             const passes = files
                 .filter((f) => f.endsWith(".json"))
                 .map((f) => f.replace(".json", ""));
 
+            console.log("JSON files found:", passes);
+
             const passData = await Promise.all(
                 passes.map(async (id) => {
                     const jsonUri = walletDir + id + ".json";
+                    console.log("Reading file:", jsonUri);
                     const content = await FileSystem.readAsStringAsync(jsonUri);
-                    return JSON.parse(content);
+                    const parsed = JSON.parse(content);
+                    console.log("Parsed data:", parsed);
+                    return parsed;
                 })
             );
 
+            console.log("Total boarding passes loaded:", passData.length);
             setBoardingPasses(passData);
         } catch (error) {
             console.error("Error loading boarding passes:", error);
         }
     };
 
-    const deleteBoardingPass = async (id: string) => {
+    const deleteBoardingPass = async (id: string, passengerName: string) => {
         Alert.alert(
             "Delete Boarding Pass",
-            "Are you sure you want to delete this boarding pass?",
+            `Are you sure you want to delete the boarding pass for ${passengerName}?`,
             [
                 { text: "Cancel", style: "cancel" },
                 {
@@ -81,22 +107,54 @@ export default function DigitalWalletScreen({ navigation }: Props) {
         );
     };
 
-    const renderBoardingPass = ({ item }: any) => (
-        <Pressable style={styles.passCard}>
-            <Image source={{ uri: item.imageUri }} style={styles.passImage} />
-            <View style={styles.passInfo}>
-                <Text style={styles.passTitle}>Boarding Pass</Text>
-                <Text style={styles.passDate}>{new Date(item.timestamp).toLocaleDateString()}</Text>
-                {item.notes && <Text style={styles.passNotes}>{item.notes}</Text>}
-            </View>
-            <Pressable
-                style={styles.deleteButton}
-                onPress={() => deleteBoardingPass(item.id)}
+    const openFullImage = (pass: BoardingPass) => {
+        setSelectedPass(pass);
+        setModalVisible(true);
+    };
+
+    const renderBoardingPass = ({ item }: { item: BoardingPass }) => {
+        console.log("Rendering boarding pass:", item.id, "Image URI:", item.imageUri);
+        
+        return (
+            <Pressable 
+                style={styles.passCard}
+                onPress={() => openFullImage(item)}
             >
-                <Text style={styles.deleteText}>×</Text>
+                <Image 
+                    source={{ uri: item.imageUri }} 
+                    style={styles.passImage}
+                    onError={(error) => {
+                        console.error("Image load error for", item.id, error.nativeEvent);
+                    }}
+                    onLoad={() => {
+                        console.log("Image loaded successfully for", item.id);
+                    }}
+                />
+                <View style={styles.passInfo}>
+                    <Text style={styles.passName}>{item.passengerName}</Text>
+                    <Text style={styles.passFlight}>Flight: {item.flightNumber}</Text>
+                    {item.seatNumber && (
+                        <Text style={styles.passDetail}>Seat: {item.seatNumber}</Text>
+                    )}
+                    {item.gateNumber && (
+                        <Text style={styles.passDetail}>Gate: {item.gateNumber}</Text>
+                    )}
+                    <Text style={styles.passDate}>
+                        {new Date(item.timestamp).toLocaleDateString()}
+                    </Text>
+                </View>
+                <Pressable
+                    style={styles.deleteButton}
+                    onPress={(e) => {
+                        e.stopPropagation();
+                        deleteBoardingPass(item.id, item.passengerName);
+                    }}
+                >
+                    <Text style={styles.deleteText}>×</Text>
+                </Pressable>
             </Pressable>
-        </Pressable>
-    );
+        );
+    };
 
     return (
         <SafeAreaView style={styles.safe}>
@@ -132,9 +190,49 @@ export default function DigitalWalletScreen({ navigation }: Props) {
                     <Text style={styles.addButtonText}>+ Add Boarding Pass</Text>
                 </Pressable>
             </View>
+
+            {/* Full Image Modal */}
+            <Modal
+                visible={modalVisible}
+                transparent={true}
+                animationType="fade"
+                onRequestClose={() => setModalVisible(false)}
+            >
+                <View style={styles.modalContainer}>
+                    <Pressable 
+                        style={styles.modalBackdrop}
+                        onPress={() => setModalVisible(false)}
+                    />
+                    <View style={styles.modalContent}>
+                        <Pressable
+                            style={styles.modalClose}
+                            onPress={() => setModalVisible(false)}
+                        >
+                            <Text style={styles.modalCloseText}>×</Text>
+                        </Pressable>
+                        
+                        {selectedPass && (
+                            <ScrollView 
+                                contentContainerStyle={styles.modalScroll}
+                                maximumZoomScale={3}
+                                minimumZoomScale={1}
+                                showsHorizontalScrollIndicator={false}
+                                showsVerticalScrollIndicator={false}
+                            >
+                                <Image
+                                    source={{ uri: selectedPass.imageUri }}
+                                    style={styles.fullImage}
+                                    resizeMode="contain"
+                                />
+                            </ScrollView>
+                        )}
+                    </View>
+                </View>
+            </Modal>
         </SafeAreaView>
     );
 }
+
 const styles = StyleSheet.create({
     safe: {
         flex: 1,
@@ -192,24 +290,32 @@ const styles = StyleSheet.create({
         height: 80,
         borderRadius: 8,
         marginRight: 16,
+        backgroundColor: "#e0e0e0",
     },
     passInfo: {
         flex: 1,
     },
-    passTitle: {
+    passName: {
         fontSize: 16,
-        fontWeight: "600",
+        fontWeight: "700",
         color: "#333",
         marginBottom: 4,
     },
-    passDate: {
+    passFlight: {
         fontSize: 14,
-        color: "#666",
+        fontWeight: "600",
+        color: "#2F6BFF",
         marginBottom: 4,
     },
-    passNotes: {
+    passDetail: {
+        fontSize: 13,
+        color: "#666",
+        marginBottom: 2,
+    },
+    passDate: {
         fontSize: 12,
         color: "#999",
+        marginTop: 4,
     },
     deleteButton: {
         width: 32,
@@ -236,5 +342,74 @@ const styles = StyleSheet.create({
         fontSize: 16,
         fontWeight: "600",
         color: "#fff",
+    },
+    modalContainer: {
+        flex: 1,
+        justifyContent: "center",
+        alignItems: "center",
+    },
+    modalBackdrop: {
+        position: "absolute",
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        backgroundColor: "rgba(0, 0, 0, 0.9)",
+    },
+    modalContent: {
+        width: "90%",
+        maxHeight: "90%",
+        backgroundColor: "#fff",
+        borderRadius: 12,
+        overflow: "hidden",
+    },
+    modalClose: {
+        position: "absolute",
+        top: 8,
+        right: 8,
+        width: 40,
+        height: 40,
+        borderRadius: 20,
+        backgroundColor: "rgba(0, 0, 0, 0.5)",
+        justifyContent: "center",
+        alignItems: "center",
+        zIndex: 10,
+    },
+    modalCloseText: {
+        fontSize: 32,
+        color: "#fff",
+        fontWeight: "600",
+    },
+    modalScroll: {
+    flexGrow: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    },
+    fullImage: {
+        width: "100%",
+        height: 600,
+    },
+    modalDetails: {
+        width: "100%",
+        padding: 16,
+        backgroundColor: "#f9f9f9",
+        borderRadius: 12,
+    },
+    modalName: {
+        fontSize: 20,
+        fontWeight: "700",
+        color: "#333",
+        marginBottom: 8,
+    },
+    modalFlight: {
+        fontSize: 18,
+        fontWeight: "600",
+        color: "#2F6BFF",
+        marginBottom: 8,
+    },
+    modalDetail: {
+        fontSize: 16,
+        color: "#666",
+        marginBottom: 4,
     },
 });

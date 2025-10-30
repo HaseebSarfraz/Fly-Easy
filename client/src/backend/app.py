@@ -1,9 +1,10 @@
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, send_file
 from flask_cors import CORS
 from hotel_search_engine import HotelSearchEngine
 from restaurant_search_engine import RestaurantSearchEngine
 import os
 import base64
+import json
 from datetime import datetime
 
 app = Flask(__name__)
@@ -91,11 +92,14 @@ def search_restaurants():
 @app.post("/upload_boarding_pass")
 def upload_boarding_pass():
     """
-    Upload a boarding pass image
+    Upload a boarding pass image with details
     Expected JSON:
     {
         "image": "base64_encoded_image_data",
-        "notes": "Optional notes"
+        "passengerName": "John Smith",
+        "flightNumber": "AA1234",
+        "seatNumber": "12A",
+        "gateNumber": "B5"
     }
     """
     try:
@@ -113,7 +117,7 @@ def upload_boarding_pass():
         image_bytes = base64.b64decode(image_data)
         
         # Generate unique filename
-        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S_%f")
         filename = f"boarding_pass_{timestamp}.jpg"
         filepath = os.path.join(UPLOAD_FOLDER, filename)
         
@@ -121,14 +125,24 @@ def upload_boarding_pass():
         with open(filepath, "wb") as f:
             f.write(image_bytes)
         
-        # Save metadata
+        # Save metadata as JSON
         metadata = {
             "id": timestamp,
             "filename": filename,
-            "filepath": filepath,
-            "notes": data.get("notes", ""),
+            "passengerName": data.get("passengerName", ""),
+            "flightNumber": data.get("flightNumber", ""),
+            "seatNumber": data.get("seatNumber", ""),
+            "gateNumber": data.get("gateNumber", ""),
             "timestamp": datetime.now().isoformat(),
         }
+        
+        # Save metadata to JSON file
+        json_filename = f"boarding_pass_{timestamp}.json"
+        json_filepath = os.path.join(UPLOAD_FOLDER, json_filename)
+        with open(json_filepath, "w") as f:
+            json.dump(metadata, f)
+        
+        print(f"Saved boarding pass: {filename}")
         
         return jsonify({
             "success": True,
@@ -144,21 +158,24 @@ def upload_boarding_pass():
 @app.get("/boarding_passes")
 def get_boarding_passes():
     """
-    Get all boarding passes
+    Get all boarding passes with their metadata
     """
     try:
         passes = []
         if os.path.exists(UPLOAD_FOLDER):
-            files = [f for f in os.listdir(UPLOAD_FOLDER) if f.endswith(".jpg")]
-            for filename in files:
-                filepath = os.path.join(UPLOAD_FOLDER, filename)
-                timestamp = filename.replace("boarding_pass_", "").replace(".jpg", "")
-                passes.append({
-                    "id": timestamp,
-                    "filename": filename,
-                    "filepath": filepath,
-                    "timestamp": timestamp
-                })
+            # Get all JSON metadata files
+            json_files = [f for f in os.listdir(UPLOAD_FOLDER) if f.endswith(".json")]
+            
+            for json_file in json_files:
+                json_filepath = os.path.join(UPLOAD_FOLDER, json_file)
+                with open(json_filepath, "r") as f:
+                    metadata = json.load(f)
+                    # Add image URL
+                    metadata["imageUrl"] = f"/boarding_pass_image/{metadata['filename']}"
+                    passes.append(metadata)
+        
+        # Sort by timestamp (newest first)
+        passes.sort(key=lambda x: x.get("timestamp", ""), reverse=True)
         
         return jsonify({
             "success": True,
@@ -167,6 +184,50 @@ def get_boarding_passes():
         
     except Exception as e:
         print(f"Error getting boarding passes: {e}")
+        return jsonify({"error": str(e)}), 500
+
+
+@app.get("/boarding_pass_image/<filename>")
+def get_boarding_pass_image(filename):
+    """
+    Serve a boarding pass image
+    """
+    try:
+        filepath = os.path.join(UPLOAD_FOLDER, filename)
+        if os.path.exists(filepath):
+            return send_file(filepath, mimetype='image/jpeg')
+        else:
+            return jsonify({"error": "Image not found"}), 404
+    except Exception as e:
+        print(f"Error serving image: {e}")
+        return jsonify({"error": str(e)}), 500
+
+
+@app.delete("/boarding_pass/<pass_id>")
+def delete_boarding_pass(pass_id):
+    """
+    Delete a boarding pass and its metadata
+    """
+    try:
+        # Delete image
+        image_filename = f"boarding_pass_{pass_id}.jpg"
+        image_path = os.path.join(UPLOAD_FOLDER, image_filename)
+        if os.path.exists(image_path):
+            os.remove(image_path)
+        
+        # Delete metadata
+        json_filename = f"boarding_pass_{pass_id}.json"
+        json_path = os.path.join(UPLOAD_FOLDER, json_filename)
+        if os.path.exists(json_path):
+            os.remove(json_path)
+        
+        return jsonify({
+            "success": True,
+            "message": "Boarding pass deleted successfully"
+        }), 200
+        
+    except Exception as e:
+        print(f"Error deleting boarding pass: {e}")
         return jsonify({"error": str(e)}), 500
 
 

@@ -1,17 +1,21 @@
 import React, { useState, useRef } from "react";
 import {
-    SafeAreaView,
     Text,
     StyleSheet,
     View,
     Pressable,
     Image,
     Alert,
+    TextInput,
+    ScrollView,
+    KeyboardAvoidingView,
+    Platform,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { CameraView, useCameraPermissions } from "expo-camera";
 import * as ImagePicker from "expo-image-picker";
 import * as ImageManipulator from "expo-image-manipulator";
-import * as FileSystem from "expo-file-system";
+import * as FileSystem from "expo-file-system/legacy";
 
 // @ts-ignore
 export default function BoardingPassScannerScreen({ navigation, route }) {
@@ -19,6 +23,12 @@ export default function BoardingPassScannerScreen({ navigation, route }) {
     const [capturedImage, setCapturedImage] = useState<string | null>(null);
     const [isCameraActive, setIsCameraActive] = useState(false);
     const cameraRef = useRef<any>(null);
+
+    // Boarding pass details
+    const [passengerName, setPassengerName] = useState("");
+    const [flightNumber, setFlightNumber] = useState("");
+    const [seatNumber, setSeatNumber] = useState("");
+    const [gateNumber, setGateNumber] = useState("");
 
     const onSave = route.params?.onSave;
 
@@ -85,61 +95,20 @@ export default function BoardingPassScannerScreen({ navigation, route }) {
         }
     };
 
-    const editImage = async () => {
-        if (!capturedImage) return;
-
-        try {
-            // Launch the built-in image editor with crop capability
-            const result = await ImagePicker.launchImageLibraryAsync({
-                mediaTypes: ["images"],
-                allowsEditing: true,
-                quality: 1,
-                base64: false,
-            });
-
-            // If user didn't cancel, use the edited version
-            if (!result.canceled && result.assets[0]) {
-                setCapturedImage(result.assets[0].uri);
-            }
-        } catch (error) {
-            console.error("Error editing:", error);
-            Alert.alert("Error", "Failed to edit image");
-        }
-    };
-
-    const openImageManipulator = async () => {
-        if (!capturedImage) return;
-
-        try {
-            // Use expo-image-manipulator's edit method
-            const result = await ImageManipulator.manipulateAsync(
-                capturedImage,
-                [],
-                { compress: 1, format: ImageManipulator.SaveFormat.JPEG }
-            );
-            
-            // For now, just open image picker with editing enabled
-            const editResult = await ImagePicker.launchImageLibraryAsync({
-                mediaTypes: ["images"],
-                allowsEditing: true,
-                aspect: [4, 3],
-                quality: 1,
-            });
-
-            if (!editResult.canceled && editResult.assets[0]) {
-                setCapturedImage(editResult.assets[0].uri);
-            }
-        } catch (error) {
-            console.error("Error manipulating:", error);
-            Alert.alert("Info", "Crop feature coming soon! Use rotate for now.");
-        }
-    };
-
     const saveBoardingPass = async () => {
         if (!capturedImage) return;
 
+        // Validate required fields
+        if (!passengerName.trim()) {
+            Alert.alert("Missing Info", "Please enter passenger name");
+            return;
+        }
+        if (!flightNumber.trim()) {
+            Alert.alert("Missing Info", "Please enter flight number");
+            return;
+        }
+
         try {
-            // Use the same path structure as DigitalWallet
             const walletDir = (FileSystem as any).documentDirectory + "wallet/";
             
             console.log("Wallet directory:", walletDir);
@@ -165,12 +134,15 @@ export default function BoardingPassScannerScreen({ navigation, route }) {
 
             console.log("Image copied successfully");
 
-            // Save metadata - IMPORTANT: imageUri must be the full path
+            // Save metadata with boarding pass details
             const metadata = {
                 id,
-                imageUri: imageUri, // Full path to the image
+                imageUri: imageUri,
+                passengerName: passengerName.trim(),
+                flightNumber: flightNumber.trim(),
+                seatNumber: seatNumber.trim(),
+                gateNumber: gateNumber.trim(),
                 timestamp: new Date().toISOString(),
-                notes: "Boarding Pass",
             };
 
             await FileSystem.writeAsStringAsync(metadataUri, JSON.stringify(metadata));
@@ -194,68 +166,116 @@ export default function BoardingPassScannerScreen({ navigation, route }) {
 
     if (isCameraActive) {
         return (
-            <SafeAreaView style={styles.safe}>
-                <CameraView style={styles.camera} ref={cameraRef}>
-                    <View style={styles.cameraOverlay}>
-                        <View style={styles.cameraHeader}>
-                            <Pressable
-                                style={styles.closeButton}
-                                onPress={() => setIsCameraActive(false)}
-                            >
-                                <Text style={styles.closeText}>×</Text>
-                            </Pressable>
-                        </View>
-
-                        <View style={styles.cameraFooter}>
-                            <Pressable style={styles.captureButton} onPress={takePicture}>
-                                <View style={styles.captureButtonInner} />
-                            </Pressable>
-                        </View>
+            <View style={{ flex: 1 }}>
+                <CameraView style={styles.camera} ref={cameraRef} />
+                <View style={styles.cameraOverlay}>
+                    <View style={styles.cameraHeader}>
+                        <Pressable
+                            style={styles.closeButton}
+                            onPress={() => setIsCameraActive(false)}
+                        >
+                            <Text style={styles.closeText}>×</Text>
+                        </Pressable>
                     </View>
-                </CameraView>
-            </SafeAreaView>
+
+                    <View style={styles.cameraFooter}>
+                        <Pressable style={styles.captureButton} onPress={takePicture}>
+                            <View style={styles.captureButtonInner} />
+                        </Pressable>
+                    </View>
+                </View>
+            </View>
         );
     }
 
     if (capturedImage) {
         return (
-            <SafeAreaView style={styles.safe}>
-                <View style={styles.container}>
-                    <Text style={styles.title}>Preview & Adjust</Text>
+            <SafeAreaView style={styles.safe} edges={['top']}>
+                <KeyboardAvoidingView 
+                    behavior={Platform.OS === "ios" ? "padding" : "height"}
+                    style={styles.keyboardView}
+                >
+                    <ScrollView 
+                        contentContainerStyle={styles.scrollContent}
+                        keyboardShouldPersistTaps="handled"
+                    >
+                        <Text style={styles.title}>Boarding Pass Details</Text>
 
-                    <Image 
-                        source={{ uri: capturedImage }} 
-                        style={styles.previewImage}
-                        resizeMode="contain"
-                    />
+                        <Image 
+                            source={{ uri: capturedImage }} 
+                            style={styles.previewImage}
+                            resizeMode="contain"
+                        />
 
-                    <View style={styles.adjustButtons}>
-                        <Pressable style={styles.adjustButton} onPress={rotateImage}>
-                            <Text style={styles.adjustButtonText}>🔄 Rotate</Text>
+                        <Pressable style={styles.rotateButton} onPress={rotateImage}>
+                            <Text style={styles.rotateButtonText}>🔄 Rotate</Text>
                         </Pressable>
-                    </View>
 
-                    <Text style={styles.cropNote}>
-                        Tip: Use gallery picker with editing enabled for cropping
-                    </Text>
+                        <View style={styles.formContainer}>
+                            <Text style={styles.label}>Passenger Name *</Text>
+                            <TextInput
+                                style={styles.input}
+                                value={passengerName}
+                                onChangeText={setPassengerName}
+                                placeholder="e.g., John Smith"
+                                placeholderTextColor="#999"
+                            />
 
-                    <View style={styles.actionButtons}>
-                        <Pressable
-                            style={[styles.button, styles.secondaryButton]}
-                            onPress={() => setCapturedImage(null)}
-                        >
-                            <Text style={[styles.buttonText, styles.secondaryText]}>
-                                Retake
-                            </Text>
-                        </Pressable>
-                        <Pressable
-                            style={[styles.button, styles.primaryButton]}
-                            onPress={saveBoardingPass}
-                        >
-                            <Text style={styles.buttonText}>Save</Text>
-                        </Pressable>
-                    </View>
-                </View>
+                            <Text style={styles.label}>Flight Number *</Text>
+                            <TextInput
+                                style={styles.input}
+                                value={flightNumber}
+                                onChangeText={setFlightNumber}
+                                placeholder="e.g., AA1234"
+                                placeholderTextColor="#999"
+                                autoCapitalize="characters"
+                            />
+
+                            <Text style={styles.label}>Seat Number</Text>
+                            <TextInput
+                                style={styles.input}
+                                value={seatNumber}
+                                onChangeText={setSeatNumber}
+                                placeholder="e.g., 12A"
+                                placeholderTextColor="#999"
+                                autoCapitalize="characters"
+                            />
+
+                            <Text style={styles.label}>Gate Number</Text>
+                            <TextInput
+                                style={styles.input}
+                                value={gateNumber}
+                                onChangeText={setGateNumber}
+                                placeholder="e.g., B5"
+                                placeholderTextColor="#999"
+                                autoCapitalize="characters"
+                            />
+                        </View>
+
+                        <View style={styles.actionButtons}>
+                            <Pressable
+                                style={[styles.button, styles.secondaryButton]}
+                                onPress={() => {
+                                    setCapturedImage(null);
+                                    setPassengerName("");
+                                    setFlightNumber("");
+                                    setSeatNumber("");
+                                    setGateNumber("");
+                                }}
+                            >
+                                <Text style={[styles.buttonText, styles.secondaryText]}>
+                                    Cancel
+                                </Text>
+                            </Pressable>
+                            <Pressable
+                                style={[styles.button, styles.primaryButton]}
+                                onPress={saveBoardingPass}
+                            >
+                                <Text style={styles.buttonText}>Save</Text>
+                            </Pressable>
+                        </View>
+                    </ScrollView>
+                </KeyboardAvoidingView>
             </SafeAreaView>
         );
     }
@@ -292,6 +312,13 @@ const styles = StyleSheet.create({
     safe: {
         flex: 1,
         backgroundColor: "#ffffff",
+    },
+    keyboardView: {
+        flex: 1,
+    },
+    scrollContent: {
+        padding: 24,
+        paddingBottom: 40,
     },
     container: {
         flex: 1,
@@ -340,8 +367,11 @@ const styles = StyleSheet.create({
         flex: 1,
     },
     cameraOverlay: {
-        flex: 1,
-        backgroundColor: "transparent",
+        position: "absolute",
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
         justifyContent: "space-between",
     },
     cameraHeader: {
@@ -383,38 +413,47 @@ const styles = StyleSheet.create({
     },
     previewImage: {
         width: "100%",
-        height: 400,
+        height: 300,
         borderRadius: 12,
         marginBottom: 16,
         backgroundColor: "#f0f0f0",
     },
-    adjustButtons: {
-        flexDirection: "row",
-        gap: 16,
-        marginBottom: 8,
-    },
-    adjustButton: {
-        flex: 1,
-        height: 50,
-        borderRadius: 12,
+    rotateButton: {
+        height: 40,
+        borderRadius: 8,
         backgroundColor: "#f0f0f0",
         justifyContent: "center",
         alignItems: "center",
+        marginBottom: 24,
     },
-    adjustButtonText: {
-        fontSize: 16,
+    rotateButtonText: {
+        fontSize: 14,
         fontWeight: "600",
         color: "#333",
     },
-    cropNote: {
-        fontSize: 12,
-        color: "#999",
-        textAlign: "center",
-        marginBottom: 16,
-        fontStyle: "italic",
+    formContainer: {
+        marginBottom: 24,
+    },
+    label: {
+        fontSize: 14,
+        fontWeight: "600",
+        color: "#333",
+        marginBottom: 8,
+        marginTop: 12,
+    },
+    input: {
+        height: 50,
+        borderWidth: 1.5,
+        borderColor: "#e0e0e0",
+        borderRadius: 12,
+        paddingHorizontal: 16,
+        fontSize: 16,
+        color: "#333",
+        backgroundColor: "#fff",
     },
     actionButtons: {
         flexDirection: "row",
         gap: 16,
+        marginTop: 8,
     },
 });

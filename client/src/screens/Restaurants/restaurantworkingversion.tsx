@@ -1,5 +1,6 @@
 import React, {useState} from "react";
-import { SafeAreaView, Text, StyleSheet, View, TextInput, Pressable} from "react-native"
+import { Text, StyleSheet, View, TextInput, Pressable} from "react-native"
+import { SafeAreaView } from "react-native-safe-area-context"
 import DropDownPicker from "react-native-dropdown-picker"
 
 const terminal = 1
