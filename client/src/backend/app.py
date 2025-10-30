@@ -41,7 +41,6 @@ def search():
 def search_restaurants():
     p = request.get_json(force=True) or {}
     reng = RestaurantSearchEngine()
-    print("Initialized restaurant search engine")
 
     iata = p.get("iata", "")
     terminal = int(p.get("terminal", 1))
@@ -49,7 +48,6 @@ def search_restaurants():
     cuisine = p.get("cuisine", "any")
     diet_restr = p.get("dietary_restriction", "none")
 
-    print("Primary search params set")
 
     restaurant = p.get("restaurant", "")
     distance = int(p.get("max_distance", 0))
@@ -76,8 +74,6 @@ def search_restaurants():
     reng.set_sort_rating(rating_sort)
     reng.set_sort_prep_time(time_sort)
     reng.toggle_wants_open_now(wants_open)
-
-    print("Secondary search params set")
 
     return jsonify(reng.find_restaurants())
 
