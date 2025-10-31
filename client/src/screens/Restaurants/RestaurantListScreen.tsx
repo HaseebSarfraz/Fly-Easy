@@ -15,12 +15,12 @@ export default function RestaurantListScreen({ navigation }) {
   const route = useRoute<RestaurantListRouteProp>();
 
   const {
-    iata,
-    airport,
-    terminal,
-    food_category,
-    cuisine,
-    dietary_restriction,
+    iata = "",
+    airport = "",
+    terminal = "1",
+    food_category = null,
+    cuisine = null,
+    dietary_restriction = null,
     restaurant = "",
     max_distance = 0,
     prep_time = 0,
@@ -328,6 +328,218 @@ export default function RestaurantListScreen({ navigation }) {
     );
   }
 
+  if (restaurants?.length == 0){
+    return(
+      <SafeAreaView style={styles.sav}>
+        <View style={styles.top_banner}>
+        <Text style={styles.airport_text}>Foods at {airport}</Text>
+        <Text style={styles.terminal_text}>Your location: terminal {terminal}</Text>
+
+        <Pressable 
+          style={styles.collapsibleHeader}
+          onPress={() => setIsExpanded(!isExpanded)}
+        >
+          <Text style={styles.collapsibleHeaderText}>Filter and Sort</Text>
+          <Text style={styles.collapsibleIcon}>{isExpanded ? '▲' : '▼'}</Text>
+        </Pressable>
+
+        {!isExpanded && renderAppliedFilters()}
+
+        {isExpanded && (
+          <View style={styles.collapsibleContent}>
+            <View style={styles.searchContainer}>
+              <Text style={styles.searchLabel}>Search for specific restaurants</Text>
+              <TextInput
+                style={styles.searchInput}
+                placeholder="search for a restaurant..."
+                placeholderTextColor="#999"
+                value={searchQuery}
+                onChangeText={setSearchQuery}
+              />
+            </View>
+            <Text style={styles.sectionLabel}>Filters:</Text>
+            <View style={[styles.filterSection, {zIndex: 5000}]}>
+              <View style={styles.dropdownContainer}>
+                <Text style={styles.dropdownLabel}>Max distance</Text>
+                <DropDownPicker
+                  open={open1}
+                  value={value1}
+                  items={items1}
+                  setOpen={setOpen1}
+                  setValue={setValue1}
+                  setItems={setItems1}
+                  placeholder="Any"
+                  style={styles.dropdown}
+                  zIndex={5000}
+                  zIndexInverse={1000}
+                  dropDownDirection="BOTTOM"
+                />
+              </View>
+
+              <View style={styles.dropdownContainer}>
+                <Text style={styles.dropdownLabel}>Food ready in</Text>
+                <DropDownPicker
+                  open={open2}
+                  value={value2}
+                  items={items2}
+                  setOpen={setOpen2}
+                  setValue={setValue2}
+                  setItems={setItems2}
+                  placeholder="Any"
+                  style={styles.dropdown}
+                  zIndex={4000}
+                  zIndexInverse={2000}
+                  dropDownDirection="BOTTOM"
+                />
+                </View>
+              </View>
+
+              <View style={[styles.filterSection, {zIndex: 3000}]}>
+              <View style={styles.dropdownContainer}>
+                <Text style={styles.dropdownLabel}>Rating</Text>
+                <DropDownPicker
+                  open={open3}
+                  value={value3}
+                  items={items3}
+                  setOpen={setOpen3}
+                  setValue={setValue3}
+                  setItems={setItems3}
+                  placeholder="Any"
+                  style={styles.dropdown}
+                  zIndex={3000}
+                  zIndexInverse={3000}
+                  dropDownDirection="BOTTOM"
+                />
+              </View>
+
+              <View style={styles.dropdownContainer}>
+                <Text style={styles.dropdownLabel}>Maximum price</Text>
+                <DropDownPicker
+                  open={open4}
+                  value={value4}
+                  items={items4}
+                  setOpen={setOpen4}
+                  setValue={setValue4}
+                  setItems={setItems4}
+                  placeholder="Any"
+                  style={styles.dropdown}
+                  zIndex={2000}
+                  zIndexInverse={4000}
+                  dropDownDirection="BOTTOM"
+                />
+              </View>
+            </View>
+
+            <Text style={styles.sectionLabel}>Sort by:</Text>
+            <View style={[styles.sortSection, {zIndex: 1000}]}>
+              <View style={styles.dropdownContainer}>
+                <Text style={styles.dropdownLabel}>Price</Text>
+                <DropDownPicker
+                  open={open5}
+                  value={value5}
+                  items={items5}
+                  setOpen={setOpen5}
+                  setValue={setValue5}
+                  setItems={setItems5}
+                  placeholder="None"
+                  style={styles.dropdown}
+                  zIndex={1000}
+                  zIndexInverse={1000}
+                  dropDownDirection="BOTTOM"
+                />
+              </View>
+
+              <View style={styles.dropdownContainer}>
+                <Text style={styles.dropdownLabel}>Distance</Text>
+                <DropDownPicker
+                  open={open6}
+                  value={value6}
+                  items={items6}
+                  setOpen={setOpen6}
+                  setValue={setValue6}
+                  setItems={setItems6}
+                  placeholder="None"
+                  style={styles.dropdown}
+                  zIndex={900}
+                  zIndexInverse={1100}
+                  dropDownDirection="BOTTOM"
+                />
+              </View>
+            </View>
+
+            <View style={[styles.sortSection, {zIndex: 800}]}>
+              <View style={styles.dropdownContainer}>
+                <Text style={styles.dropdownLabel}>Food prep time</Text>
+                <DropDownPicker
+                  open={open7}
+                  value={value7}
+                  items={items7}
+                  setOpen={setOpen7}
+                  setValue={setValue7}
+                  setItems={setItems7}
+                  placeholder="None"
+                  style={styles.dropdown}
+                  zIndex={800}
+                  zIndexInverse={1200}
+                  dropDownDirection="BOTTOM"
+                />
+              </View>
+
+              <View style={styles.dropdownContainer}>
+                <Text style={styles.dropdownLabel}>Rating</Text>
+                <DropDownPicker
+                  open={open8}
+                  value={value8}
+                  items={items8}
+                  setOpen={setOpen8}
+                  setValue={setValue8}
+                  setItems={setItems8}
+                  placeholder="None"
+                  style={styles.dropdown}
+                  zIndex={700}
+                  zIndexInverse={1300}
+                  dropDownDirection="BOTTOM"
+                />
+              </View>
+            </View>
+
+            <View style={styles.buttonRow}>
+              <Pressable 
+                style={[styles.actionButton, openNow && styles.openNowButtonActive]} 
+                onPress={() => setOpenNow(!openNow)}
+              >
+                <Text style={[styles.actionButtonText, openNow && styles.openNowTextActive]}>
+                  Open now
+                </Text>
+              </Pressable>
+
+              <Pressable 
+                style={[styles.actionButton, styles.applyButton]} 
+                onPress={applyFilters}
+              >
+                <Text style={[styles.actionButtonText, styles.applyButtonText]}>
+                  Apply Filters
+                </Text>
+              </Pressable>
+
+              <Pressable 
+                style={[styles.actionButton, styles.clearButton]} 
+                onPress={clearAllFilters}
+              >
+                <Text style={[styles.actionButtonText, styles.clearButtonText]}>
+                  Clear All
+                </Text>
+              </Pressable>
+            </View>
+          </View>
+        )}
+      </View>
+      <View style={styles.norestaurant}>
+        <Text style={styles.norestaurantText}>No restaurants found. Reset the filters or, go back and search for other restaurants.</Text>
+      </View>
+      </SafeAreaView>
+    )
+  }
   return (
     <SafeAreaView style={styles.sav}>
       <View style={styles.top_banner}>
@@ -583,12 +795,13 @@ const styles = StyleSheet.create({
       borderBottomColor: "#000000ff"
     },
     airport_text:{
-        fontSize: 18,
+        fontSize: 20,
         fontWeight: "bold",
         color: "#fff"
     },
     terminal_text:{
       fontSize: 14,
+      fontWeight: "500",
       color: "#fff"
     },
     searchContainer: {
@@ -729,5 +942,18 @@ const styles = StyleSheet.create({
       color: "#fff",
       marginBottom: 0,
       marginTop: 5
+    },
+    norestaurant: {
+      flex: 1,
+      flexDirection: "column",
+      justifyContent: "center",
+      alignItems: "center",
+      paddingHorizontal: 20
+    },
+    norestaurantText: {
+      fontSize: 25,
+      fontWeight: "bold",
+      textAlign: "center",
+      color: "#bc1515ff"
     }
 })
