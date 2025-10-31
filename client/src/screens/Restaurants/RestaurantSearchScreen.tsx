@@ -15,7 +15,7 @@ export default function RestaurantSearchScreen({ navigation }) {
     const [fc_open, set_fc_open] = useState(false);
     const [fc_value, set_fc_value] = useState(null);
     const [fc_items, set_fc_items] = useState([
-        { label: 'Any', value: "any" },
+        { label: 'Any', value: "DC" },
         { label: 'Breakfast', value: "breakfast" },
         { label: 'Lunch', value: "lunch" },
         { label: 'Dinner', value: "dinner" },
@@ -28,7 +28,7 @@ export default function RestaurantSearchScreen({ navigation }) {
     const [dr_open, set_dr_open] = useState(false);
     const [dr_value, set_dr_value] = useState(null);
     const [dr_items, set_dr_items] = useState([
-        { label: "None", value: "none" },
+        { label: "None", value: "DC" },
         { label: 'Vegan', value: "vegan" },
         { label: 'Vegetarian', value: "vegetarian" },
         { label: 'Halal', value: "halal" },
@@ -38,13 +38,15 @@ export default function RestaurantSearchScreen({ navigation }) {
     const [cs_open, set_cs_open] = useState(false);
     const [cs_value, set_cs_value] = useState(null);
     const [cs_items, set_cs_items] = useState([
+        { label: 'Any', value: "DC" },
+        { label: '- POPULAR CUISINES -', value: "any", disabled: true },
         // Popular cuisines first
         { label: 'Italian', value: "italian" },
         { label: 'Chinese', value: "chinese" },
         { label: 'Japanese', value: "japanese" },
         { label: 'Mexican', value: "mexican" },
         { label: 'Indian', value: "indian" },
-        { label: '---', value: "any", disabled: true },
+        { label: '- OTHER CUISINES -', value: "any", disabled: true },
         // Alphabetically ordered
         { label: 'American', value: "american" },
         { label: 'French', value: "french" },

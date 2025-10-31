@@ -79,7 +79,6 @@ class RestaurantSearchEngine:
         """
         self.restaurant_name = None
         name = name.strip().lower()
-        print(name)
         if name:
             self.restaurant_name = name
 
@@ -128,7 +127,7 @@ class RestaurantSearchEngine:
 
                 if user_search_info[0] == restaurant_info[0]:
                     for i in range(1, 4):
-                        if user_search_info[i] and user_search_info[i] != restaurant_info[i]:
+                        if user_search_info[i] != "DC" and user_search_info[i] and user_search_info[i] != restaurant_info[i]:
                             matches = False
                             break
                     if matches:
@@ -155,8 +154,8 @@ class RestaurantSearchEngine:
                                             r_dict["open_time"], r_dict["close_time"] = hours[0], hours[1]
                                             r_dict["open_now"] = open_time <= self.time <= close_time
                                             filtered_restaurants.append(r_dict)
-                filtered_restaurants.sort(key=self._rank_key)
-                return filtered_restaurants
+            filtered_restaurants.sort(key=self._rank_key)
+            return filtered_restaurants
         except IndexError:
             return []
 
