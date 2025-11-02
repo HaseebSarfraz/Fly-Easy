@@ -58,7 +58,7 @@ export default CreateRestaurantCard;
 
 const styles = StyleSheet.create({
     pane: {
-        width: screen_width * 0.9,
+        width: screen_width * 0.95,
         // maxWidth: 450,
         height: 180,
         borderRadius: 12,

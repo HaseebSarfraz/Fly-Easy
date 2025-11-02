@@ -48,13 +48,11 @@ def search():
 def search_restaurants():
     p = request.get_json(force=True) or {}
     reng = RestaurantSearchEngine()
-
     iata = p.get("iata", "")
     terminal = int(p.get("terminal", 1))
-    food_category = p.get("food_category", "any")
-    cuisine = p.get("cuisine", "any")
-    diet_restr = p.get("dietary_restriction", "none")
-
+    food_category = p.get("food_category", "DC")
+    cuisine = p.get("cuisine", "DC")
+    diet_restr = p.get("dietary_restriction", "DC")
 
     restaurant = p.get("restaurant", "")
     distance = int(p.get("max_distance", 0))
