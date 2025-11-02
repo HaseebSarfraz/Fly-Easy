@@ -39,14 +39,14 @@ export default function RestaurantSearchScreen({ navigation }) {
     const [cs_value, set_cs_value] = useState(null);
     const [cs_items, set_cs_items] = useState([
         { label: 'Any', value: "DC" },
-        { label: '- POPULAR CUISINES -', value: "any", disabled: true },
+        { label: '== POPULAR CUISINES ==', value: "divider_one", disabled: true }, // THE VALUE "ANY" IS THE SAME AS THE ONE ON LINE 49
         // Popular cuisines first
         { label: 'Italian', value: "italian" },
         { label: 'Chinese', value: "chinese" },
         { label: 'Japanese', value: "japanese" },
         { label: 'Mexican', value: "mexican" },
         { label: 'Indian', value: "indian" },
-        { label: '- OTHER CUISINES -', value: "any", disabled: true },
+        { label: '== OTHER CUISINES ==', value: "divider_two", disabled: true },
         // Alphabetically ordered
         { label: 'American', value: "american" },
         { label: 'French', value: "french" },
