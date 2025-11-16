@@ -10,11 +10,13 @@ import RestaurantListScreen from "./src/screens/Restaurants/RestaurantListScreen
 import HotelPreferencesScreen from "./src/screens/Hotels/HotelPreferencesScreen";
 import DigitalWalletScreen from "./src/screens/Wallet/DigitalWalletScreen";
 import Scanner from "./src/components/wallet-components/Scanner";
+import AirportTracker from "./src/screens/AirportTracker/AirportTracker";
 
 
 export type RootStackParamList = {
   LandingPage: undefined;
   HotelSearch: undefined;
+  AirportTracker: undefined;
   RestaurantsSearch: undefined;
   RestaurantList: {
     // SEARCH PARAMS FROM FIRST PAGE
@@ -77,6 +79,11 @@ export default function App() {
                     name="BoardingPassScanner" 
                     component={Scanner}
                     options={{ title: "Scan Boarding Pass" }}
+                />
+                <Stack.Screen 
+                    name="AirportTracker" 
+                    component={AirportTracker}
+                    options={{ title: "Airport Tracker" }}
                 />
             </Stack.Navigator>
         </NavigationContainer>

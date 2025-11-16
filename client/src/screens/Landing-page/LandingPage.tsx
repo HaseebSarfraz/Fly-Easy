@@ -20,7 +20,7 @@ export default function LandingPageScreen({ navigation }) {
                         style={[styles.button, styles.primaryButton]}
                         onPress={() => navigation.navigate("HotelSearch")}
                     >
-                        <Text style={styles.buttonText}>Search Hotels</Text>
+                        <Text style={styles.buttonText}>🏨 Search Hotels</Text>
                     </Pressable>
 
                     <Pressable
@@ -28,7 +28,7 @@ export default function LandingPageScreen({ navigation }) {
                         onPress={() => navigation.navigate("RestaurantsSearch")}
                     >
                         <Text style={[styles.buttonText, styles.secondaryText]}>
-                           Search Restaurants
+                           🍽️ Search Restaurants
                         </Text>
                     </Pressable>
 
@@ -37,6 +37,13 @@ export default function LandingPageScreen({ navigation }) {
                         onPress={() => navigation.navigate("DigitalWallet")}
                     >
                         <Text style={styles.buttonText}>💳 Digital Wallet</Text>
+                    </Pressable>
+
+                    <Pressable
+                        style={[styles.button, styles.secondaryButton]}
+                        onPress={() => navigation.navigate("AirportTracker")}
+                    >
+                        <Text style={[styles.buttonText, styles.secondaryText]}>📃 All Flights</Text>
                     </Pressable>
                 </View>
             </View>
@@ -101,5 +108,5 @@ const styles = StyleSheet.create({
     },
     secondaryText: {
         color: "#2F6BFF",
-    },
+    }
 });
