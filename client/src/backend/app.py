@@ -227,14 +227,12 @@ def delete_boarding_pass(pass_id):
 
 @app.get("/airport_tracker/<airport_code>")
 def airport_tracker(airport_code):
-    """Get all flights for specific airport."""
     try:
-        if not airport_code:
-            return jsonify({"error": "Airport code is required"}), 400
+        direction = request.args.get("direction", "Both")
         
         eng = FlightTracker()
         eng.set_airport(airport_code)
-        result = eng.get_flights()
+        result = eng.get_flights(direction)
         
         if "error" in result:
             return jsonify(result), 400
@@ -242,7 +240,6 @@ def airport_tracker(airport_code):
         return jsonify(result), 200
         
     except Exception as e:
-        print(f"Error in airport tracker: {e}")
         return jsonify({"error": str(e)}), 500
 
 if __name__ == "__main__":
