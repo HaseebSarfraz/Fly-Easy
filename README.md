@@ -1,4 +1,4 @@
-## ✈️ Fly-Easy ✈️##
+## ✈️ Fly-Easy ✈️
 
 This is an interactive and dynamic Airport companion mobile app that allows the user to store boarding passes, books hotels and restaurants, and track flights at their discretion. 
 
