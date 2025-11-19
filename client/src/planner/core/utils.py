@@ -57,3 +57,7 @@ def load_events(path: Path = DATA_DIR / "events.json") -> List[Activity]:
         )
         out.append(a)
     return out
+
+def to_minutes(hhmm: str) -> int:
+    h, m = hhmm.split(":")
+    return int(h) * 60 + int(m)
