@@ -93,7 +93,7 @@
     "age_min": 0, "age_max": 99,
     "opening_hours": { "daily": ["00:00","23:59"] },
     "fixed_times": [], "requires_booking": false,
-    "weather_blockers": ["heavy_rain","storm"], "popularity": 0.83
+    "weather_blockers": ["Heavy rain", "Thunderstorm"], "popularity": 0.83
   },
 
   { "id": "e_centre_island_01", "name": "Centre Island Ferry & Park", "category": "outdoor",
@@ -104,7 +104,7 @@
     "age_min": 0, "age_max": 99,
     "opening_hours": { "daily": ["09:00","20:00"] },
     "fixed_times": [], "requires_booking": false,
-    "weather_blockers": ["rain","wind"], "popularity": 0.81
+    "weather_blockers": ["Slight rain", "Moderate rain", "Heavy rain", "Slight rain showers", "Moderate rain showers", "Violent rain showers"], "popularity": 0.81
   },
 
   { "id": "e_high_park_01", "name": "High Park Walk", "category": "park",
@@ -115,7 +115,7 @@
     "age_min": 0, "age_max": 99,
     "opening_hours": { "daily": ["06:00","23:00"] },
     "fixed_times": [], "requires_booking": false,
-    "weather_blockers": ["rain"], "popularity": 0.72
+    "weather_blockers": ["Slight rain", "Moderate rain", "Heavy rain", "Slight rain showers", "Moderate rain showers", "Violent rain showers"], "popularity": 0.72
   },
 
   { "id": "e_osc_01", "name": "Ontario Science Centre", "category": "museum",
@@ -137,7 +137,7 @@
     "age_min": 0, "age_max": 99,
     "opening_hours": { "daily": ["10:00","21:00"] },
     "fixed_times": [], "requires_booking": false,
-    "weather_blockers": ["rain"], "popularity": 0.79
+    "weather_blockers": ["Slight rain", "Moderate rain", "Heavy rain", "Slight rain showers", "Moderate rain showers", "Violent rain showers"], "popularity": 0.79
   },
 
   { "id": "e_st_lawrence_01", "name": "St. Lawrence Market Food Crawl", "category": "food",
@@ -170,7 +170,7 @@
     "age_min": 0, "age_max": 99,
     "opening_hours": { "daily": ["09:30","18:00"] },
     "fixed_times": [], "requires_booking": false,
-    "weather_blockers": ["heat_warning","rain"], "popularity": 0.85
+    "weather_blockers": ["Slight rain", "Moderate rain", "Heavy rain", "Slight rain showers", "Moderate rain showers", "Violent rain showers"], "popularity": 0.85
   },
 
   { "id": "e_wonderland_01", "name": "Canada's Wonderland", "category": "theme_park",
@@ -181,7 +181,7 @@
     "age_min": 0, "age_max": 99,
     "opening_hours": { "daily": ["10:00","22:00"] },
     "fixed_times": [], "requires_booking": true,
-    "weather_blockers": ["thunderstorm"], "popularity": 0.92
+    "weather_blockers": ["Thunderstorm", "Heavy hail thunderstorm"], "popularity": 0.92
   },
 
   { "id": "e_niagara_boat_01", "name": "Niagara Falls Boat Tour", "category": "day_trip",
@@ -192,7 +192,7 @@
     "age_min": 0, "age_max": 99,
     "opening_hours": { "daily": ["10:00","20:00"] },
     "fixed_times": [], "requires_booking": true,
-    "weather_blockers": ["high_wind"], "popularity": 0.9
+    "weather_blockers": [], "popularity": 0.9
   },
 
   { "id": "e_clifton_hill_01", "name": "Clifton Hill Attractions Stroll", "category": "walk",
@@ -203,7 +203,7 @@
     "age_min": 0, "age_max": 99,
     "opening_hours": { "daily": ["10:00","23:00"] },
     "fixed_times": [], "requires_booking": false,
-    "weather_blockers": ["rain"], "popularity": 0.78
+    "weather_blockers": ["Slight rain", "Moderate rain", "Heavy rain", "Slight rain showers", "Moderate rain showers", "Violent rain showers"], "popularity": 0.78
   },
 
   { "id": "e_kensington_01", "name": "Kensington Market Walk",
@@ -214,7 +214,7 @@
     "age_min": 0, "age_max": 99,
     "opening_hours": { "daily": ["10:00","20:00"] },
     "fixed_times": [], "requires_booking": false,
-    "weather_blockers": ["rain"], "popularity": 0.77
+    "weather_blockers": ["Slight rain", "Moderate rain", "Heavy rain", "Slight rain showers", "Moderate rain showers", "Violent rain showers"], "popularity": 0.77
   },
 
   { "id": "e_agakhan_01", "name": "Aga Khan Museum", "category": "museum",
