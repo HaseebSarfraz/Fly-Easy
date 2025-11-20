@@ -36,13 +36,29 @@ def make_day_plan(client: Client, activities: List[Activity], day: date) -> Plan
     return plan
 
 if __name__ == "__main__":
+    # Force the test day to the concert day
+    from datetime import date
     from .utils import load_people, load_events
+
     people = load_people()
     events = load_events()
-    client = people[0]
-    day = client.trip_start
 
-    subset = [e for e in events if e.category in {"museum","food","walk","viewpoint"}][:8]
+    # Any client is fine; we hard-set the day
+    client = people[0]
+    day = date(2025, 8, 3)  # Arijit concert fixed at 17:00 on this date
+
+    # Carefully chosen set to pack the afternoon and force CN Tower into 16:30–18:00,
+    # which overlaps the concert. Optimized solver should nudge CN Tower to 19:30–21:00.
+    wanted_ids = {
+        "e_st_lawrence_01",          # 07:00–08:15 (Sat pattern; ok to keep early)
+        "e_rom_01",                  # 150m, daily 10:00–17:30 -> 10:00–12:30
+        "e_ago_01",                  # 120m, Sun 10:30–17:30 -> 12:30–14:30
+        "e_distillery_01",           # 90m, daily 10:00–21:00 -> 14:30–16:00
+        "e_cn_tower_01",             # 90m, daily until 21:00 -> earliest non-overlap ~16:30–18:00 (conflicts)
+        "e_concert_southasian_01",   # FIXED 17:00–19:30
+    }
+    subset = [e for e in events if e.id in wanted_ids]
+
     plan = make_day_plan(client, subset, day)
 
     print(f"Plan for {day}:")

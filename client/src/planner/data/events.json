@@ -396,5 +396,22 @@
     "requires_booking": false,
     "weather_blockers": [],
     "popularity": 0.8
-  }
+  },
+  {
+  "id": "t_ago_blocker",
+  "name": "AGO Long Visit (12–18)",
+  "category": "museum",
+  "tags": ["art","indoors","culture"],
+  "venue": "AGO",
+  "city": "Toronto",
+  "location": { "lat": 43.6536, "lng": -79.3925 },
+  "duration_min": 180,
+  "cost_cad": 25,
+  "age_min": 0, "age_max": 99,
+  "opening_hours": { "daily": ["12:00","18:00"] },
+  "fixed_times": [],
+  "requires_booking": false,
+  "weather_blockers": [],
+  "popularity": 0.88
+}
 ]
