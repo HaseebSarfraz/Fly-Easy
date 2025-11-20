@@ -3,10 +3,6 @@
 # dependencies
 node_modules/
 
-# Jetbrains IDEs
-.idea/*
-*.iml
-__pycache__/
 # Expo
 .expo/
 dist/
