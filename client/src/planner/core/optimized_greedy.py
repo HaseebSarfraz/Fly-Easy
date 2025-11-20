@@ -6,6 +6,7 @@ from planner.core.constraints import hard_feasible, hc_open_window_ok, hc_age_ok
 from planner.core.timegrid import generate_candidate_times, choose_step_minutes
 from planner.core.scoring import interest_score
 from planner.core.utils import to_minutes
+
 import requests                 # TO MAKE API REQUESTS
 import pandas as pd
 WEATHER_CODE_MAP = {
@@ -262,7 +263,7 @@ def repairB(plan: PlanDay,
 if __name__ == "__main__":
     # Force the test day to the concert day
     from datetime import date
-    from .utils import load_people, load_events
+    from planner.core.utils import load_people, load_events
 
     people = load_people()
     events = load_events()
