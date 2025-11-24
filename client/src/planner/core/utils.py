@@ -7,18 +7,20 @@ from .models import Location, Client, Activity
 
 DATA_DIR = Path(__file__).parent.parent / "data"
 
-def load_people(path: Path = DATA_DIR / "people.json") -> List[Client]:
+
+def load_people(path: Path = DATA_DIR / "people1.json") -> List[Client]:
     raw = json.loads(Path(path).read_text())
     out = []
     for d in raw:
         c = Client(
             id=d["id"],
             party_type=d["party_type"],
-            adults_ages=d.get("adults_ages", []),
-            kids_ages=d.get("kids_ages", []),
+            party_members=d.get("party_members", {}),
+            # adults_ages=d.get("adults_ages", []),
+            # kids_ages=d.get("kids_ages", []),
             religion=d.get("religion"),
             ethnicity_culture=d.get("ethnicity_culture", []),
-            interest_weights=d.get("interest_weights", {}),
+            # interest_weights=d.get("interest_weights", {}),
             vibe=d.get("vibe", ""),
             budget_total=d.get("budget_total", 0.0),
             trip_start=date.fromisoformat(d["trip_start"]),

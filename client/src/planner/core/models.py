@@ -1,8 +1,10 @@
 from __future__ import annotations
+
+import math
 from dataclasses import dataclass, field
 from datetime import date, datetime, time, timedelta
 from enum import Enum
-from typing import Dict, List, Optional, Set, Tuple
+from typing import Dict, List, Optional, Set, Tuple, Union
 
 class Location: 
 
@@ -24,11 +26,12 @@ class Location:
 class Client: 
     id: str
     party_type: str                 # "family", "couple", "solo", ...
-    adults_ages: List[int]
-    kids_ages: List[int]
+    # adults_ages: List[int]
+    # kids_ages: List[int]
+    party_members: Dict[str, Union[str, Dict]]       # Each family member's age and their weighted interests.
     religion: Optional[str]
     ethnicity_culture: List[str]
-    interest_weights: Dict[str, int]  # e.g., {"concerts": 2, "food": 7, ...}
+    # interest_weights: Dict[str, int]  # e.g., {"concerts": 2, "food": 7, ...}
     vibe: str
     budget_total: float
     trip_start: date
@@ -38,17 +41,16 @@ class Client:
     prefer_outdoor: int             # 0–10
     prefer_cultural: int            # 0–10
     early_risers: bool
+    credits_left: Dict[str, int]    # KEEPS A COUNT OF THE NUMBER OF ACCOMMODATION CREDITS LEFT FOR EVERY MEMBER
 
 
     def __init__(
         self,
         id: str,
         party_type: str,                 # "family", "couple", "solo", ...
-        adults_ages: List[int],
-        kids_ages: List[int],
+        party_members: Dict[str, Union[str, Dict]],
         religion: Optional[str],
         ethnicity_culture: List[str],
-        interest_weights: Dict[str, int],# {"concerts": 2, "food": 7, ...}
         vibe: str,
         budget_total: float,
         trip_start: date,
@@ -60,13 +62,11 @@ class Client:
         early_risers: bool,
     ):
         
-        self.adults_ages = [int(age) for age in adults_ages]
-        self.kids_ages = [int(age) for age in kids_ages]
+        self.party_members = party_members
         self.id = str(id)
         self.party_type = party_type
         self.religion = religion
         self.ethnicity_culture = ethnicity_culture
-        self.interest_weights = interest_weights
         self.vibe = vibe
         self.budget_total = float(budget_total)
         self.trip_start = trip_start
@@ -76,21 +76,27 @@ class Client:
         self.prefer_outdoor = int(prefer_outdoor)
         self.prefer_cultural = int(prefer_cultural)
         self.early_risers = bool(early_risers)
+        self.credits_left = {}
+        trip_days = (trip_end - trip_start).days
+        cpm = math.floor(trip_days // len(self.party_members))
+        for name in self.party_members:
+            self.credits_left[name] = cpm
 
     def size(self) -> int:
-        return len(self.adults_ages) + len(self.kids_ages)
+        return len(self.party_members)
     
     def min_age(self) -> int:
-        ages = self.adults_ages + self.kids_ages
-        if ages != []:
+        ages = [self.party_members[m]["age"] for m in self.party_members]
+        if ages:
             return min(ages)
-        
         return 0
     
-    def interest(self, activity: str):
-        if activity in self.interest_weights: 
-            return self.interest_weights[activity]
-        
+    def interest(self, activity: str, name: str):
+        """
+        Returns the activity interest score for <name>.
+        """
+        if activity in self.party_members[name]:
+            return self.party_members[name][activity]
         else:
             return 0
         
