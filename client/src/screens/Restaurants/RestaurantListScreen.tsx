@@ -333,7 +333,7 @@ export default function RestaurantListScreen({ navigation }) {
       <SafeAreaView style={styles.sav}>
         <View style={styles.top_banner}>
         <Text style={styles.airport_text}>Foods at {airport}</Text>
-        <Text style={styles.terminal_text}>Your location: terminal {terminal}</Text>
+        <Text style={styles.terminal_text}>Your location: Terminal {terminal}</Text>
 
         <Pressable 
           style={styles.collapsibleHeader}
@@ -351,7 +351,7 @@ export default function RestaurantListScreen({ navigation }) {
               <Text style={styles.searchLabel}>Search for specific restaurants</Text>
               <TextInput
                 style={styles.searchInput}
-                placeholder="search for a restaurant..."
+                placeholder="Search..."
                 placeholderTextColor="#999"
                 value={searchQuery}
                 onChangeText={setSearchQuery}
@@ -784,15 +784,15 @@ const styles = StyleSheet.create({
     top_banner:{
       width: "100%",
       height: "auto",
-      backgroundColor: "#F36D3B",
+      borderRadius: 12,
+      borderWidth: 1,
+      backgroundColor: "#2F6BFF",
       textAlign: "left",
       paddingVertical: 10,
       paddingHorizontal: 15,
       gap: 2,
       zIndex: 10000,
       elevation: 10,
-      borderBottomWidth: 2, 
-      borderBottomColor: "#000000ff"
     },
     airport_text:{
         fontSize: 20,
@@ -955,5 +955,5 @@ const styles = StyleSheet.create({
       fontWeight: "bold",
       textAlign: "center",
       color: "#bc1515ff"
-    }
+    },
 })

@@ -1,5 +1,5 @@
 // restaurantsearchscreen.tsx
-import React, {useState} from "react";
+import React, {useState, useMemo} from "react";
 import { Text, StyleSheet, View, TextInput, Pressable} from "react-native"
 import { SafeAreaView } from "react-native-safe-area-context"
 import DropDownPicker from "react-native-dropdown-picker"
@@ -58,6 +58,10 @@ export default function RestaurantSearchScreen({ navigation }) {
         { label: 'Vietnamese', value: "vietnamese" },
     ]);
 
+    const canContinue = useMemo(() => {
+        return iata !== "" && terminal !== "";
+    }, [iata, terminal])
+
     return (
         
         <SafeAreaView style={styles.safe}>
@@ -66,11 +70,11 @@ export default function RestaurantSearchScreen({ navigation }) {
 
                 <Text style={styles.header}>Find A Place To Eat</Text>
         
-                <Text style={styles.label}>Your airport</Text>
-                <TextInput style={[styles.label, styles.input]} value={iata} onChangeText={setIATA} placeholder="IATA code (example: 'YYZ' for Toronto Pearson Intl.)"/>
+                <Text style={styles.label}>Your airport*</Text>
+                <TextInput style={[styles.label, styles.input]} value={iata} onChangeText={setIATA} placeholder="Airport Code (e.g YYZ)"/>
 
-                <Text style={styles.label}>Your terminal</Text>
-                <TextInput style={[styles.label, styles.input]} value={terminal} onChangeText={setTerminal} placeholder="1"/>
+                <Text style={styles.label}>Your terminal*</Text>
+                <TextInput style={[styles.label, styles.input]} value={terminal} onChangeText={setTerminal}/>
 
                 <View style={styles.dropdownsection}>
                     <View style={[styles.dropdownrow, {zIndex: 3000}]}>
@@ -137,11 +141,12 @@ export default function RestaurantSearchScreen({ navigation }) {
                             </View>
                         </View>
                         <View style={styles.buttoncontainer}>
-                            <Pressable style={styles.button} onPress={() => {
+                            <Pressable style={[styles.button, !canContinue && { opacity: 0.6 }]} onPress={() => {
                                 const airport = airports.find(a => a.iata === iata.toUpperCase());
                                 navigation.navigate("RestaurantList", {iata: iata, airport: airport?.name, terminal: terminal, food_category: fc_value, cuisine: cs_value, dietary_restriction: dr_value})
-                                }}>
-                                <Text style={styles.buttonText}>Find Restaurants!</Text>
+                                }}
+                                disabled={!canContinue}>
+                                <Text style={styles.buttonText}>Continue</Text>
                             </Pressable>
                         </View>
                     </View>

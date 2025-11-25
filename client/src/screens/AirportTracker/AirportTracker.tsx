@@ -85,7 +85,7 @@ export default function AirportTracker() {
 
         <TextInput
           style={styles.input}
-          placeholder="Airport Code (e.g., LAX)"
+          placeholder="Airport Code (e.g., YYZ)"
           value={airportCode}
           onChangeText={setAirportCode}
           maxLength={3}

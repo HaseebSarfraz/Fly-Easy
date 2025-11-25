@@ -97,6 +97,16 @@ class FlightTracker:
         scheduled = time_info.get("scheduledTime", {}).get("local", "")
         actual = time_info.get("actualTime", {}).get("local") or time_info.get("revisedTime", {}).get("local")
         
+        airport_resources = time_info.get("airportResources", {}) or {}
+        gate = time_info.get("gate") or airport_resources.get("gate")
+        terminal = time_info.get("terminal") or airport_resources.get("terminal")
+        if not gate:
+            gate = flight.get("departure", {}).get("gate") or flight.get("arrival", {}).get("gate")
+        if not terminal:
+            terminal = flight.get("departure", {}).get("terminal") or flight.get("arrival", {}).get("terminal")
+        gate = gate or "TBA"
+        terminal = terminal or "TBA"
+        
         return {
             "flightNumber": flight.get("number", "N/A"),
             "airline": airline.get("name", "Unknown"),
@@ -106,8 +116,8 @@ class FlightTracker:
             "scheduledTime": self._format_time(scheduled),
             "actualTime": self._format_time(actual),
             "status": flight.get("status", "Scheduled"),
-            "gate": time_info.get("gate", "TBA"),
-            "terminal": time_info.get("terminal", "TBA"),
+            "gate": gate,
+            "terminal": terminal,
             "type": flight_type,
             "aircraft": flight.get("aircraft", {}).get("model", "Unknown")
         }
