@@ -17,18 +17,21 @@ interface FlyingPlaneProps {
 const FlyingPlane = ({ delay, speed, yPosition, icon }: FlyingPlaneProps) => {
   const translateX = React.useRef(new Animated.Value(-100)).current;
 
-  React.useEffect(() => {
+React.useEffect(() => {
+  // Stagger initial start
+  setTimeout(() => {
     const animate = () => {
       translateX.setValue(-100);
       Animated.timing(translateX, {
         toValue: SCREEN_WIDTH + 100,
         duration: speed,
         useNativeDriver: true,
-        delay,
+        delay: 0, // No delay on loop
       }).start(() => animate());
     };
     animate();
-  }, []);
+  }, delay);
+}, []);
 
   return (
     <Animated.View
@@ -49,7 +52,7 @@ export default function LandingPageScreen({ navigation }: LandingPageScreenProps
     const planes = React.useMemo(() => {
         return Array.from({ length: 100 }).map((_, i) => ({
             key: i,
-            delay: Math.random() * 10000,
+            delay: Math.random() * 5000,
             speed: 6000 + Math.random() * 12000,
             yPosition: Math.random() * SCREEN_HEIGHT,
             icon: (Math.random() > 0.5 ? "airplane-outline" : "airplane-sharp") as keyof typeof Ionicons.glyphMap
@@ -57,9 +60,9 @@ export default function LandingPageScreen({ navigation }: LandingPageScreenProps
     }, []);
 
     return (
-        <SafeAreaView style={styles.safe}>
+        <SafeAreaView style={styles.safe} edges={['bottom', 'left', 'right']}>
             <View style={styles.container}>
-                <View style={StyleSheet.absoluteFill} pointerEvents="none">
+                <View style={styles.animationContainer}>
                     {planes.map(plane => (
                         <FlyingPlane
                             key={plane.key}
@@ -160,9 +163,10 @@ const styles = StyleSheet.create({
     secondaryButton: {
         borderWidth: 1.5,
         borderColor: "#2F6BFF",
+        backgroundColor: "#fff"
     },
     walletButton: {
-        backgroundColor: "#4CAF50",
+        backgroundColor: "#2F6BFF",
     },
     buttonText: {
         fontSize: 16,
@@ -171,5 +175,10 @@ const styles = StyleSheet.create({
     },
     secondaryText: {
         color: "#2F6BFF",
-    }
+    },
+    animationContainer: {
+    ...StyleSheet.absoluteFillObject,
+    overflow: 'visible',
+    pointerEvents: 'none',
+    },
 });

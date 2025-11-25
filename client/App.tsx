@@ -1,5 +1,5 @@
 // App.tsx
-import React from "react";
+import React, { useState } from "react";
 import { NavigationContainer } from "@react-navigation/native";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import HotelResultsScreen from "./src/screens/Hotels/HotelResultsScreen";
@@ -13,6 +13,7 @@ import Scanner from "./src/components/wallet-components/Scanner";
 import AirportTracker from "./src/screens/AirportTracker/AirportTracker";
 import { urlToHttpOptions } from "url";
 import { title } from "process";
+import SplashAnimation from "./src/screens/StartAnimation/SplashAnimation";
 
 
 export type RootStackParamList = {
@@ -63,6 +64,11 @@ export type RootStackParamList = {
 const Stack = createNativeStackNavigator<RootStackParamList>(); // <-- add the generic
 
 export default function App() {
+    const [showSplash, setShowSplash] = useState(true);
+
+    if (showSplash) {
+      return <SplashAnimation onFinish={() => setShowSplash(false)} />;
+    }
     return (
         <NavigationContainer>
             <Stack.Navigator>

@@ -50,7 +50,7 @@ export default function HotelSearchScreen({ navigation }: Props) {
   };
 
   return (
-    <SafeAreaView style={styles.safe}>
+    <SafeAreaView style={styles.safe} edges={['bottom', 'left', 'right']}>
       <View style={styles.container}>
         <Text style={styles.header}>Book Your Stay</Text>
 

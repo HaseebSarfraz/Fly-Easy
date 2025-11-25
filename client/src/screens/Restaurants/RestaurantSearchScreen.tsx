@@ -64,7 +64,7 @@ export default function RestaurantSearchScreen({ navigation }) {
 
     return (
         
-        <SafeAreaView style={styles.safe}>
+        <SafeAreaView style={styles.safe} edges={['bottom', 'left', 'right']}>
 
             <View style={styles.container}>
 

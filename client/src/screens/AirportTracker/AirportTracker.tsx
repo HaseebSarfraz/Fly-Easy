@@ -78,7 +78,7 @@ export default function AirportTracker() {
   );
 
   return (
-    <SafeAreaView style={styles.safe}>
+    <SafeAreaView style={styles.safe} edges={['bottom', 'left', 'right']}>
       <View style={styles.container}>
         <Text style={styles.title}>✈️ Airport Tracker</Text>
         <Text style={styles.subtitle}>Track flights in real-time</Text>

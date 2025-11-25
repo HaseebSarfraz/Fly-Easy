@@ -73,7 +73,7 @@ export default function HotelPreferencesScreen({ route, navigation }: Props) {
   };
 
   return (
-    <SafeAreaView style={styles.safe}>
+    <SafeAreaView style={styles.safe} edges={['bottom', 'left', 'right']}>
       <View style={styles.content}>
         <Text style={styles.title}>Tailor Your Stay</Text>
 
