@@ -54,11 +54,11 @@ class FlightTracker:
         }
 
         params = {
-            "offsetMinutes": -120,
+            "offsetMinutes": -30,
             "durationMinutes": 720,
             "withLeg": "true",
             "direction": "Both",
-            "withCancelled": "true",
+            "withCancelled": "false",
             "withCodeshared": "true",
             "withCargo": "false",
             "withPrivate": "false",

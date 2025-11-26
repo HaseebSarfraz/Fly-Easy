@@ -1,5 +1,5 @@
 import React, { useEffect, useRef } from 'react';
-import { View, Animated, StyleSheet, Dimensions, Text, Easing } from 'react-native';
+import { View, Animated, StyleSheet, Dimensions, Text, Easing, Platform } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Audio } from 'expo-av';
 
@@ -9,40 +9,54 @@ export default function SplashAnimation({ onFinish }: { onFinish: () => void }) 
   const planeX = useRef(new Animated.Value(-100)).current;
   const textOpacity = useRef(new Animated.Value(0)).current;
 
-  useEffect(() => {
-    const playAnimation = async () => {
-      const { sound } = await Audio.Sound.createAsync(
-        require('../../../assets/swoosh.mp3')
-      );
+useEffect(() => {
+  const failsafe = setTimeout(() => {
+    onFinish();
+  }, 4000);
 
-      // Animate plane left to right
+  const playAnimation = async () => {
+    try {
+      // Only play sound on mobile
+      let sound: Audio.Sound;
+      if (Platform.OS !== 'web') {
+        const result = await Audio.Sound.createAsync(
+          require('../../../assets/swoosh.mp3')
+        );
+        sound = result.sound;
+        await sound.playAsync();
+      }
+
       Animated.timing(planeX, {
         toValue: SCREEN_WIDTH + 100,
         duration: 1500,
-        easing: Easing.out(Easing.ease),
-        useNativeDriver: true,
-        }).start();
+        easing: Easing.linear,
+        useNativeDriver: Platform.OS !== 'web', // Disable on web
+      }).start();
 
-      // Play sound
-      await sound.playAsync();
-
-      // Fade in text after 800ms
       setTimeout(() => {
         Animated.timing(textOpacity, {
           toValue: 1,
           duration: 800,
-          useNativeDriver: true,
+          useNativeDriver: Platform.OS !== 'web',
         }).start(() => {
           setTimeout(() => {
-            sound.unloadAsync();
+            if (sound) sound.unloadAsync();
+            clearTimeout(failsafe);
             onFinish();
-          }, 1000);
+          }, 5000);
         });
       }, 800);
-    };
+    } catch (error) {
+      console.error('Animation error:', error);
+      clearTimeout(failsafe);
+      onFinish();
+    }
+  };
 
-    playAnimation();
-  }, []);
+  playAnimation();
+
+  return () => clearTimeout(failsafe);
+}, []);
 
   return (
     <View style={styles.container}>

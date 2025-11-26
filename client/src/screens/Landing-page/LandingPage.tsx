@@ -99,25 +99,28 @@ export default function LandingPageScreen({ navigation }: LandingPageScreenProps
     };
 
     useEffect(() => {
-      if (!flightData?.departure?.scheduledTime) return;
+    if (!flightData?.departure?.scheduledTime?.local) return;
 
-      const interval = setInterval(() => {
+    const interval = setInterval(() => {
         const now = new Date().getTime();
-        const departure = new Date(flightData.departure.scheduledTime).getTime();
-        const diff = departure - now;
+        // Parse the local time string properly
+        const departureTime = new Date(flightData.departure.scheduledTime.local).getTime();
+        const diff = departureTime - now;
 
         if (diff < 0) {
-          setCountdown('Departed');
-          return;
+        setCountdown('Departed');
+        clearInterval(interval)
+        return;
         }
 
         const hours = Math.floor(diff / (1000 * 60 * 60));
         const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
         const seconds = Math.floor((diff % (1000 * 60)) / 1000);
-        setCountdown(`${hours}h ${minutes}m ${seconds}s`);
-      }, 1000);
 
-      return () => clearInterval(interval);
+        setCountdown(`${hours}h ${minutes}m ${seconds}s`);
+    }, 1000);
+
+    return () => clearInterval(interval);
     }, [flightData]);
 
     return (
