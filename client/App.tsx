@@ -1,5 +1,5 @@
 // App.tsx
-import React from "react";
+import React, { useState } from "react";
 import { NavigationContainer } from "@react-navigation/native";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import HotelResultsScreen from "./src/screens/Hotels/HotelResultsScreen";
@@ -10,11 +10,16 @@ import RestaurantListScreen from "./src/screens/Restaurants/RestaurantListScreen
 import HotelPreferencesScreen from "./src/screens/Hotels/HotelPreferencesScreen";
 import DigitalWalletScreen from "./src/screens/Wallet/DigitalWalletScreen";
 import Scanner from "./src/components/wallet-components/Scanner";
+import AirportTracker from "./src/screens/AirportTracker/AirportTracker";
+import { urlToHttpOptions } from "url";
+import { title } from "process";
+import SplashAnimation from "./src/screens/StartAnimation/SplashAnimation";
 
 
 export type RootStackParamList = {
   LandingPage: undefined;
   HotelSearch: undefined;
+  AirportTracker: undefined;
   RestaurantsSearch: undefined;
   RestaurantList: {
     // SEARCH PARAMS FROM FIRST PAGE
@@ -59,15 +64,20 @@ export type RootStackParamList = {
 const Stack = createNativeStackNavigator<RootStackParamList>(); // <-- add the generic
 
 export default function App() {
+    const [showSplash, setShowSplash] = useState(true);
+
+    if (showSplash) {
+      return <SplashAnimation onFinish={() => setShowSplash(false)} />;
+    }
     return (
         <NavigationContainer>
             <Stack.Navigator>
-                <Stack.Screen name="LandingPage" component={LandingPageScreen} />
-                <Stack.Screen name="HotelSearch" component={HotelSearchScreen} />
-                <Stack.Screen name="RestaurantsSearch" component={RestaurantSearchScreen} />
-                <Stack.Screen name="RestaurantList" component={RestaurantListScreen} />
-                <Stack.Screen name="HotelPreferences" component={HotelPreferencesScreen} />
-                <Stack.Screen name="HotelResults" component={HotelResultsScreen} />
+                <Stack.Screen name="LandingPage" component={LandingPageScreen} options={{title: "FlyEasy"}}/>
+                <Stack.Screen name="HotelSearch" component={HotelSearchScreen} options={{title: "Search Hotels"}} />
+                <Stack.Screen name="RestaurantsSearch" component={RestaurantSearchScreen} options={{title: "Search Restaurants"}}/>
+                <Stack.Screen name="RestaurantList" component={RestaurantListScreen} options={{title: "Restaurants"}}/>
+                <Stack.Screen name="HotelPreferences" component={HotelPreferencesScreen} options={{title: "Select Preferences"}}/>
+                <Stack.Screen name="HotelResults" component={HotelResultsScreen} options={{title: "Hotels"}}/>
                 <Stack.Screen 
                     name="DigitalWallet" 
                     component={DigitalWalletScreen}
@@ -77,6 +87,11 @@ export default function App() {
                     name="BoardingPassScanner" 
                     component={Scanner}
                     options={{ title: "Scan Boarding Pass" }}
+                />
+                <Stack.Screen 
+                    name="AirportTracker" 
+                    component={AirportTracker}
+                    options={{ title: "Airport Tracker" }}
                 />
             </Stack.Navigator>
         </NavigationContainer>
