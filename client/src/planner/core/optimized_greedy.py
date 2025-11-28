@@ -1,7 +1,7 @@
 # src/planner/core/solver.py
 from datetime import date, datetime, timedelta, time      # MAKE SURE THIS IS INSTALLED
 from typing import List                             # MAKE SURE THIS IS INSTALLED
-from planner.core.models import Client, Activity, PlanDay, PlanEvent
+from planner.core.models import Client, Activity, PlanDay, PlanEvent, Location
 from planner.core.constraints import hard_feasible, hc_open_window_ok, hc_age_ok
 from planner.core.timegrid import generate_candidate_times, choose_step_minutes
 from planner.core.scoring import interest_score_age
@@ -51,36 +51,40 @@ def is_weather_suitable(activity: Activity, start_dt: datetime) -> bool:
     Checks if the current <activity> is suitable to attend with the current weather.
     Return: true if the current activity will not be affected by the weather, false otherwise.
     """
-    wb = activity.weather_blockers
-    end_dt = start_dt + timedelta(minutes=activity.duration_min)
-    if not wb:
-        return True
+    try:
+        print(start_dt)
+        wb = activity.weather_blockers
+        end_dt = start_dt + timedelta(minutes=activity.duration_min)
+        if not wb:
+            return True
 
-    # TO GET THE TIMEZONE
-    res = requests.get("https://geocoding-api.open-meteo.com/v1/search", params={"name": activity.city})
-    data = res.json()
-    tz = data["results"][0]["timezone"]
+        # TO GET THE TIMEZONE
+        res = requests.get("https://geocoding-api.open-meteo.com/v1/search", params={"name": activity.city})
+        data = res.json()
+        tz = data["results"][0]["timezone"]
 
-    url = "https://api.open-meteo.com/v1/forecast"
-    params = {
-        "latitude": activity.location.lat,                  # LATITUDE OF THE LOCATION OF EVENT
-        "longitude": activity.location.lng,                 # LONGITUDE OF THE LOCATION OF EVENT
-        "hourly": "weathercode",                            # STANDARD TEMPERATURE ANALYSIS ALTITUDE
-        "start_date": start_dt.strftime("%Y-%m-%d"),        # STARTING DATE OF EVENT
-        "end_date": end_dt.strftime("%Y-%m-%d"),            # ENDING DATE OF EVENT
-        "timezone": tz                                      # TIMEZONE
-    }
+        url = "https://api.open-meteo.com/v1/forecast"
+        params = {
+            "latitude": activity.location.lat,                  # LATITUDE OF THE LOCATION OF EVENT
+            "longitude": activity.location.lng,                 # LONGITUDE OF THE LOCATION OF EVENT
+            "hourly": "weathercode",                            # STANDARD TEMPERATURE ANALYSIS ALTITUDE
+            "start_date": start_dt.strftime("%Y-%m-%d"),        # STARTING DATE OF EVENT
+            "end_date": end_dt.strftime("%Y-%m-%d"),            # ENDING DATE OF EVENT
+            "timezone": tz                                      # TIMEZONE
+        }
 
-    response = requests.get(url, params=params)
-    data = response.json()
+        response = requests.get(url, params=params)
+        data = response.json()
+        times = pd.to_datetime(data["hourly"]["time"])
+        weather_codes = data["hourly"]["weathercode"]
 
-    times = pd.to_datetime(data["hourly"]["time"])
-    weather_codes = data["hourly"]["weathercode"]
-
-    event_mask = (times >= start_dt) & (times <= end_dt)
-    event_weather_codes = [weather_codes[i] for i, m in enumerate(event_mask) if m]
-    event_weather = [WEATHER_CODE_MAP[code] for code in event_weather_codes]
-    return not any(w in activity.weather_blockers for w in event_weather)  # RETURN TRUE IF ALL WEATHER IS FINE
+        event_mask = (times >= start_dt) & (times <= end_dt)
+        event_weather_codes = [weather_codes[i] for i, m in enumerate(event_mask) if m]
+        event_weather = [WEATHER_CODE_MAP[code] for code in event_weather_codes]
+        bad_weather = any(w in activity.weather_blockers for w in event_weather)
+        return not bad_weather  # RETURN TRUE IF ALL WEATHER IS FINE
+    except KeyError:
+        return False
 
 
 def fits_in_window(activity: Activity, client: Client, start_min: int) -> bool:
@@ -97,11 +101,6 @@ def fits_in_window(activity: Activity, client: Client, start_min: int) -> bool:
     if e_end_m < e_start_m:
         e_end_m += (24 * 60)
     fits = (client_start_m <= e_start_m < client_end_m) and (client_start_m < e_end_m <= client_end_m)
-
-    if fits:
-        print(f"Adding {activity.name} into plan\n")
-    else:
-        print(f"Not adding {activity.name} into plan\n")
     return fits
 
 
@@ -118,18 +117,17 @@ def make_day_plan(client: Client, activities: List[Activity], day: date) -> Plan
     for act in acts_sorted:
         step = choose_step_minutes(act) or 60
         for start_dt in generate_candidate_times(act, day, step_minutes=step):
-            
             # Checks if the age restriction and start time is feasible based on 
             # when client starts and the duration of the activity with respect to its closing time
             hard_check = hard_feasible(client, act, start_dt)
             no_overlap = fits_no_overlap(plan.events, start_dt, act)
-            weather_satisfiable = is_weather_suitable(act, start_dt)
             window_fits = fits_in_window(act, client, client.day_start_min)
 
-            if no_overlap and hard_check and weather_satisfiable and window_fits:
-                plan.add(PlanEvent(act, start_dt))
-                break
-            
+            if no_overlap and hard_check and window_fits:
+                if is_weather_suitable(act, start_dt): # ONLY RUNS WEATHER CHECKS IF THE EVENT CAN FIT (OPTIMIZATION)
+                    plan.add(PlanEvent(act, start_dt))
+                    break
+
             placed = repairB(plan, client, act, day, start_dt, max_moves=1, try_others=True)
                 
             if placed:
@@ -296,49 +294,13 @@ def repairB(plan: PlanDay,
 
 
 if __name__ == "__main__":
-    from datetime import date, datetime
-    from planner.core.models import Client, Activity, PlanDay, PlanEvent
+    # Force the test day to the concert day
+    from datetime import date, datetime, time
+    from planner.core.utils import load_people, load_events
 
-    # -----------------------------
-    # Define client (extreme-interest scenario)
-    # -----------------------------
-    client_data = {
-        "id": "family_extreme_interest_01",
-        "party_type": "family",
-        "party_members": {
-            "Parent 1": {"age": 40, "interest_weights": {"theme_parks": 10, "zoo": 0, "aquarium": 0, "parks": 0}},
-            "Parent 2": {"age": 38, "interest_weights": {"theme_parks": 0, "zoo": 0, "aquarium": 0, "parks": 0}},
-            "Child 1": {"age": 12, "interest_weights": {"theme_parks": 0, "zoo": 0, "aquarium": 0, "parks": 0}},
-            "Child 2": {"age": 8,  "interest_weights": {"theme_parks": 0, "zoo": 0, "aquarium": 0, "parks": 0}}
-        },
-        "religion": "none",
-        "ethnicity_culture": ["generic"],
-        "vibe": "family-fun",
-        "budget_total": 500,
-        "trip_start": "2026-08-01",
-        "trip_end": "2026-08-05",
-        "home_base": {"lat": 43.65, "lng": -79.38},
-        "avoid_long_transit": 5,
-        "prefer_outdoor": 7,
-        "prefer_cultural": 3,
-        "day_start_time": "08:00",
-        "day_end_time": "20:00"
-    }
+    client = load_people()[0]
+    events = load_events()
 
-    client_data["trip_start"] = datetime.strptime(client_data["trip_start"], "%Y-%m-%d").date()
-    client_data["trip_end"] = datetime.strptime(client_data["trip_end"], "%Y-%m-%d").date()
-
-    # # Convert start/end time to minutes
-    # # start_h, start_m = map(int, client_data["day_start_time"].split(":"))
-    # # end_h, end_m = map(int, client_data["day_end_time"].split(":"))
-    # # client_data["day_start_min"] = start_h * 60 + start_m
-    # # client_data["day_end_min"] = end_h * 60 + end_m
-
-    client = Client(**client_data)
-
-    # -----------------------------
-    # Define event (theme park)
-    # -----------------------------
     event_data = {
         "id": "e_themepark_extreme_01",
         "name": "Thrill Seeker’s Mega Theme Park",
@@ -359,30 +321,62 @@ if __name__ == "__main__":
     }
 
     activity = Activity(**event_data)
-    activities = [activity]
 
-    # -----------------------------
-    # Generate day plan
-    # -----------------------------
-    plan_day = PlanDay(date(2026, 8, 2))
+    day = date(2025, 8, 3)  # Arijit concert fixed at 17:00 on this date
 
-    # Check if activity fits in client window
-    for act in activities:
-        for ft in act.fixed_times:
-            start_dt = datetime.strptime(f"{ft['date']} {ft['start']}", "%Y-%m-%d %H:%M")
-            start_min = start_dt.hour * 60 + start_dt.minute
+    # Existing subset of events
+    wanted_ids = {
+        "e_st_lawrence_01",
+        "e_rom_01",
+        "e_ago_01",
+        "e_distillery_01",
+        "e_cn_tower_01",
+        "e_concert_southasian_01",
+    }
+    subset = [e for e in events if e.id in wanted_ids]
 
-            if fits_in_window(act, client, start_min):
-                plan_day.add(PlanEvent(act, start_dt))
+    # --- NEW MOCK EVENT: Outdoor walk blocked by rain ---
+    mock_rain_event = {
+        "id": "e_mock_rain_01",
+        "name": "Rainy Outdoor Stroll",
+        "category": "walk",
+        "tags": ["outdoor", "nature"],
+        "venue": "Mock Park",
+        "city": "Toronto",
+        "location": {"lat": 43.650, "lng": -79.380},
+        "duration_min": 60,
+        "cost_cad": 0,
+        "age_min": 0,
+        "age_max": 99,
+        "opening_hours": {"daily": ["08:00", "20:00"]},
+        "fixed_times": [],
+        "requires_booking": False,
+        "weather_blockers": ["Slight rain", "Moderate rain", "Heavy rain"],  # blocked
+        "popularity": 0.5
+    }
 
-    # -----------------------------
-    # Print resulting plan with interest
-    # -----------------------------
-    print(f"Plan for {plan_day.day}:")
-    for ev in plan_day.events:
+    # Simulate rainy conditions for testing
+    current_weather = "Heavy rain"
+
+    # Add mock event to the subset
+    mock_rain_activity = Activity(**mock_rain_event)
+    mock_location = Location(mock_rain_event["location"]["lat"], mock_rain_event["location"]["lng"], mock_rain_event["city"])
+    mock_rain_activity.location = mock_location
+    subset.append(mock_rain_activity)
+
+    # Filter events based on weather for the greedy algorithm (optional test)
+    filtered_subset = [e for e in subset if current_weather not in getattr(e, "weather_blockers", [])]
+
+    print("Subset BEFORE weather filter:")
+    for e in subset:
+        print(f"- {e.name} (weather blockers: {e.weather_blockers})")
+
+    print("\nSubset AFTER weather filter:")
+    for e in filtered_subset:
+        print(f"- {e.name}")
+
+    plan = make_day_plan(client, subset, day)
+
+    print(f"\nPlan for {day}:")
+    for ev in plan.events:
         print(f"- {ev.start_dt.time()}–{ev.end_dt.time()}  {ev.activity.name} ({ev.activity.category})  ${ev.activity.cost_cad}")
-        print("  Member interest:")
-        for member_name, member_info in client.party_members.items():
-            interest = member_info["interest_weights"].get(ev.activity.category, 0)
-            status = "EXTREMELY INTERESTED" if interest >= 9 else "Not interested"
-            print(f"    {member_name} (age {member_info['age']}): {interest} → {status}")
