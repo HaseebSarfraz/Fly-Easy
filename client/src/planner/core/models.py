@@ -95,8 +95,8 @@ class Client:
         """
         Returns the activity interest score for <name>.
         """
-        if activity in self.party_members[name]:
-            return self.party_members[name][activity]
+        if activity in self.party_members[name]["interest_weights"]:
+            return self.party_members[name]["interest_weights"][activity]
         else:
             return 0
 

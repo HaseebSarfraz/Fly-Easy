@@ -94,12 +94,10 @@ def fits_in_window(activity: Activity, client: Client, start_min: int) -> bool:
     e_start_m = start_min
     e_end_m = _time_to_minutes(time(dur_h, dur_m)) + start_min
 
-    print(f"CLIENT WINDOW: \n\tclient_start_m = {client_start_m} mins \n\tclient_end_m = {client_end_m} mins\n")
-
     if e_end_m < e_start_m:
         e_end_m += (24 * 60)
-    print(f"EVENT TIMINGS: \n\te_start_m = {e_start_m} mins\n\te_end_m = {e_end_m} mins")
     fits = (client_start_m <= e_start_m < client_end_m) and (client_start_m < e_end_m <= client_end_m)
+
     if fits:
         print(f"Adding {activity.name} into plan\n")
     else:
@@ -298,94 +296,75 @@ def repairB(plan: PlanDay,
 
 
 if __name__ == "__main__":
-    from datetime import date, time, datetime
+    from datetime import date, datetime
     from planner.core.models import Client, Activity, PlanDay, PlanEvent
 
     # -----------------------------
-    # Define client
+    # Define client (extreme-interest scenario)
     # -----------------------------
     client_data = {
-        "id": "p_couple_with_parents_early20kid_01",
-        "party_type": "multi_gen",
+        "id": "family_extreme_interest_01",
+        "party_type": "family",
         "party_members": {
-            "Parent 1": {"age": 50, "interest_weights": {"concerts": 5, "food": 8, "nightlife": 0, "history": 7, "museums": 7, "architecture": 6, "aquarium": 4, "theme_parks": 3, "zoo": 2, "parks": 7, "islands": 5, "shopping": 8, "pizza": 7, "theatre": 6, "views": 7}},
-            "Parent 2": {"age": 48, "interest_weights": {"concerts": 4, "food": 9, "nightlife": 0, "history": 8, "museums": 8, "architecture": 7, "aquarium": 3, "theme_parks": 2, "zoo": 1, "parks": 8, "islands": 6, "shopping": 9, "pizza": 8, "theatre": 7, "views": 8}},
-            "Young Adult Child": {"age": 21, "interest_weights": {"food": 8, "shopping": 8, "concerts": 6, "theatre": 6, "history": 7, "museums": 7, "architecture": 6, "views": 7, "parks": 7, "pizza": 7}}
+            "Parent 1": {"age": 40, "interest_weights": {"theme_parks": 10, "zoo": 0, "aquarium": 0, "parks": 0}},
+            "Parent 2": {"age": 38, "interest_weights": {"theme_parks": 0, "zoo": 0, "aquarium": 0, "parks": 0}},
+            "Child 1": {"age": 12, "interest_weights": {"theme_parks": 0, "zoo": 0, "aquarium": 0, "parks": 0}},
+            "Child 2": {"age": 8,  "interest_weights": {"theme_parks": 0, "zoo": 0, "aquarium": 0, "parks": 0}}
         },
-        "religion": "muslim",
-        "ethnicity_culture": ["south_asian"],
-        "vibe": "family-cultural",
-        "budget_total": 2400,
-        "trip_start": "2026-09-10",
-        "trip_end": "2026-09-15",
-        "home_base": {"lat": 43.59, "lng": -79.65},
-        "avoid_long_transit": 7,
-        "prefer_outdoor": 5,
-        "prefer_cultural": 8,
+        "religion": "none",
+        "ethnicity_culture": ["generic"],
+        "vibe": "family-fun",
+        "budget_total": 500,
+        "trip_start": "2026-08-01",
+        "trip_end": "2026-08-05",
+        "home_base": {"lat": 43.65, "lng": -79.38},
+        "avoid_long_transit": 5,
+        "prefer_outdoor": 7,
+        "prefer_cultural": 3,
         "day_start_time": "08:00",
-        "day_end_time": "21:00"
+        "day_end_time": "20:00"
     }
 
     client_data["trip_start"] = datetime.strptime(client_data["trip_start"], "%Y-%m-%d").date()
     client_data["trip_end"] = datetime.strptime(client_data["trip_end"], "%Y-%m-%d").date()
 
     # # Convert start/end time to minutes
-    # start_h, start_m = map(int, client_data["day_start_time"].split(":"))
-    # end_h, end_m = map(int, client_data["day_end_time"].split(":"))
-    # client_data["day_start_min"] = start_h * 60 + start_m
-    # client_data["day_end_min"] = end_h * 60 + end_m
+    # # start_h, start_m = map(int, client_data["day_start_time"].split(":"))
+    # # end_h, end_m = map(int, client_data["day_end_time"].split(":"))
+    # # client_data["day_start_min"] = start_h * 60 + start_m
+    # # client_data["day_end_min"] = end_h * 60 + end_m
 
     client = Client(**client_data)
 
     # -----------------------------
-    # Define event
+    # Define event (theme park)
     # -----------------------------
-
     event_data = {
-        "id": "e_concert_southasian_01",
-        "name": "Arijit Singh Live",
-        "category": "concert",
-        "tags": ["concerts", "bollywood", "south_asian"],
-        "venue": "Scotiabank Arena",
+        "id": "e_themepark_extreme_01",
+        "name": "Thrill Seeker’s Mega Theme Park",
+        "category": "theme_parks",
+        "tags": ["theme_parks", "roller_coasters", "extreme", "outdoor"],
+        "venue": "Wonderland",
         "city": "Toronto",
-        "location": {"lat": 43.6435, "lng": -79.3791},
-        "duration_min": 150,
-        "cost_cad": 120,
-        "age_min": 8, "age_max": 99,
-        "opening_hours": {},
-        "fixed_times": [{"date": "2025-08-03", "start": "17:00"}],
-        "requires_booking": True,
-        "weather_blockers": [],
-        "popularity": 0.95
-    }
-    event2_data = {
-        "id": "e_late_night_party_01",
-        "name": "Late Night Party",
-        "category": "nightlife",
-        "tags": ["party", "nightlife"],
-        "venue": "Downtown Club",
-        "city": "Toronto",
-        "location": {"lat": 43.652, "lng": -79.383},
-        "duration_min": 180,  # 3 hours
-        "cost_cad": 50,
-        "age_min": 18,
+        "location": {"lat": 43.6426, "lng": -79.3860},
+        "duration_min": 180,
+        "cost_cad": 80,
+        "age_min": 5,
         "age_max": 99,
         "opening_hours": {},
-        "fixed_times": [{"date": "2026-09-11", "start": "22:00"}],  # starts at 10 PM
-        "requires_booking": False,
+        "fixed_times": [{"date": "2026-08-02", "start": "10:00"}],
+        "requires_booking": True,
         "weather_blockers": [],
-        "popularity": 0.7
+        "popularity": 0.9
     }
 
-    print(f"CLIENT TRIP: from {client.trip_start} to {client.trip_end}")
-
     activity = Activity(**event_data)
-    activity2 = Activity(**event2_data)
-    activities = [activity, activity2]
+    activities = [activity]
+
     # -----------------------------
     # Generate day plan
     # -----------------------------
-    plan_day = PlanDay(date(2025, 8, 3))
+    plan_day = PlanDay(date(2026, 8, 2))
 
     # Check if activity fits in client window
     for act in activities:
@@ -397,8 +376,13 @@ if __name__ == "__main__":
                 plan_day.add(PlanEvent(act, start_dt))
 
     # -----------------------------
-    # Print resulting plan
+    # Print resulting plan with interest
     # -----------------------------
     print(f"Plan for {plan_day.day}:")
     for ev in plan_day.events:
         print(f"- {ev.start_dt.time()}–{ev.end_dt.time()}  {ev.activity.name} ({ev.activity.category})  ${ev.activity.cost_cad}")
+        print("  Member interest:")
+        for member_name, member_info in client.party_members.items():
+            interest = member_info["interest_weights"].get(ev.activity.category, 0)
+            status = "EXTREMELY INTERESTED" if interest >= 9 else "Not interested"
+            print(f"    {member_name} (age {member_info['age']}): {interest} → {status}")

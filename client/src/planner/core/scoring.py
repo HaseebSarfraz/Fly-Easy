@@ -1,10 +1,11 @@
 # src/planner/core/scoring.py
 import math
-from .models import Client, Activity
+from planner.core.models import Client, Activity
+from datetime import datetime
 
 MAX_CREDS_PER_MEMBER = 2  # MAX CREDITS ALLOWED PER MEMBER FOR AN EXTREME ACCOMMODATION
 HOURS_PER_CREDIT = 2      # EACH CREDIT CAN BE USED FOR A 2-HOUR ACCOMMODATION
-EXTREME_INTEREST_MIN_SCORE = 9.2  # MINIMUM SCORE FOR SOMEONE TO BE CONSIDERED "EXTREMELY INTERESTED"
+EXTREME_INTEREST_MIN_SCORE = 8.5  # MINIMUM SCORE FOR SOMEONE TO BE CONSIDERED "EXTREMELY INTERESTED"
 
 
 def interest_score_age(client: Client, act: Activity) -> float:
@@ -53,7 +54,7 @@ def interest_score_age(client: Client, act: Activity) -> float:
 
     ext_interested_avg = sum(ext_interested) / len(ext_interested)  # AVG SCORE OF EXTREMELY INTERESTED
     not_ext_interested_avg = sum(not_ext_interested) / len(not_ext_interested)  # AVG SCORE OF NOT EXTREMELY INTERESTED
-    
+
     interest_score_diff = ext_interested_avg - not_ext_interested_avg  # THIS WILL ALWAYS BE POSITIVE
     extreme_score = 0  # SCORE FOR THE EXTREME ACCOMMODATION SCENARIO. IF NO EXTREME ACCOMMODATION, SCORE IS 0.
 
@@ -96,6 +97,7 @@ def interest_score_age(client: Client, act: Activity) -> float:
     else:                   # OTHERWISE IF THERE IS NOT ENOUGH CREDITS LEFT THEN WE CONSIDER THIS A REGULAR EVENT
         return average_interest_score
 
+
 def _check_age_factor(member_age: int, act: Activity) -> float:
     """
     Does a simple soft score between 0 and 1 based on how age-friendly the activity is.
@@ -110,3 +112,83 @@ def _check_age_factor(member_age: int, act: Activity) -> float:
     # GPT-SUGGESTED CODE BELOW FOR SCORING BASED ON AGE. THE CLOSER A PERSON'S AGE IS TO THE MEDIAN AGE OF THE EVENT
     # THE HIGHER THE EVENT IS SCORED FOR THAT PERSON.
     return 1 - (abs(member_age - (act.age_min + act.age_max) / 2) / (age_window / 2))
+
+
+if __name__ == "__main__":
+    # -----------------------------
+    # Define client with extreme-interest scenario
+    # -----------------------------
+    client_data = {
+        "id": "family_extreme_interest_01",
+        "party_type": "family",
+        "party_members": {
+            "Parent 1": {"age": 47, "interest_weights": {"theme_parks": 10, "zoo": 0, "aquarium": 0, "parks": 0}},
+            "Parent 2": {"age": 38, "interest_weights": {"theme_parks": 0, "zoo": 0, "aquarium": 0, "parks": 0}},
+            "Child 1": {"age": 12, "interest_weights": {"theme_parks": 0, "zoo": 0, "aquarium": 0, "parks": 0}},
+            "Child 2": {"age": 8,  "interest_weights": {"theme_parks": 0, "zoo": 0, "aquarium": 0, "parks": 0}}
+        },
+        "religion": "none",
+        "ethnicity_culture": ["generic"],
+        "vibe": "family-fun",
+        "budget_total": 500,
+        "trip_start": "2026-08-01",
+        "trip_end": "2026-08-25",
+        "home_base": {"lat": 43.65, "lng": -79.38},
+        "avoid_long_transit": 5,
+        "prefer_outdoor": 7,
+        "prefer_cultural": 3,
+        "day_start_time": "08:00",
+        "day_end_time": "20:00"
+    }
+
+    client_data["trip_start"] = datetime.strptime(client_data["trip_start"], "%Y-%m-%d").date()
+    client_data["trip_end"] = datetime.strptime(client_data["trip_end"], "%Y-%m-%d").date()
+
+    client = Client(**client_data)
+
+    # -----------------------------
+    # Define activity
+    # -----------------------------
+    event_data = {
+        "id": "e_themepark_extreme_01",
+        "name": "Thrill Seeker’s Mega Theme Park",
+        "category": "theme_parks",
+        "tags": ["theme_parks", "roller_coasters", "extreme", "outdoor"],
+        "venue": "Wonderland",
+        "city": "Toronto",
+        "location": {"lat": 43.6426, "lng": -79.3860},
+        "duration_min": 180,
+        "cost_cad": 80,
+        "age_min": 5,
+        "age_max": 99,
+        "opening_hours": {},
+        "fixed_times": [{"date": "2026-08-02", "start": "10:00"}],
+        "requires_booking": True,
+        "weather_blockers": [],
+        "popularity": 0.9
+    }
+
+    activity = Activity(**event_data)
+
+    # -----------------------------
+    # Compute interest score
+    # -----------------------------
+
+    score = interest_score_age(client, activity)
+    print(f"Computed interest score for activity '{activity.name}': {score:.2f}")
+
+    # -----------------------------
+    # Show which members are extremely interested
+    # -----------------------------
+    print("\nMember extreme interest status:")
+    for member_name, member_info in client.party_members.items():
+        interest_score = sum(client.interest(tag, member_name) for tag in activity.tags)
+        status = "EXTREMELY INTERESTED" if interest_score >= EXTREME_INTEREST_MIN_SCORE else "Not interested"
+        print(f"   {member_name}: {interest_score} → {status}")
+
+    # -----------------------------
+    # Show updated credits
+    # -----------------------------
+    print("\nUpdated credits after scoring:")
+    for member, creds in client.credits_left.items():
+        print(f"  {member}: {creds}")
