@@ -1,5 +1,5 @@
 # src/planner/core/solver.py
-from datetime import date, datetime, timedelta      # MAKE SURE THIS IS INSTALLED
+from datetime import date, datetime, timedelta, time      # MAKE SURE THIS IS INSTALLED
 from typing import List                             # MAKE SURE THIS IS INSTALLED
 from planner.core.models import Client, Activity, PlanDay, PlanEvent
 from planner.core.constraints import hard_feasible, hc_open_window_ok, hc_age_ok
@@ -34,9 +34,9 @@ WEATHER_CODE_MAP = {
 }
 
 
-
 def overlaps(a_start, a_end, b_start, b_end) -> bool:
     return not (a_end <= b_start or b_end <= a_start)
+
 
 def fits_no_overlap(events: List[PlanEvent], start_dt: datetime, act: Activity) -> bool:
     end_dt = start_dt + timedelta(minutes=act.duration_min)
@@ -83,6 +83,30 @@ def is_weather_suitable(activity: Activity, start_dt: datetime) -> bool:
     return not any(w in activity.weather_blockers for w in event_weather)  # RETURN TRUE IF ALL WEATHER IS FINE
 
 
+def fits_in_window(activity: Activity, client: Client, start_min: int) -> bool:
+    """
+    Checks if the currently-planned event fits in the client's day-planning window.
+    Returns true if both the event start and end are within the client's day-plan window, false otherwise.
+    """
+    client_start_m, client_end_m = client.day_start_min, client.day_end_min
+    dur_h, dur_m = (activity.duration_min // 60) % 24, (activity.duration_min % 60)
+
+    e_start_m = start_min
+    e_end_m = _time_to_minutes(time(dur_h, dur_m)) + start_min
+
+    print(f"CLIENT WINDOW: \n\tclient_start_m = {client_start_m} mins \n\tclient_end_m = {client_end_m} mins\n")
+
+    if e_end_m < e_start_m:
+        e_end_m += (24 * 60)
+    print(f"EVENT TIMINGS: \n\te_start_m = {e_start_m} mins\n\te_end_m = {e_end_m} mins")
+    fits = (client_start_m <= e_start_m < client_end_m) and (client_start_m < e_end_m <= client_end_m)
+    if fits:
+        print(f"Adding {activity.name} into plan\n")
+    else:
+        print(f"Not adding {activity.name} into plan\n")
+    return fits
+
+
 def make_day_plan(client: Client, activities: List[Activity], day: date) -> PlanDay:
     plan = PlanDay(day)
 
@@ -102,8 +126,9 @@ def make_day_plan(client: Client, activities: List[Activity], day: date) -> Plan
             hard_check = hard_feasible(client, act, start_dt)
             no_overlap = fits_no_overlap(plan.events, start_dt, act)
             weather_satisfiable = is_weather_suitable(act, start_dt)
+            window_fits = fits_in_window(act, client, client.day_start_min)
 
-            if no_overlap and hard_check and weather_satisfiable:
+            if no_overlap and hard_check and weather_satisfiable and window_fits:
                 plan.add(PlanEvent(act, start_dt))
                 break
             
@@ -144,6 +169,7 @@ def _overlap_minutes(start_dt: datetime,
     inter_end   = min(a2, b2)
     return int((inter_end - inter_start).total_seconds() // 60)
 
+
 def _future_candidates(activity: Activity,
                        day: date,
                        after_dt: datetime) -> List[datetime]:
@@ -152,12 +178,21 @@ def _future_candidates(activity: Activity,
     cands = generate_candidate_times(activity, day, step_minutes=step)
     return [t for t in cands if t > after_dt]
 
+
 def _can_place_against(events: List[PlanEvent],
                        client: Client,
                        act: Activity,
                        when: datetime) -> bool:
     """Hard checks + no-overlap against `events`."""
     return hard_feasible(client, act, when) and fits_no_overlap(events, when, act) and is_weather_suitable(act, when)
+
+
+def _time_to_minutes(dt):
+    """
+    Converts the time into actual minutes.
+    """
+    return dt.hour * 60 + dt.minute
+
 
 def _try_nudge_forward(plan: PlanDay,
                        client: Client,
@@ -198,6 +233,7 @@ def _try_nudge_forward(plan: PlanDay,
         tried += 1
 
     return False
+
 
 def _flexibility_now(plan: PlanDay,
                      client: Client,
@@ -262,68 +298,107 @@ def repairB(plan: PlanDay,
 
 
 if __name__ == "__main__":
-    # Force the test day to the concert day
-    from datetime import date, datetime, time
-    from planner.core.utils import load_people, load_events
+    from datetime import date, time, datetime
+    from planner.core.models import Client, Activity, PlanDay, PlanEvent
 
-    people = load_people()
-    events = load_events()
-
-    client = people[0]
-    day = date(2025, 8, 3)  # Arijit concert fixed at 17:00 on this date
-
-    # Existing subset of events
-    wanted_ids = {
-        "e_st_lawrence_01",
-        "e_rom_01",
-        "e_ago_01",
-        "e_distillery_01",
-        "e_cn_tower_01",
-        "e_concert_southasian_01",
+    # -----------------------------
+    # Define client
+    # -----------------------------
+    client_data = {
+        "id": "p_couple_with_parents_early20kid_01",
+        "party_type": "multi_gen",
+        "party_members": {
+            "Parent 1": {"age": 50, "interest_weights": {"concerts": 5, "food": 8, "nightlife": 0, "history": 7, "museums": 7, "architecture": 6, "aquarium": 4, "theme_parks": 3, "zoo": 2, "parks": 7, "islands": 5, "shopping": 8, "pizza": 7, "theatre": 6, "views": 7}},
+            "Parent 2": {"age": 48, "interest_weights": {"concerts": 4, "food": 9, "nightlife": 0, "history": 8, "museums": 8, "architecture": 7, "aquarium": 3, "theme_parks": 2, "zoo": 1, "parks": 8, "islands": 6, "shopping": 9, "pizza": 8, "theatre": 7, "views": 8}},
+            "Young Adult Child": {"age": 21, "interest_weights": {"food": 8, "shopping": 8, "concerts": 6, "theatre": 6, "history": 7, "museums": 7, "architecture": 6, "views": 7, "parks": 7, "pizza": 7}}
+        },
+        "religion": "muslim",
+        "ethnicity_culture": ["south_asian"],
+        "vibe": "family-cultural",
+        "budget_total": 2400,
+        "trip_start": "2026-09-10",
+        "trip_end": "2026-09-15",
+        "home_base": {"lat": 43.59, "lng": -79.65},
+        "avoid_long_transit": 7,
+        "prefer_outdoor": 5,
+        "prefer_cultural": 8,
+        "day_start_time": "08:00",
+        "day_end_time": "21:00"
     }
-    subset = [e for e in events if e.id in wanted_ids]
 
-    # --- NEW MOCK EVENT: Outdoor walk blocked by rain ---
-    mock_rain_event = {
-        "id": "e_mock_rain_01",
-        "name": "Rainy Outdoor Stroll",
-        "category": "walk",
-        "tags": ["outdoor", "nature"],
-        "venue": "Mock Park",
+    client_data["trip_start"] = datetime.strptime(client_data["trip_start"], "%Y-%m-%d").date()
+    client_data["trip_end"] = datetime.strptime(client_data["trip_end"], "%Y-%m-%d").date()
+
+    # # Convert start/end time to minutes
+    # start_h, start_m = map(int, client_data["day_start_time"].split(":"))
+    # end_h, end_m = map(int, client_data["day_end_time"].split(":"))
+    # client_data["day_start_min"] = start_h * 60 + start_m
+    # client_data["day_end_min"] = end_h * 60 + end_m
+
+    client = Client(**client_data)
+
+    # -----------------------------
+    # Define event
+    # -----------------------------
+
+    event_data = {
+        "id": "e_concert_southasian_01",
+        "name": "Arijit Singh Live",
+        "category": "concert",
+        "tags": ["concerts", "bollywood", "south_asian"],
+        "venue": "Scotiabank Arena",
         "city": "Toronto",
-        "location": {"lat": 43.650, "lng": -79.380},
-        "duration_min": 60,
-        "cost_cad": 0,
-        "age_min": 0,
+        "location": {"lat": 43.6435, "lng": -79.3791},
+        "duration_min": 150,
+        "cost_cad": 120,
+        "age_min": 8, "age_max": 99,
+        "opening_hours": {},
+        "fixed_times": [{"date": "2025-08-03", "start": "17:00"}],
+        "requires_booking": True,
+        "weather_blockers": [],
+        "popularity": 0.95
+    }
+    event2_data = {
+        "id": "e_late_night_party_01",
+        "name": "Late Night Party",
+        "category": "nightlife",
+        "tags": ["party", "nightlife"],
+        "venue": "Downtown Club",
+        "city": "Toronto",
+        "location": {"lat": 43.652, "lng": -79.383},
+        "duration_min": 180,  # 3 hours
+        "cost_cad": 50,
+        "age_min": 18,
         "age_max": 99,
-        "opening_hours": {"daily": ["08:00", "20:00"]},
-        "fixed_times": [],
+        "opening_hours": {},
+        "fixed_times": [{"date": "2026-09-11", "start": "22:00"}],  # starts at 10 PM
         "requires_booking": False,
-        "weather_blockers": ["Slight rain", "Moderate rain", "Heavy rain"],  # blocked
-        "popularity": 0.5
+        "weather_blockers": [],
+        "popularity": 0.7
     }
 
-    # Simulate rainy conditions for testing
-    current_weather = "Heavy rain"
+    print(f"CLIENT TRIP: from {client.trip_start} to {client.trip_end}")
 
-    # Add mock event to the subset
-    mock_rain_activity = Activity(**mock_rain_event)
-    subset.append(mock_rain_activity)
+    activity = Activity(**event_data)
+    activity2 = Activity(**event2_data)
+    activities = [activity, activity2]
+    # -----------------------------
+    # Generate day plan
+    # -----------------------------
+    plan_day = PlanDay(date(2025, 8, 3))
 
-    # Filter events based on weather for the greedy algorithm (optional test)
-    filtered_subset = [e for e in subset if current_weather not in getattr(e, "weather_blockers", [])]
+    # Check if activity fits in client window
+    for act in activities:
+        for ft in act.fixed_times:
+            start_dt = datetime.strptime(f"{ft['date']} {ft['start']}", "%Y-%m-%d %H:%M")
+            start_min = start_dt.hour * 60 + start_dt.minute
 
-    print("Subset BEFORE weather filter:")
-    for e in subset:
-        print(f"- {e.name} (weather blockers: {e.weather_blockers})")
+            if fits_in_window(act, client, start_min):
+                plan_day.add(PlanEvent(act, start_dt))
 
-    print("\nSubset AFTER weather filter:")
-    for e in filtered_subset:
-        print(f"- {e.name}")
-
-    # Make the day plan (greedy algorithm should skip rainy event)
-    plan = make_day_plan(client, filtered_subset, day)
-
-    print(f"\nPlan for {day}:")
-    for ev in plan.events:
+    # -----------------------------
+    # Print resulting plan
+    # -----------------------------
+    print(f"Plan for {plan_day.day}:")
+    for ev in plan_day.events:
         print(f"- {ev.start_dt.time()}–{ev.end_dt.time()}  {ev.activity.name} ({ev.activity.category})  ${ev.activity.cost_cad}")

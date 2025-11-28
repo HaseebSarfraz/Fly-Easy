@@ -96,7 +96,6 @@ def interest_score_age(client: Client, act: Activity) -> float:
     else:                   # OTHERWISE IF THERE IS NOT ENOUGH CREDITS LEFT THEN WE CONSIDER THIS A REGULAR EVENT
         return average_interest_score
 
-
 def _check_age_factor(member_age: int, act: Activity) -> float:
     """
     Does a simple soft score between 0 and 1 based on how age-friendly the activity is.

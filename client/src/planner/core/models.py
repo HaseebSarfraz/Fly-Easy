@@ -26,12 +26,9 @@ class Location:
 class Client: 
     id: str
     party_type: str                 # "family", "couple", "solo", ...
-    # adults_ages: List[int]
-    # kids_ages: List[int]
     party_members: Dict[str, Union[str, Dict]]       # Each family member's age and their weighted interests.
     religion: Optional[str]
     ethnicity_culture: List[str]
-    # interest_weights: Dict[str, int]  # e.g., {"concerts": 2, "food": 7, ...}
     vibe: str
     budget_total: float
     trip_start: date
@@ -40,7 +37,8 @@ class Client:
     avoid_long_transit: int         # 0–10 in your data
     prefer_outdoor: int             # 0–10
     prefer_cultural: int            # 0–10
-    early_risers: bool
+    day_start_min: int              # STARTING TIME FOR THEIR DAY (IN MINUTES)
+    day_end_min: int                # ENDING TIME FOR THEIR DAY (IN MINUTES)
     credits_left: Dict[str, int]    # KEEPS A COUNT OF THE NUMBER OF ACCOMMODATION CREDITS LEFT FOR EVERY MEMBER
 
 
@@ -59,7 +57,8 @@ class Client:
         avoid_long_transit: int,         # 0–10
         prefer_outdoor: int,             # 0–10
         prefer_cultural: int,            # 0–10
-        early_risers: bool,
+        day_start_time: str,
+        day_end_time: str
     ):
         
         self.party_members = party_members
@@ -75,7 +74,8 @@ class Client:
         self.avoid_long_transit = int(avoid_long_transit)
         self.prefer_outdoor = int(prefer_outdoor)
         self.prefer_cultural = int(prefer_cultural)
-        self.early_risers = bool(early_risers)
+        self.day_start_min = _to_minutes(day_start_time)
+        self.day_end_min = _to_minutes(day_end_time)
         self.credits_left = {}
         trip_days = (trip_end - trip_start).days
         cpm = math.floor(trip_days // len(self.party_members))
@@ -84,13 +84,13 @@ class Client:
 
     def size(self) -> int:
         return len(self.party_members)
-    
+
     def min_age(self) -> int:
         ages = [self.party_members[m]["age"] for m in self.party_members]
         if ages:
             return min(ages)
         return 0
-    
+
     def interest(self, activity: str, name: str):
         """
         Returns the activity interest score for <name>.
@@ -99,7 +99,7 @@ class Client:
             return self.party_members[name][activity]
         else:
             return 0
-        
+
 
 class Activity:
     def __init__(
@@ -138,26 +138,22 @@ class Activity:
         self.weather_blockers = list(weather_blockers or [])
         self.popularity = float(popularity)
 
-  # helpers we might need. 
-
-    def _to_minutes(self, hhmm: str) -> int:
-        h, m = hhmm.split(":")
-        return int(h) * 60 + int(m)
+  # helpers we might need.
 
     def _weekday_key(self, d: date) -> str:
         # "Mon","Tue","Wed","Thu","Fri","Sat","Sun"
         return ["Mon","Tue","Wed","Thu","Fri","Sat","Sun"][d.weekday()]
 
     def _window_for_date(self, d: date) -> tuple[int, int] | None:
-        
+
         if "daily" in self.opening_hours:
             s, e = self.opening_hours["daily"]
-            return self._to_minutes(s), self._to_minutes(e)
+            return _to_minutes(s), _to_minutes(e)
 
         wk = self._weekday_key(d)
         if wk in self.opening_hours:
             s, e = self.opening_hours[wk]
-            return self._to_minutes(s), self._to_minutes(e)
+            return _to_minutes(s), _to_minutes(e)
 
         return None
 
@@ -180,7 +176,7 @@ class Activity:
         s_min, e_min = window
         start_min = start_dt.hour * 60 + start_dt.minute
         return (start_min >= s_min) and (start_min + self.duration_min) <= e_min
-    
+
 class PlanEvent:
     def __init__(self, activity: Activity, start_dt: datetime):
         self.activity = activity
@@ -207,7 +203,9 @@ class PlanDay:
     def last_event_end(self) -> Optional[datetime]:
         return self.events[-1].end_dt if self.events else None
 
-
+def _to_minutes(hhmm: str) -> int:
+        h, m = hhmm.split(":")
+        return int(h) * 60 + int(m)
 
 
 if __name__ == "__main__":
