@@ -170,6 +170,9 @@ if __name__ == "__main__":
 
     activity = Activity(**event_data)
 
+    print("\nCreds before scoring:")
+    for member, creds in client.credits_left.items():
+        print(f"  {member}: {creds}")
     # -----------------------------
     # Compute interest score
     # -----------------------------
