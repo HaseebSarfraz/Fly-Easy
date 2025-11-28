@@ -8,7 +8,7 @@ from .models import Location, Client, Activity
 DATA_DIR = Path(__file__).parent.parent / "data"
 
 
-def load_people(path: Path = DATA_DIR / "people1.json") -> List[Client]:
+def load_people(path: Path = DATA_DIR / "people.json") -> List[Client]:
     raw = json.loads(Path(path).read_text())
     out = []
     for d in raw:

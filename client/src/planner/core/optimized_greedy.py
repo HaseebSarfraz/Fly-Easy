@@ -52,7 +52,6 @@ def is_weather_suitable(activity: Activity, start_dt: datetime) -> bool:
     Return: true if the current activity will not be affected by the weather, false otherwise.
     """
     try:
-        print(start_dt)
         wb = activity.weather_blockers
         end_dt = start_dt + timedelta(minutes=activity.duration_min)
         if not wb:
