@@ -186,7 +186,7 @@ export default function LandingPageScreen({ navigation }: LandingPageScreenProps
                     </Pressable>
 
                     <Pressable
-                        style={[styles.button, styles.walletButton]}
+                        style={[styles.button, styles.primaryButton]}
                         onPress={() => navigation.navigate("DigitalWallet")}
                     >
                         <Text style={styles.buttonText}>💳 Digital Wallet</Text>
@@ -196,7 +196,14 @@ export default function LandingPageScreen({ navigation }: LandingPageScreenProps
                         style={[styles.button, styles.secondaryButton]}
                         onPress={() => navigation.navigate("AirportTracker")}
                     >
-                        <Text style={[styles.buttonText, styles.secondaryText]}>📃 All Flights</Text>
+                        <Text style={[styles.buttonText, styles.secondaryText]}>🛬 All Flights</Text>
+                    </Pressable>
+
+                    <Pressable
+                        style={[styles.button, styles.primaryButton]}
+                        onPress={() => navigation.navigate("EventPreferences")}
+                    >
+                        <Text style={[styles.buttonText]}>📃 Event Planner</Text>
                     </Pressable>
                 </View>
             </View>
@@ -302,9 +309,6 @@ const styles = StyleSheet.create({
         borderWidth: 1.5,
         borderColor: "#2F6BFF",
         backgroundColor: "#fff"
-    },
-    walletButton: {
-        backgroundColor: "#2F6BFF",
     },
     buttonText: {
         fontSize: 16,

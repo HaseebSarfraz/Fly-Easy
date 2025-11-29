@@ -22,6 +22,7 @@
     "expo-image-picker": "~17.0.8",
     "expo-splash-screen": "~31.0.11",
     "expo-status-bar": "~3.0.8",
+    "lucide-react": "^0.555.0",
     "node": "^20.19.6",
     "npm": "^11.6.2",
     "react": "^19.1.0",
