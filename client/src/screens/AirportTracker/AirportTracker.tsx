@@ -5,7 +5,8 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 interface Flight {
   flightNumber: string;
   airline: string;
-  location: string;
+  departure: string;
+  arrival: string
   scheduledTime: string;
   actualTime: string;
   status: string;
@@ -56,9 +57,15 @@ export default function AirportTracker() {
     }
   };
 
-  const filteredFlights = flights.filter(flight =>
-    flight.location.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const filteredFlights = flights.filter(flight => {
+  const query = searchQuery.toLowerCase();
+    return (
+      flight.departure.toLowerCase().includes(query) ||
+      flight.arrival.toLowerCase().includes(query) ||
+      flight.flightNumber.toLowerCase().includes(query) ||
+      flight.airline.toLowerCase().includes(query)
+    );
+  });
 
   const renderFlight = ({ item }: { item: Flight }) => (
     <View style={styles.flightCard}>
@@ -67,7 +74,11 @@ export default function AirportTracker() {
         <Text style={[styles.status, item.status === 'Departed' && styles.statusDeparted]}>{item.status}</Text>
       </View>
       <Text style={styles.airline}>{item.airline}</Text>
-      <Text style={styles.location}>{item.type}: {item.location}</Text>
+      <Text style={styles.location}>
+        {item.type === 'Departure' 
+          ? `To: ${item.arrival}` 
+          : `From: ${item.departure}`}
+      </Text>
       <View style={styles.flightDetails}>
         <Text style={styles.detailText}>🕐 {item.scheduledTime || 'N/A'}</Text>
         {item.actualTime && <Text style={styles.detailText}>✈️ {item.actualTime}</Text>}
@@ -113,15 +124,13 @@ export default function AirportTracker() {
 
         {airportName && <Text style={styles.airportName}>{airportName}</Text>}
 
-        {flights.length > 0 && (
-          <TextInput
-            style={styles.input}
-            placeholder="Filter by destination..."
-            value={searchQuery}
-            onChangeText={setSearchQuery}
-            placeholderTextColor="#999"
-          />
-        )}
+        <TextInput
+          style={styles.input}
+          placeholder="Search by flight, airline, or location..."
+          value={searchQuery}
+          onChangeText={setSearchQuery}
+          placeholderTextColor="#999"
+        />
 
         {error && <Text style={styles.error}>{error}</Text>}
 

@@ -487,7 +487,6 @@ export default function EventPreferences() {
                               width: '100%',
                               height: '6px',
                               borderRadius: '3px',
-                              appearance: 'none',
                               background: `linear-gradient(90deg, #2F6BFF ${memberData.interest_weights[interest] * 10}%, #e5e7eb ${memberData.interest_weights[interest] * 10}%)`,
                               outline: 'none'
                             }}
@@ -624,7 +623,14 @@ export default function EventPreferences() {
                     type="date"
                     required
                     value={formData.trip_start}
-                    onChange={(e) => setFormData({...formData, trip_start: e.target.value})}
+                    onChange={(e) => {
+                      const newStartDate = e.target.value;
+                      setFormData({...formData, trip_start: newStartDate});
+                      
+                      if (formData.trip_end && newStartDate > formData.trip_end) {
+                        setFormData(prev => ({...prev, trip_start: newStartDate, trip_end: ''}));
+                      }
+                    }}
                     style={{
                       width: '100%',
                       height: '48px',
@@ -651,7 +657,14 @@ export default function EventPreferences() {
                     type="date"
                     required
                     value={formData.trip_end}
+                    min={formData.trip_start}
+                    max={formData.trip_start ? (() => {
+                      const maxDate = new Date(formData.trip_start);
+                      maxDate.setDate(maxDate.getDate() + 16); // Days between start and end change.
+                      return maxDate.toISOString().split('T')[0];
+                    })() : undefined}
                     onChange={(e) => setFormData({...formData, trip_end: e.target.value})}
+                    disabled={!formData.trip_start}
                     style={{
                       width: '100%',
                       height: '48px',
@@ -659,7 +672,9 @@ export default function EventPreferences() {
                       border: '1.5px solid #CFCFD6',
                       borderRadius: '12px',
                       fontSize: '15px',
-                      boxSizing: 'border-box'
+                      boxSizing: 'border-box',
+                      opacity: !formData.trip_start ? 0.6 : 1,
+                      cursor: !formData.trip_start ? 'not-allowed' : 'text'
                     }}
                   />
                 </div>
@@ -706,8 +721,6 @@ export default function EventPreferences() {
                     <input
                       type="time"
                       required
-                      value={formData.start_time}
-                      onChange={(e) => setFormData({...formData, start_time: e.target.value})}
                       style={{
                         width: '100%',
                         height: '48px',
@@ -734,6 +747,7 @@ export default function EventPreferences() {
                       required
                       value={formData.end_time}
                       onChange={(e) => setFormData({...formData, end_time: e.target.value})}
+                      disabled={!formData.start_time}
                       style={{
                         width: '100%',
                         height: '48px',
@@ -831,7 +845,6 @@ export default function EventPreferences() {
                       width: '100%',
                       height: '8px',
                       borderRadius: '4px',
-                      appearance: 'none',
                       background: `linear-gradient(90deg, #2F6BFF ${formData.avoid_long_transit * 10}%, #e5e7eb ${formData.avoid_long_transit * 10}%)`,
                       outline: 'none'
                     }}
@@ -869,7 +882,6 @@ export default function EventPreferences() {
                       width: '100%',
                       height: '8px',
                       borderRadius: '4px',
-                      appearance: 'none',
                       background: `linear-gradient(90deg, #2F6BFF ${formData.prefer_outdoor * 10}%, #e5e7eb ${formData.prefer_outdoor * 10}%)`,
                       outline: 'none'
                     }}
@@ -907,7 +919,6 @@ export default function EventPreferences() {
                       width: '100%',
                       height: '8px',
                       borderRadius: '4px',
-                      appearance: 'none',
                       background: `linear-gradient(90deg, #2F6BFF ${formData.prefer_cultural * 10}%, #e5e7eb ${formData.prefer_cultural * 10}%)`,
                       outline: 'none'
                     }}
