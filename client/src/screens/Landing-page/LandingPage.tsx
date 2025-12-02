@@ -93,9 +93,32 @@ export default function LandingPageScreen({ navigation }: LandingPageScreenProps
     };
 
     const handleTrackFlight = async () => {
-      await AsyncStorage.setItem('trackedFlight', flightNumber);
-      setTrackedFlight(flightNumber);
-      fetchFlightData(flightNumber);
+    try {
+        const today = new Date().toISOString().split('T')[0];
+        const response = await fetch(
+        `https://aerodatabox.p.rapidapi.com/flights/number/${flightNumber}/${today}`,
+        {
+            headers: {
+            'X-RapidAPI-Key': 'a75d212df3msh80b4775bd20989bp1ac458jsn28c53dce7038',
+            'X-RapidAPI-Host': 'aerodatabox.p.rapidapi.com'
+            }
+        }
+        );
+        
+        const data = await response.json();
+        console.log('Flight data:', data);
+        
+        if (data && data.length > 0) {
+        await AsyncStorage.setItem('trackedFlight', flightNumber);
+        setTrackedFlight(flightNumber);
+        setFlightData(data[0]);
+        } else {
+        alert('Flight not found. Please check the flight number.');
+        }
+    } catch (error) {
+        console.error('Error:', error);
+        alert('Error fetching flight data. Please try again.');
+    }
     };
 
     useEffect(() => {
@@ -160,10 +183,12 @@ export default function LandingPageScreen({ navigation }: LandingPageScreenProps
                     <Text style={styles.flightNum}>{trackedFlight}</Text>
                     <Text style={styles.countdownText}>{countdown}</Text>
                     <Pressable onPress={async () => { 
-                      setTrackedFlight(null); 
-                      await AsyncStorage.removeItem('trackedFlight'); 
-                    }}>
-                      <Text style={styles.changeText}>Change Flight</Text>
+                        setTrackedFlight(null);
+                        setFlightData(null); // Add this line to clear the flight data
+                        setCountdown(''); // Optional: clear countdown display
+                        await AsyncStorage.removeItem('trackedFlight'); 
+                        }}>
+                        <Text style={styles.changeText}>Change Flight</Text>
                     </Pressable>
                   </View>
                 )}

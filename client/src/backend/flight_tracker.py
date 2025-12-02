@@ -59,7 +59,7 @@ class FlightTracker:
             "withLeg": "true",
             "direction": "Both",
             "withCancelled": "false",
-            "withCodeshared": "true",
+            "withCodeshared": "false",
             "withCargo": "false",
             "withPrivate": "false",
             "withLocation": "false"
@@ -87,12 +87,18 @@ class FlightTracker:
     def _parse_flight(self, flight: Dict, flight_type: str) -> Dict:
         airline = flight.get("airline", {})
         
+        departure_info = flight.get("departure", {})
+        arrival_info = flight.get("arrival", {})
+        
+        departure_airport = departure_info.get("airport", {})
+        arrival_airport = arrival_info.get("airport", {})
+        
         if flight_type == "Departure":
-            location_info = flight.get("arrival", {}).get("airport", {})
-            time_info = flight.get("departure", {})
-        else:
-            location_info = flight.get("departure", {}).get("airport", {})
-            time_info = flight.get("arrival", {})
+            time_info = departure_info
+            other_airport = arrival_airport.get("name", "Unknown")
+        else:  
+            time_info = arrival_info
+            other_airport = departure_airport.get("name", "Unknown")
         
         scheduled = time_info.get("scheduledTime", {}).get("local", "")
         actual = time_info.get("actualTime", {}).get("local") or time_info.get("revisedTime", {}).get("local")
@@ -101,18 +107,19 @@ class FlightTracker:
         gate = time_info.get("gate") or airport_resources.get("gate")
         terminal = time_info.get("terminal") or airport_resources.get("terminal")
         if not gate:
-            gate = flight.get("departure", {}).get("gate") or flight.get("arrival", {}).get("gate")
+            gate = departure_info.get("gate") or arrival_info.get("gate")
         if not terminal:
-            terminal = flight.get("departure", {}).get("terminal") or flight.get("arrival", {}).get("terminal")
+            terminal = departure_info.get("terminal") or arrival_info.get("terminal")
         gate = gate or "TBA"
         terminal = terminal or "TBA"
         
         return {
             "flightNumber": flight.get("number", "N/A"),
             "airline": airline.get("name", "Unknown"),
-            "location": location_info.get("name", "Unknown"),
-            "country": location_info.get("iata", ""),
-            "city": location_info.get("name", ""),
+            "departure": departure_airport.get("name", "Unknown"),
+            "arrival": arrival_airport.get("name", "Unknown"),
+            "country": arrival_airport.get("iata", "") if flight_type == "Departure" else departure_airport.get("iata", ""),
+            "city": other_airport,
             "scheduledTime": self._format_time(scheduled),
             "actualTime": self._format_time(actual),
             "status": flight.get("status", "Scheduled"),
