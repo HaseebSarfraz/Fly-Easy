@@ -4,7 +4,7 @@ from typing import List                             # MAKE SURE THIS IS INSTALLE
 from planner.core.models import Client, Activity, PlanDay, PlanEvent, Location
 from planner.core.constraints import hard_feasible, hc_open_window_ok, hc_age_ok
 from planner.core.timegrid import generate_candidate_times, choose_step_minutes
-from planner.core.scoring import interest_score_age
+from planner.core.scoring import interest_age_score
 from planner.core.utils import to_minutes
 
 import requests                 # TO MAKE API REQUESTS (MUST BE INSTALLED ON DEVICE)
@@ -103,17 +103,52 @@ def fits_in_window(activity: Activity, client: Client, start_min: int) -> bool:
     return fits
 
 
-def make_day_plan(client: Client, activities: List[Activity], day: date) -> PlanDay:
+# def make_day_plan(client: Client, activities: List[Activity], day: date) -> PlanDay:
+#     plan = PlanDay(day)
+#
+#     # higher interest, then popularity
+#     acts_sorted = sorted(
+#         activities,
+#         key=lambda a: (interest_score_age(client, a), a.popularity),
+#         reverse=True,
+#     )
+#
+#     for act in acts_sorted:
+#         step = choose_step_minutes(act) or 60
+#         for start_dt in generate_candidate_times(act, day, step_minutes=step):
+#             # Checks if the age restriction and start time is feasible based on
+#             # when client starts and the duration of the activity with respect to its closing time
+#             hard_check = hard_feasible(client, act, start_dt)
+#             no_overlap = fits_no_overlap(plan.events, start_dt, act)
+#             window_fits = fits_in_window(act, client, client.day_start_min)
+#
+#             if no_overlap and hard_check and window_fits:
+#                 if is_weather_suitable(act, start_dt): # ONLY RUNS WEATHER CHECKS IF THE EVENT CAN FIT (OPTIMIZATION)
+#                     plan.add(PlanEvent(act, start_dt))
+#                     break
+#
+#             placed = repairB(plan, client, act, day, start_dt, max_moves=1, try_others=True)
+#             if placed:
+#                 break # E placed; move to next activity
+#             # else: try next candidate time for this act
+#     plan.events.sort(key=lambda e: e.start_dt)
+#     return plan
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Repair helpers
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+def _make_day_plan_helper(client: Client, activities: List[Activity], day: date) -> PlanDay:
+    """
+    Helper function to make a day plan.
+    This helper is used multiple times for layered-scoring and planning.
+    """
     plan = PlanDay(day)
 
-    # higher interest, then popularity
-    acts_sorted = sorted(
-        activities,
-        key=lambda a: (interest_score_age(client, a), a.popularity),
-        reverse=True,
-    )
-
-    for act in acts_sorted:
+    filtered_activities = []
+    for act in activities:
         step = choose_step_minutes(act) or 60
         for start_dt in generate_candidate_times(act, day, step_minutes=step):
             # Checks if the age restriction and start time is feasible based on
@@ -123,14 +158,36 @@ def make_day_plan(client: Client, activities: List[Activity], day: date) -> Plan
             window_fits = fits_in_window(act, client, client.day_start_min)
 
             if no_overlap and hard_check and window_fits:
-                if is_weather_suitable(act, start_dt): # ONLY RUNS WEATHER CHECKS IF THE EVENT CAN FIT (OPTIMIZATION)
+                if is_weather_suitable(act, start_dt):  # ONLY RUNS WEATHER CHECKS IF THE EVENT CAN FIT (OPTIMIZATION)
                     plan.add(PlanEvent(act, start_dt))
                     break
 
             placed = repairB(plan, client, act, day, start_dt, max_moves=1, try_others=True)
+
             if placed:
-                break # E placed; move to next activity
+                break  # E placed; move to next activity
             # else: try next candidate time for this act
+
+    return plan
+
+
+def make_day_plan(client: Client, activities: List[Activity], day: date) -> PlanDay:
+    first_plan = _make_day_plan_helper(client, activities, day)
+    acts_with_interest_score = {}
+    for act in first_plan.events:
+        interest_score, ext_creds, interest_score_individual = interest_age_score(client, act)
+        # duration_pen = duration_penalty(act, client)
+        acts_with_interest_score[act.name] = {"iscore": interest_score, "individual_iscore": interest_score_individual,
+                                              "ext_creds": ext_creds}
+
+    # higher interest, then popularity
+    acts_sorted_by_ip = sorted(
+        first_plan.events,
+        key=lambda a: (acts_with_interest_score[a.name], a.popularity),
+        reverse=True,
+    )
+    second_plan = _make_day_plan_helper(client, acts_sorted_by_ip, day)
+    # acts_by_otc =
     plan.events.sort(key=lambda e: e.start_dt)
     return plan
 

@@ -12,7 +12,7 @@ EXTREME_INTEREST_MIN_SCORE = 8.5  # MINIMUM SCORE FOR SOMEONE TO BE CONSIDERED "
 PENALTY_SENSITIVITY = 0.4          # USED FOR CONTROLLING SENSITIVITY OF PENALIZATION FOR TIME DISTRIBUTION
 
 
-def interest_score_age(client: Client, act: Activity) -> tuple[float, dict, dict]:
+def interest_age_score(client: Client, act: Activity) -> tuple[float, dict, dict]:
     """
     Soft score for an activity [0, 10+]. Sums client's interest weights on an activity.
     This modified version accounts for extreme interest cases, so if this activity satisfies a member
@@ -111,6 +111,43 @@ def interest_score_age(client: Client, act: Activity) -> tuple[float, dict, dict
     else:                   # OTHERWISE IF THERE IS NOT ENOUGH CREDITS LEFT THEN WE CONSIDER THIS A REGULAR EVENT
         return average_interest_score, {}, interest_scores
 
+
+# FIRST PENALTY APPLIED IN INITIAL SCORING
+def duration_penalty(act: Activity, interest_score: float, gamma: float = 1.2) -> float:
+    """
+    Returns a score indicating the "fairness" of the activity towards everyone.
+    If there is any form of imbalance, the score increases.
+    Returns values ranging between 0 and 1, with 1 meaning it is not fair at all,
+    and 0 meaning it is completely fair.
+    """
+    dur_pen = act.duration_min * ((1 - interest_score/10) ** gamma)
+    return min(10, dur_pen)
+
+
+# SECOND SET OF PENALTIES APPLIED AFTER SECOND WAVE OF PLANNING
+def conflict_penalty(act: Activity, plan: PlanDay, client: Client, gamma: float = 1.1) -> float:
+    """
+    Returns a penalty for this activity if it has categories that repeat. In events that have been added to the plan
+    already.
+    """
+    conf_pen = 0
+    for tag in act.tags:        # GO OVER EACH EVENT "TAG"
+        total_tag_interest = 0
+        times_encountered = plan.tags_encountered[tag] # GET THE NUMBER OF TIMES THIS TAG HAS APPEARED IN PREVIOUS ACTIVITIES
+        for c in client.party_members.values():
+            interests = c["interest_weights"]
+            total_tag_interest += interests.get(tag, 0)  # ADD THE INTEREST LEVEL OF THIS MEMBER FOR THIS TAG
+        conf_pen += ((times_encountered * ((1 - (total_tag_interest/len(client.party_members))) ** gamma)) *
+                     (act.duration_min / client.daily_act_time_per_member))  # SOME EXPRESSION HERE
+    return min(conf_pen, 10)  # RETURN PENALTY
+
+
+def fairness_penalty() -> float:
+    """
+    A penalty on activities based on separation of interest scores.
+    """
+    # TODO: IMPLEMENT THIS FUNCTION
+    pass
 def _check_age_factor(member_age: int, act: Activity) -> float:
     """
     Does a simple soft score between 0 and 1 based on how age-friendly the activity is.

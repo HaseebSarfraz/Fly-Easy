@@ -74,14 +74,25 @@ class Client:
         self.avoid_long_transit = int(avoid_long_transit)
         self.prefer_outdoor = int(prefer_outdoor)
         self.prefer_cultural = int(prefer_cultural)
-        self.day_start_min = _to_minutes(day_start_time)
-        self.day_end_min = _to_minutes(day_end_time)
+        self.day_start_min, self.day_end_min = _window_to_minutes(_to_minutes(day_start_time), _to_minutes(day_end_time))
         self.credits_left = {}
         # CODE BELOW GETS THE NUMBER OF CREDITS PER MEMBER
         trip_days = (trip_end - trip_start).days
         cpm = math.floor(trip_days // len(self.party_members))
         for name in self.party_members:
             self.credits_left[name] = cpm
+
+        # THE NUMBER OF HOURS EACH MEMBER CAN GET PER EVENT IN THE DAY (ASSUMING RIGHT NOW THAT IT IS EQUAL PER PERSON)
+        self.total_day_duration = self.day_end_min - self.day_start_min
+        self.daily_act_time_per_member = self.total_day_duration / len(self.party_members)
+        self.engagement_time = {}
+        for name in self.party_members:
+            self.engagement_time[name] = 0
+
+        # STORES THE NUMBER OF TIMES EACH MEMBER WAS SATISFIED.
+        self.times_satisfied = {}
+        for name in party_members:
+            self.times_satisfied[name] = 0
 
     def size(self) -> int:
         return len(self.party_members)
@@ -179,6 +190,9 @@ class Activity:
         return (start_min >= s_min) and (start_min + self.duration_min) <= e_min
 
 class PlanEvent:
+    activity: Activity
+    start_dt: datetime
+    end_dt: datetime
     def __init__(self, activity: Activity, start_dt: datetime):
         self.activity = activity
         self.start_dt = start_dt
@@ -190,9 +204,11 @@ class PlanEvent:
 
 
 class PlanDay:
+    events: list[PlanEvent]
     def __init__(self, day: date):
         self.day = day
         self.events = []
+        self.tags_encountered = {}
 
     def add(self, event: PlanEvent):
         self.events.append(event)
@@ -209,6 +225,10 @@ def _to_minutes(hhmm: str) -> int:
         return int(h) * 60 + int(m)
 
 
+def _window_to_minutes(w_start: int, w_end: int) -> tuple[int, int]:
+    if w_end < w_start:
+        w_end += (24 * 60)
+    return w_start, w_end
 if __name__ == "__main__":
     from datetime import date, datetime
 
