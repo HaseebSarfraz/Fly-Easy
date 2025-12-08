@@ -2,13 +2,17 @@
 import math
 from planner.core.models import Client, Activity
 from datetime import datetime
+from models import PlanDay
 
+# TODO: BALANCING TASK -> OVER THE TRIP, YOU SATISFY EACH PERSON'S NEEDS ATLEAST ONCE
+# TODO: FOR EVERY SINGLE DAY THERE SHOULD BE 1 EXTREME ACCOMMODATION PER MEMBER (ASK GPT)
 MAX_CREDS_PER_MEMBER = 2  # MAX CREDITS ALLOWED PER MEMBER FOR AN EXTREME ACCOMMODATION
 HOURS_PER_CREDIT = 2      # EACH CREDIT CAN BE USED FOR A 2-HOUR ACCOMMODATION
 EXTREME_INTEREST_MIN_SCORE = 8.5  # MINIMUM SCORE FOR SOMEONE TO BE CONSIDERED "EXTREMELY INTERESTED"
+PENALTY_SENSITIVITY = 0.4          # USED FOR CONTROLLING SENSITIVITY OF PENALIZATION FOR TIME DISTRIBUTION
 
 
-def interest_score_age(client: Client, act: Activity) -> float:
+def interest_score_age(client: Client, act: Activity) -> tuple[float, dict, dict]:
     """
     Soft score for an activity [0, 10+]. Sums client's interest weights on an activity.
     This modified version accounts for extreme interest cases, so if this activity satisfies a member
@@ -27,8 +31,9 @@ def interest_score_age(client: Client, act: Activity) -> float:
     interest_scores = {}                          # INTEREST SCORES OF THE ENTIRE FAMILY
     not_ext_interested = []                       # LIST OF ALL "NOT EXTREMELY INTERESTED" SCORES
     ext_interested = []                           # LIST OF ALL "EXTREMELY INTERESTED" SCORES
-    ext_interested_creds = {}                     # DICTIONARY OF CREDITS FOR EACH EXTREMELY INTERESTED MEMBER
+    ext_interested_creds = {}                     # DICTIONARY OF CREDITS USED BY EACH EXTREMELY INTERESTED MEMBER
     num_members = len(client.party_members)       # THE NUMBER OF MEMBERS IN THE PARTY (FAMILY)
+
     for member in client.party_members:           # ITERATES OVER EACH MEMBER IN THE FAMILY
         age = client.party_members[member]["age"]  # THE AGE OF THIS MEMBER
         member_age_score = _check_age_factor(age, act)  # THE AGE SCORE OF THIS ACTIVITY TO THIS PERSON'S AGE
@@ -39,7 +44,8 @@ def interest_score_age(client: Client, act: Activity) -> float:
         interest_scores[member] = member_interest   # STORES THIS MEMBER'S OVERALL INTEREST SCORE FOR THIS EVENT
         if member_interest >= EXTREME_INTEREST_MIN_SCORE:  # LIST OF SCORES FOR THOSE EXTREMELY INTERESTED
             ext_interested.append(member_interest)  # IF THE MEMBER HAS A HIGH INTEREST SCORE, ADD THEM TO THIS LIST
-            ext_interested_creds[member] = client.credits_left[member]  # STORE THIS PERSON'S "ACCOMOCATION" CREDITS
+            # ext_interested_creds[member] = client.credits_left[member]  # STORE THIS PERSON'S "ACCOMOCATION" CREDITS
+            ext_interested_creds[member] = 0
         else:   # LIST OF SCORES FOR THOSE NOT EXTREMELY INTERESTED (INTEREST SCORE COULD STILL BE HIGH)
             not_ext_interested.append(member_interest)  # NOT-SUPER-INTERESTED MEMBERS GET ADDED HERE
     average_interest_score = sum(interest_scores.values()) / num_members  # AVERAGE SUITABILITY SCORE FOR THE FAMILY
@@ -50,7 +56,7 @@ def interest_score_age(client: Client, act: Activity) -> float:
     # ======= OPTIMIZATION MEASURE: IF THE ENTIRE FAMILY IS IN THE SAME INTEREST GROUP THEN WE RETURN THE
     # AVERAGE INTEREST SCORE. =======
     if total_ext_count == 0 or total_not_ext_count == 0:
-        return average_interest_score
+        return average_interest_score, {}, interest_scores
 
     ext_interested_avg = sum(ext_interested) / len(ext_interested)  # AVG SCORE OF EXTREMELY INTERESTED
     not_ext_interested_avg = sum(not_ext_interested) / len(not_ext_interested)  # AVG SCORE OF NOT EXTREMELY INTERESTED
@@ -67,36 +73,43 @@ def interest_score_age(client: Client, act: Activity) -> float:
 
     if interest_score_diff >= 3:    # CHECKS IF THE INTEREST SCORE IS SIGNIFICANT ENOUGH FOR ANY EXTREME ACCOMMODATION
         extreme_score = max(interest_scores.values())   # TAKES THE ABSOLUTE MAXIMUM INTEREST SCORE
-        for i in ext_interest_sorted:   # GOES OVER ALL THE EXTREMELY INTERESTED MEMBER
-            if creds_required >= MAX_CREDS_PER_MEMBER:  # CHECKS IF THERE ARE AT LEAST 2 CREDITS NEEDED FOR THIS EVENT
-                if ext_interested_creds[i] >= MAX_CREDS_PER_MEMBER:  # PERSON HAS AT LEAST 2 CREDITS
-                    ext_interested_creds[i] -= 2
-                    creds_required -= 2
-                    if creds_required == 0:
-                        break
-                elif ext_interested_creds[i] == 1:  # PERSON HAS 1 CREDIT LEFT
-                    ext_interested_creds[i] -= 1
-                    creds_required -= 1
-                else:                               # PERSON HAS NO CREDITS
-                    continue
-            elif creds_required == 1:
-                if ext_interested_creds[i] > 0:
-                    ext_interested_creds[i] -= 1
-                    creds_required = 0
-                    break
-                else:
-                    continue
-            else:   # SOMEHOW NO EXTREME ACCOMMODATION IS NEEDED (THIS SHOULD IDEALLY NOT HAPPEN)
-                break
+        i = 0
+        while creds_required > 0 and i < len(ext_interest_sorted):
+            creds_2 = creds_required - 2
+            use_creds = int(creds_2 >= 0) + 1   # USE 2 CREDITS IF THE REQUIRED NUMBER OF CREDITS AFTER UPDATE IS >= 0
+            ext_interested_creds[ext_interest_sorted[i]] = use_creds
+            creds_required -= use_creds
+            i += 1
 
-    if creds_required == 0:  # EVERYONE IN THE GROUP HAS ENOUGH CREDITS TO DO THIS
-        if extreme_score > average_interest_score:
-            for i in ext_interested_creds:
-                client.credits_left[i] = ext_interested_creds[i]    # UPDATE THE CREDITS FOR EACH INTERESTED MEMBER
-        return extreme_score    # RETURN THE MAX SCORE
+        # for i in ext_interest_sorted:   # GOES OVER ALL THE EXTREMELY INTERESTED MEMBER
+        #     if creds_required >= MAX_CREDS_PER_MEMBER:  # CHECKS IF THERE ARE AT LEAST 2 CREDITS NEEDED FOR THIS EVENT
+        #         if ext_interested_creds[i] >= MAX_CREDS_PER_MEMBER:  # PERSON HAS AT LEAST 2 CREDITS
+        #             ext_interested_creds[i] -= 2
+        #             creds_required -= 2
+        #             if creds_required == 0:
+        #                 break
+        #         elif ext_interested_creds[i] == 1:  # PERSON HAS 1 CREDIT LEFT
+        #             ext_interested_creds[i] -= 1
+        #             creds_required -= 1
+        #         else:                               # PERSON HAS NO CREDITS
+        #             continue
+        #     elif creds_required == 1:
+        #         if ext_interested_creds[i] > 0:
+        #             ext_interested_creds[i] -= 1
+        #             creds_required = 0
+        #             break
+        #         else:
+        #             continue
+        #     else:   # SOMEHOW NO EXTREME ACCOMMODATION IS NEEDED (THIS SHOULD IDEALLY NOT HAPPEN)
+        #         break
+    # TODO: FOR ALL RETURN STATEMENTS, IF MUST REVERT TO ORIGINAL, RETURN JUST THE FIRST VALUE
+    if creds_required == 0 and extreme_score > average_interest_score:  # EVERYONE IN THE GROUP HAS ENOUGH CREDITS TO DO THIS
+        # if extreme_score > average_interest_score:
+        # for i in ext_interested_creds:
+        #     client.credits_left[i] = ext_interested_creds[i]    # UPDATE THE CREDITS FOR EACH INTERESTED MEMBER
+        return extreme_score, ext_interested_creds, interest_scores   # RETURN THE MAX SCORE
     else:                   # OTHERWISE IF THERE IS NOT ENOUGH CREDITS LEFT THEN WE CONSIDER THIS A REGULAR EVENT
-        return average_interest_score
-
+        return average_interest_score, {}, interest_scores
 
 def _check_age_factor(member_age: int, act: Activity) -> float:
     """

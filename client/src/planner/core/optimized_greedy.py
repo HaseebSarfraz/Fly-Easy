@@ -82,7 +82,7 @@ def is_weather_suitable(activity: Activity, start_dt: datetime) -> bool:
         event_weather = [WEATHER_CODE_MAP[code] for code in event_weather_codes]
         bad_weather = any(w in activity.weather_blockers for w in event_weather)
         return not bad_weather  # RETURN TRUE IF ALL WEATHER IS FINE
-    except KeyError:
+    except KeyError:    # ONLY HAPPENS IN THE CASE WHERE THE WEATHER CANT BE FOUND
         return False
 
 
@@ -116,7 +116,7 @@ def make_day_plan(client: Client, activities: List[Activity], day: date) -> Plan
     for act in acts_sorted:
         step = choose_step_minutes(act) or 60
         for start_dt in generate_candidate_times(act, day, step_minutes=step):
-            # Checks if the age restriction and start time is feasible based on 
+            # Checks if the age restriction and start time is feasible based on
             # when client starts and the duration of the activity with respect to its closing time
             hard_check = hard_feasible(client, act, start_dt)
             no_overlap = fits_no_overlap(plan.events, start_dt, act)
@@ -128,7 +128,6 @@ def make_day_plan(client: Client, activities: List[Activity], day: date) -> Plan
                     break
 
             placed = repairB(plan, client, act, day, start_dt, max_moves=1, try_others=True)
-                
             if placed:
                 break # E placed; move to next activity
             # else: try next candidate time for this act
