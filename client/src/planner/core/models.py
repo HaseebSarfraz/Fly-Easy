@@ -38,6 +38,8 @@ class Client:
     prefer_outdoor: int             # 0–10
     prefer_cultural: int            # 0–10
     early_risers: bool
+    dietary: Optional[dict]
+    meal_prefs: Optional[dict]
 
 
     def __init__(
@@ -58,8 +60,9 @@ class Client:
         prefer_outdoor: int,             # 0–10
         prefer_cultural: int,            # 0–10
         early_risers: bool,
+        dietary: Optional[dict],
+        meal_prefs: Optional[dict]
     ):
-        
         self.adults_ages = [int(age) for age in adults_ages]
         self.kids_ages = [int(age) for age in kids_ages]
         self.id = str(id)
@@ -76,6 +79,12 @@ class Client:
         self.prefer_outdoor = int(prefer_outdoor)
         self.prefer_cultural = int(prefer_cultural)
         self.early_risers = bool(early_risers)
+        self.dietary = dietary or {"restrictions": [], "avoid": [], "cuisine_likes": []}
+        self.meal_prefs = meal_prefs or {
+            "breakfast": {"start": "08:00", "end": "10:00"},
+            "lunch":     {"start": "12:00", "end": "14:00"},
+            "dinner":    {"start": "18:00", "end": "20:00"},
+        }
 
     def size(self) -> int:
         return len(self.adults_ages) + len(self.kids_ages)
@@ -114,6 +123,8 @@ class Activity:
         requires_booking: bool,
         weather_blockers: list[str],
         popularity: float,
+        vibe_tags: List[str] = None
+
     ):
         self.id = str(id)
         self.name = name
@@ -131,6 +142,7 @@ class Activity:
         self.requires_booking = bool(requires_booking)
         self.weather_blockers = list(weather_blockers or [])
         self.popularity = float(popularity)
+        self.vibe_tags = list(vibe_tags or [])
 
   # helpers we might need. 
 
