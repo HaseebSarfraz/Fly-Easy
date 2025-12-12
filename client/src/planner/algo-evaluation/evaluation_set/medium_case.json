@@ -1,0 +1,23 @@
+[
+{
+  "id": "M1_couple_city_stack",
+  "client_id": "p_couple_urbanfood_01",
+  "day": "2025-12-05",
+  "event_ids": ["e_cn_tower_01", "e_ripleys_01", "e_kensington_01", "e_pizza_maker_01"],
+  "notes": "Tight mid-day stack of 90+120+75+60; all daily. Mild overlaps likely."
+},
+{
+  "id": "M2_family_museums_block",
+  "client_id": "p_family_youngkids_01",
+  "day": "2025-11-23",
+  "event_ids": ["e_rom_01", "t_ago_blocker", "e_distillery_01"],
+  "notes": "‘t_ago_blocker’ has 12:00–18:00 window with 180min dur; ROM=150min daily; Distillery=90min daily."
+},
+{
+  "id": "M3_couple_shopping_food_views",
+  "client_id": "p_couple_urbanfood_01",
+  "day": "2025-12-06",
+  "event_ids": ["e_eaton_centre_shop_01", "e_pizza_libretto_oss_01", "e_cn_tower_01"],
+  "notes": "Two 120-min bookends and a 60-min meal; small room for shuffles."
+}
+]
