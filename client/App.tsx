@@ -14,6 +14,7 @@ import AirportTracker from "./src/screens/AirportTracker/AirportTracker";
 import { urlToHttpOptions } from "url";
 import { title } from "process";
 import SplashAnimation from "./src/screens/StartAnimation/SplashAnimation";
+import EventPreferences from "./src/screens/EventPlanner/EventPreferences";
 
 
 export type RootStackParamList = {
@@ -59,6 +60,7 @@ export type RootStackParamList = {
   BoardingPassScanner: {
     onSave?: () => void;
   };
+  EventPreferences: undefined;
 };
 
 const Stack = createNativeStackNavigator<RootStackParamList>(); // <-- add the generic
@@ -91,6 +93,11 @@ export default function App() {
                 <Stack.Screen 
                     name="AirportTracker" 
                     component={AirportTracker}
+                    options={{ title: "Airport Tracker" }}
+                />
+                <Stack.Screen 
+                    name="EventPreferences" 
+                    component={EventPreferences}
                     options={{ title: "Airport Tracker" }}
                 />
             </Stack.Navigator>
