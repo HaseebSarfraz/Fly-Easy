@@ -6,7 +6,7 @@ interface Flight {
   flightNumber: string;
   airline: string;
   departure: string;
-  arrival: string
+  arrival: string;
   scheduledTime: string;
   actualTime: string;
   status: string;
@@ -18,7 +18,7 @@ interface Flight {
 
 export default function AirportTracker() {
   const [airportCode, setAirportCode] = useState('');
-  const [direction, setDirection] = useState<'Departure' | 'Arrival' | 'Both'>('Both');
+  const [direction, setDirection] = useState<'Departure' | 'Arrival'>('Departure');
   const [flights, setFlights] = useState<Flight[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [loading, setLoading] = useState(false);
@@ -35,8 +35,6 @@ export default function AirportTracker() {
     setError('');
 
     try {
-        // NO BACKEND. INPUT IP ADDRESS INTO THIS TO TEST. THIS IS ALL DEV. DO NOT PUSH YOUR IP ADDRESS TO GITHUB
-        // GO TO TERMINAL TYPE IN IPCONFIG PASTE IPv4 ADDRESS REPLACING THE "127.0.0.1"
       const response = await fetch(
         `http://127.0.0.1:5001/airport_tracker/${airportCode.toUpperCase()}?direction=${direction}`
       );
@@ -57,8 +55,38 @@ export default function AirportTracker() {
     }
   };
 
+  const isFlightDelayed = (scheduledTime: string, actualTime: string): boolean => {
+    if (!scheduledTime || !actualTime) return false;
+    
+    const parseTime = (timeStr: string): Date => {
+      const [time, period] = timeStr.split(' ');
+      const [hours, minutes] = time.split(':').map(Number);
+      let adjustedHours = hours;
+      
+      if (period === 'PM' && hours !== 12) {
+        adjustedHours = hours + 12;
+      } else if (period === 'AM' && hours === 12) {
+        adjustedHours = 0;
+      }
+      
+      const date = new Date();
+      date.setHours(adjustedHours, minutes, 0, 0);
+      return date;
+    };
+
+    try {
+      const scheduled = parseTime(scheduledTime);
+      const actual = parseTime(actualTime);
+      
+      // Consider delayed if actual time is more than 5 minutes after scheduled
+      return actual.getTime() > scheduled.getTime() + (5 * 60 * 1000);
+    } catch {
+      return false;
+    }
+  };
+
   const filteredFlights = flights.filter(flight => {
-  const query = searchQuery.toLowerCase();
+    const query = searchQuery.toLowerCase();
     return (
       flight.departure.toLowerCase().includes(query) ||
       flight.arrival.toLowerCase().includes(query) ||
@@ -67,26 +95,44 @@ export default function AirportTracker() {
     );
   });
 
-  const renderFlight = ({ item }: { item: Flight }) => (
-    <View style={styles.flightCard}>
-      <View style={styles.flightHeader}>
-        <Text style={styles.flightNumber}>{item.flightNumber}</Text>
-        <Text style={[styles.status, item.status === 'Departed' && styles.statusDeparted]}>{item.status}</Text>
+  const renderFlight = ({ item }: { item: Flight }) => {
+    const isDelayed = isFlightDelayed(item.scheduledTime, item.actualTime);
+    
+    return (
+      <View style={[styles.flightCard]}>
+        <View style={styles.flightHeader}>
+          <Text style={styles.flightNumber}>{item.flightNumber}</Text>
+          <Text style={[
+            styles.status, 
+            item.status === 'Departed' && styles.statusDeparted,
+            isDelayed && styles.statusDelayed
+          ]}>
+            {isDelayed ? 'Delayed' : item.status}
+          </Text>
+        </View>
+        <Text style={styles.airline}>{item.airline}</Text>
+        <Text style={styles.location}>
+          {item.type === 'Departure' 
+            ? `To: ${item.arrival}` 
+            : `From: ${item.departure}`}
+          </Text>
+        <View style={styles.flightDetails}>
+          <Text style={styles.detailText}>
+            🕐 Scheduled: {item.scheduledTime || 'N/A'}
+          </Text>
+          {item.actualTime && isDelayed && (
+            <Text style={[styles.detailText, styles.delayedTime]}>
+              ⏰ New Time: {item.actualTime}
+            </Text>
+          )}
+          <Text style={styles.detailText}>
+            🚪 Gate {item.gate} | Terminal {item.terminal}
+          </Text>
+        </View>
+        <Text style={styles.aircraft}>✈️ {item.aircraft}</Text>
       </View>
-      <Text style={styles.airline}>{item.airline}</Text>
-      <Text style={styles.location}>
-        {item.type === 'Departure' 
-          ? `To: ${item.arrival}` 
-          : `From: ${item.departure}`}
-      </Text>
-      <View style={styles.flightDetails}>
-        <Text style={styles.detailText}>🕐 {item.scheduledTime || 'N/A'}</Text>
-        {item.actualTime && <Text style={styles.detailText}>✈️ {item.actualTime}</Text>}
-        <Text style={styles.detailText}>🚪 Gate {item.gate} | Terminal {item.terminal}</Text>
-      </View>
-      <Text style={styles.aircraft}>✈️ {item.aircraft}</Text>
-    </View>
-  );
+    );
+  };
 
   return (
     <SafeAreaView style={styles.safe} edges={['bottom', 'left', 'right']}>
@@ -272,6 +318,10 @@ const styles = StyleSheet.create({
     color: '#2196F3',
     backgroundColor: '#E3F2FD',
   },
+  statusDelayed: {
+    color: '#F57C00',
+    backgroundColor: '#FFE0B2',
+  },
   airline: {
     fontSize: 15,
     color: '#666',
@@ -290,6 +340,10 @@ const styles = StyleSheet.create({
   detailText: {
     fontSize: 14,
     color: '#666',
+  },
+  delayedTime: {
+    color: '#F57C00',
+    fontWeight: '600',
   },
   aircraft: {
     fontSize: 13,
