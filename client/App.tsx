@@ -11,6 +11,9 @@ import HotelPreferencesScreen from "./src/screens/Hotels/HotelPreferencesScreen"
 import DigitalWalletScreen from "./src/screens/Wallet/DigitalWalletScreen";
 import Scanner from "./src/components/wallet-components/Scanner";
 import AirportTracker from "./src/screens/AirportTracker/AirportTracker";
+import LoginPageScreen from "./src/screens/Login/LoginScreen";
+import LoginPage from "./src/screens/Login/LoginPage";
+import SignUpPageScreen from "./src/screens/Login/SignUpPage";
 import { urlToHttpOptions } from "url";
 import { title } from "process";
 import SplashAnimation from "./src/screens/StartAnimation/SplashAnimation";
@@ -19,6 +22,9 @@ import EventPreferences from "./src/screens/EventPlanner/EventPreferences";
 
 export type RootStackParamList = {
   LandingPage: undefined;
+  LoginScreen: undefined;
+  LoginPage: undefined;
+  SignUpPage: undefined;
   HotelSearch: undefined;
   AirportTracker: undefined;
   RestaurantsSearch: undefined;
@@ -73,7 +79,12 @@ export default function App() {
     }
     return (
         <NavigationContainer>
-            <Stack.Navigator>
+            <Stack.Navigator
+                initialRouteName="LoginScreen"
+            >
+                <Stack.Screen name="LoginScreen" component={LoginPageScreen} />
+                <Stack.Screen name="LoginPage" component={LoginPage} />
+                <Stack.Screen name="SignUpPage" component={SignUpPageScreen} />
                 <Stack.Screen name="LandingPage" component={LandingPageScreen} options={{title: "FlyEasy"}}/>
                 <Stack.Screen name="HotelSearch" component={HotelSearchScreen} options={{title: "Search Hotels"}} />
                 <Stack.Screen name="RestaurantsSearch" component={RestaurantSearchScreen} options={{title: "Search Restaurants"}}/>
