@@ -37,6 +37,8 @@ class Client:
     avoid_long_transit: int         # 0–10 in your data
     prefer_outdoor: int             # 0–10
     prefer_cultural: int            # 0–10
+    day_start_time: time
+    day_end_time: time
     day_start_min: int              # STARTING TIME FOR THEIR DAY (IN MINUTES)
     day_end_min: int                # ENDING TIME FOR THEIR DAY (IN MINUTES)
     credits_left: Dict[str, int]    # KEEPS A COUNT OF THE NUMBER OF ACCOMMODATION CREDITS LEFT FOR EVERY MEMBER
@@ -74,6 +76,8 @@ class Client:
         self.avoid_long_transit = int(avoid_long_transit)
         self.prefer_outdoor = int(prefer_outdoor)
         self.prefer_cultural = int(prefer_cultural)
+        self.day_start_time = datetime.strptime(day_start_time, "%H:%M").time()
+        self.day_end_time = datetime.strptime(day_end_time, "%H:%M").time()
         self.day_start_min, self.day_end_min = _window_to_minutes(_to_minutes(day_start_time), _to_minutes(day_end_time))
         self.credits_left = {}
         # CODE BELOW GETS THE NUMBER OF CREDITS PER MEMBER
@@ -150,7 +154,23 @@ class Activity:
         self.weather_blockers = list(weather_blockers or [])
         self.popularity = float(popularity)
 
+
   # helpers we might need.
+    def __str__(self):
+        return (
+            f"Activity({self.name} | ID: {self.id})\n"
+            f"  Category: {self.category}\n"
+            f"  Venue: {self.venue}, {self.city}\n"
+            f"  Duration: {self.duration_min} min | Cost: ${self.cost_cad:.2f}\n"
+            f"  Age range: {self.age_min}-{self.age_max}\n"
+            f"  Popularity: {self.popularity:.2f}\n"
+            f"  Opening hours: {self.opening_hours}\n"
+            f"  Fixed times: {self.fixed_times}\n"
+            f"  Requires booking: {self.requires_booking}\n"
+            f"  Weather blockers: {self.weather_blockers}\n"
+            f"  Tags: {self.tags}\n"
+            f"  Location: ({self.location.lat}, {self.location.lng})"
+        )
 
     def _weekday_key(self, d: date) -> str:
         # "Mon","Tue","Wed","Thu","Fri","Sat","Sun"

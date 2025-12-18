@@ -1,18 +1,17 @@
 # src/planner/core/scoring.py
 import math
-from planner.core.models import Client, Activity
+from planner.core.models import Client, Activity, Location
 from datetime import datetime
 from models import PlanDay
 
 # TODO: BALANCING TASK -> OVER THE TRIP, YOU SATISFY EACH PERSON'S NEEDS ATLEAST ONCE
-# TODO: FOR EVERY SINGLE DAY THERE SHOULD BE 1 EXTREME ACCOMMODATION PER MEMBER (ASK GPT)
 MAX_CREDS_PER_MEMBER = 2  # MAX CREDITS ALLOWED PER MEMBER FOR AN EXTREME ACCOMMODATION
-HOURS_PER_CREDIT = 2      # EACH CREDIT CAN BE USED FOR A 2-HOUR ACCOMMODATION
+HOURS_PER_CREDIT = 2  # EACH CREDIT CAN BE USED FOR A 2-HOUR ACCOMMODATION
 EXTREME_INTEREST_MIN_SCORE = 8.5  # MINIMUM SCORE FOR SOMEONE TO BE CONSIDERED "EXTREMELY INTERESTED"
-PENALTY_SENSITIVITY = 0.4          # USED FOR CONTROLLING SENSITIVITY OF PENALIZATION FOR TIME DISTRIBUTION
+PENALTY_SENSITIVITY = 0.4  # USED FOR CONTROLLING SENSITIVITY OF PENALIZATION FOR TIME DISTRIBUTION
 
 
-def interest_age_score(client: Client, act: Activity) -> tuple[float, dict, dict]:
+def interest_score(client: Client, act: Activity) -> tuple[float, dict, dict]:
     """
     Soft score for an activity [0, 10+]. Sums client's interest weights on an activity.
     This modified version accounts for extreme interest cases, so if this activity satisfies a member
@@ -28,30 +27,29 @@ def interest_age_score(client: Client, act: Activity) -> tuple[float, dict, dict
     """
     activity_hrs = act.duration_min / 60
     creds_required = math.ceil(activity_hrs / 2)  # NUMBER OF CREDITS REQUIRED FOR EXTREME ACCOMODATION
-    interest_scores = {}                          # INTEREST SCORES OF THE ENTIRE FAMILY
-    not_ext_interested = []                       # LIST OF ALL "NOT EXTREMELY INTERESTED" SCORES
-    ext_interested = []                           # LIST OF ALL "EXTREMELY INTERESTED" SCORES
-    ext_interested_creds = {}                     # DICTIONARY OF CREDITS USED BY EACH EXTREMELY INTERESTED MEMBER
-    num_members = len(client.party_members)       # THE NUMBER OF MEMBERS IN THE PARTY (FAMILY)
+    interest_scores = {}  # INTEREST SCORES OF THE ENTIRE FAMILY
+    not_ext_interested = []  # LIST OF ALL "NOT EXTREMELY INTERESTED" SCORES
+    ext_interested = []  # LIST OF ALL "EXTREMELY INTERESTED" SCORES
+    ext_interested_creds = {}  # DICTIONARY OF CREDITS USED BY EACH EXTREMELY INTERESTED MEMBER
+    num_members = len(client.party_members)  # THE NUMBER OF MEMBERS IN THE PARTY (FAMILY)
 
-    for member in client.party_members:           # ITERATES OVER EACH MEMBER IN THE FAMILY
-        age = client.party_members[member]["age"]  # THE AGE OF THIS MEMBER
-        member_age_score = _check_age_factor(age, act)  # THE AGE SCORE OF THIS ACTIVITY TO THIS PERSON'S AGE
-        member_interest = 0     # THE INTEREST SCORE OF THIS MEMBER
-        for tag in act.tags:    # ITERATES OVER THE ACTIVITY "TAGS", USED FOR CALCULATING THE INTEREST SCORE OF THIS MEMBER
+    for member in client.party_members:  # ITERATES OVER EACH MEMBER IN THE FAMILY
+        member_interest = 0  # THE INTEREST SCORE OF THIS MEMBER
+        for tag in act.tags:  # ITERATES OVER THE ACTIVITY "TAGS", USED FOR CALCULATING THE INTEREST SCORE OF THIS MEMBER
             # THE LINE BELOW INCREASES THIS MEMBER'S INTEREST SCORE BASED ON THE CURRENT TAG'S INTEREST AND AGE SCORE
-            member_interest += client.interest(tag, member) * member_age_score
-        interest_scores[member] = member_interest   # STORES THIS MEMBER'S OVERALL INTEREST SCORE FOR THIS EVENT
+            member_interest += client.interest(tag, member)
+        interest_scores[member] = member_interest  # STORES THIS MEMBER'S OVERALL INTEREST SCORE FOR THIS EVENT
         if member_interest >= EXTREME_INTEREST_MIN_SCORE:  # LIST OF SCORES FOR THOSE EXTREMELY INTERESTED
             ext_interested.append(member_interest)  # IF THE MEMBER HAS A HIGH INTEREST SCORE, ADD THEM TO THIS LIST
             # ext_interested_creds[member] = client.credits_left[member]  # STORE THIS PERSON'S "ACCOMOCATION" CREDITS
             ext_interested_creds[member] = 0
-        else:   # LIST OF SCORES FOR THOSE NOT EXTREMELY INTERESTED (INTEREST SCORE COULD STILL BE HIGH)
+        else:  # LIST OF SCORES FOR THOSE NOT EXTREMELY INTERESTED (INTEREST SCORE COULD STILL BE HIGH)
             not_ext_interested.append(member_interest)  # NOT-SUPER-INTERESTED MEMBERS GET ADDED HERE
-    average_interest_score = sum(interest_scores.values()) / num_members  # AVERAGE SUITABILITY SCORE FOR THE FAMILY
+    average_interest_score = sum(interest_scores.values()) / num_members  # AVERAGE SUITABILITY SCORE FOR THE GROUP
 
     total_ext_score, total_ext_count = sum(ext_interested), len(ext_interested)  # SUM AND NUMBER OF THE INTEREST SCORES
-    total_not_ext_score, total_not_ext_count = sum(not_ext_interested), len(not_ext_interested) # SAME AS ABOVE BUT FOR THE NOT-SUPER-INTERESTED
+    total_not_ext_score, total_not_ext_count = sum(not_ext_interested), len(
+        not_ext_interested)  # SAME AS ABOVE BUT FOR THE NOT-SUPER-INTERESTED
 
     # ======= OPTIMIZATION MEASURE: IF THE ENTIRE FAMILY IS IN THE SAME INTEREST GROUP THEN WE RETURN THE
     # AVERAGE INTEREST SCORE. =======
@@ -65,117 +63,69 @@ def interest_age_score(client: Client, act: Activity) -> tuple[float, dict, dict
     extreme_score = 0  # SCORE FOR THE EXTREME ACCOMMODATION SCENARIO. IF NO EXTREME ACCOMMODATION, SCORE IS 0.
 
     # THE SORTED LIST'S PURPOSE IS TO DEDUCT CREDITS FROM THOSE WHO ARE MOST INTERESTED FIRST
-    ext_interest_sorted = sorted(   # WE SORT THE NAMES OF MEMBERS BASED ON THEIR INTEREST SCORE IN DESCENDING ORDER
+    ext_interest_sorted = sorted(  # WE SORT THE NAMES OF MEMBERS BASED ON THEIR INTEREST SCORE IN DESCENDING ORDER
         ext_interested_creds.keys(),
         key=lambda m: interest_scores[m],
         reverse=True
     )
 
-    if interest_score_diff >= 3:    # CHECKS IF THE INTEREST SCORE IS SIGNIFICANT ENOUGH FOR ANY EXTREME ACCOMMODATION
-        extreme_score = max(interest_scores.values())   # TAKES THE ABSOLUTE MAXIMUM INTEREST SCORE
+    if interest_score_diff >= 3:  # CHECKS IF THE INTEREST SCORE IS SIGNIFICANT ENOUGH FOR ANY EXTREME ACCOMMODATION
+        extreme_score = max(interest_scores.values())  # TAKES THE ABSOLUTE MAXIMUM INTEREST SCORE
         i = 0
         while creds_required > 0 and i < len(ext_interest_sorted):
             creds_2 = creds_required - 2
-            use_creds = int(creds_2 >= 0) + 1   # USE 2 CREDITS IF THE REQUIRED NUMBER OF CREDITS AFTER UPDATE IS >= 0
+            use_creds = int(creds_2 >= 0) + 1  # USE 2 CREDITS IF THE REQUIRED NUMBER OF CREDITS AFTER UPDATE IS >= 0
             ext_interested_creds[ext_interest_sorted[i]] = use_creds
             creds_required -= use_creds
             i += 1
-
-        # for i in ext_interest_sorted:   # GOES OVER ALL THE EXTREMELY INTERESTED MEMBER
-        #     if creds_required >= MAX_CREDS_PER_MEMBER:  # CHECKS IF THERE ARE AT LEAST 2 CREDITS NEEDED FOR THIS EVENT
-        #         if ext_interested_creds[i] >= MAX_CREDS_PER_MEMBER:  # PERSON HAS AT LEAST 2 CREDITS
-        #             ext_interested_creds[i] -= 2
-        #             creds_required -= 2
-        #             if creds_required == 0:
-        #                 break
-        #         elif ext_interested_creds[i] == 1:  # PERSON HAS 1 CREDIT LEFT
-        #             ext_interested_creds[i] -= 1
-        #             creds_required -= 1
-        #         else:                               # PERSON HAS NO CREDITS
-        #             continue
-        #     elif creds_required == 1:
-        #         if ext_interested_creds[i] > 0:
-        #             ext_interested_creds[i] -= 1
-        #             creds_required = 0
-        #             break
-        #         else:
-        #             continue
-        #     else:   # SOMEHOW NO EXTREME ACCOMMODATION IS NEEDED (THIS SHOULD IDEALLY NOT HAPPEN)
-        #         break
-    # TODO: FOR ALL RETURN STATEMENTS, IF MUST REVERT TO ORIGINAL, RETURN JUST THE FIRST VALUE
     if creds_required == 0 and extreme_score > average_interest_score:  # EVERYONE IN THE GROUP HAS ENOUGH CREDITS TO DO THIS
-        # if extreme_score > average_interest_score:
-        # for i in ext_interested_creds:
-        #     client.credits_left[i] = ext_interested_creds[i]    # UPDATE THE CREDITS FOR EACH INTERESTED MEMBER
-        return extreme_score, ext_interested_creds, interest_scores   # RETURN THE MAX SCORE
-    else:                   # OTHERWISE IF THERE IS NOT ENOUGH CREDITS LEFT THEN WE CONSIDER THIS A REGULAR EVENT
+        return extreme_score, ext_interested_creds, interest_scores  # RETURN THE MAX SCORE
+    else:  # OTHERWISE IF THERE IS NOT ENOUGH CREDITS LEFT THEN WE CONSIDER THIS A REGULAR EVENT
         return average_interest_score, {}, interest_scores
 
 
 # FIRST PENALTY APPLIED IN INITIAL SCORING
-def duration_penalty(act: Activity, interest_score: float, gamma: float = 1.2) -> float:
-    """
-    Returns a score indicating the "fairness" of the activity towards everyone.
-    If there is any form of imbalance, the score increases.
-    Returns values ranging between 0 and 1, with 1 meaning it is not fair at all,
-    and 0 meaning it is completely fair.
-    """
-    dur_pen = act.duration_min * ((1 - interest_score/10) ** gamma)
-    return min(10, dur_pen)
+def duration_penalty(act: Activity, client: Client, avg_interest_score: float, gamma: float = 1.2) -> float:
+    base = max(0, math.ceil(1 - avg_interest_score / 10))  # ensure non-negative
+    dur_pen = (act.duration_min / client.total_day_duration) * (base ** gamma)
+    return min(10, dur_pen * 10)
 
 
 # SECOND SET OF PENALTIES APPLIED AFTER SECOND WAVE OF PLANNING
-def conflict_penalty(act: Activity, plan: PlanDay, client: Client, gamma: float = 1.1) -> float:
+def conflict_penalty(act: Activity, client: Client, tags_count: dict[str, int],
+                      gamma: float = 1.1) -> float:
     """
-    Returns a penalty for this activity if it has categories that repeat. In events that have been added to the plan
-    already.
+    Penalizes each individual activity based on the number of conflicts with earlier, more-popular activities.
     """
     conf_pen = 0
-    for tag in act.tags:        # GO OVER EACH EVENT "TAG"
-        total_tag_interest = 0
-        times_encountered = plan.tags_encountered[tag] # GET THE NUMBER OF TIMES THIS TAG HAS APPEARED IN PREVIOUS ACTIVITIES
-        for c in client.party_members.values():
-            interests = c["interest_weights"]
-            total_tag_interest += interests.get(tag, 0)  # ADD THE INTEREST LEVEL OF THIS MEMBER FOR THIS TAG
-        conf_pen += ((times_encountered * ((1 - (total_tag_interest/len(client.party_members))) ** gamma)) *
-                     (act.duration_min / client.daily_act_time_per_member))  # SOME EXPRESSION HERE
-    return min(conf_pen, 10)  # RETURN PENALTY
+    for tag in act.tags:
+        times_repeated = tags_count.get(tag, 0)  # how many times this tag has appeared already
+        average_interest_wgt = (
+                sum([m["interest_weights"].get(tag, 0) for m in client.party_members.values()])
+                / (len(client.party_members) * 10)
+        )
+        interest_factor = 1 - average_interest_wgt
+        act_duration_share = act.duration_min / client.total_day_duration
 
-
-def fairness_penalty() -> float:
-    """
-    A penalty on activities based on separation of interest scores.
-    """
-    # TODO: IMPLEMENT THIS FUNCTION
-    pass
-def _check_age_factor(member_age: int, act: Activity) -> float:
-    """
-    Does a simple soft score between 0 and 1 based on how age-friendly the activity is.
-    The higher the score is for the activity, the more recommended the activity is for the person by age.
-    So if an activity has an age range of 0 to 10 years and <member_age> is 5, then the activity is given a score of 1.
-    """
-    if member_age not in range(act.age_min, act.age_max + 1):
-        return 1
-    age_window = act.age_max - act.age_min
-    if age_window == 0:  # PERFECT MATCH FOR THIS PERSON
-        return 1
-    # GPT-SUGGESTED CODE BELOW FOR SCORING BASED ON AGE. THE CLOSER A PERSON'S AGE IS TO THE MEDIAN AGE OF THE EVENT
-    # THE HIGHER THE EVENT IS SCORED FOR THAT PERSON.
-    return 1 - (abs(member_age - (act.age_min + act.age_max) / 2) / (age_window / 2))
+        conf_pen += times_repeated * (interest_factor ** gamma) * (1 + act_duration_share)
+    # final sort by adjusted score
+    return min(conf_pen * 10, 10)
 
 
 if __name__ == "__main__":
+    from datetime import datetime
+
     # -----------------------------
-    # Define client with extreme-interest scenario
+    # Define client (extreme-interest case)
     # -----------------------------
     client_data = {
         "id": "family_extreme_interest_01",
         "party_type": "family",
         "party_members": {
-            "Parent 1": {"age": 47, "interest_weights": {"theme_parks": 10, "zoo": 0, "aquarium": 0, "parks": 0}},
-            "Parent 2": {"age": 38, "interest_weights": {"theme_parks": 0, "zoo": 0, "aquarium": 0, "parks": 0}},
-            "Child 1": {"age": 12, "interest_weights": {"theme_parks": 0, "zoo": 0, "aquarium": 0, "parks": 0}},
-            "Child 2": {"age": 8,  "interest_weights": {"theme_parks": 0, "zoo": 0, "aquarium": 0, "parks": 0}}
+            "Parent 1": {"age": 47, "interest_weights": {"theme_parks": 10}},
+            "Parent 2": {"age": 38, "interest_weights": {"theme_parks": 0}},
+            "Child 1": {"age": 12, "interest_weights": {"theme_parks": 0}},
+            "Child 2": {"age": 8, "interest_weights": {"theme_parks": 0}},
         },
         "religion": "none",
         "ethnicity_culture": ["generic"],
@@ -188,60 +138,84 @@ if __name__ == "__main__":
         "prefer_outdoor": 7,
         "prefer_cultural": 3,
         "day_start_time": "08:00",
-        "day_end_time": "20:00"
+        "day_end_time": "20:00",
     }
 
     client_data["trip_start"] = datetime.strptime(client_data["trip_start"], "%Y-%m-%d").date()
     client_data["trip_end"] = datetime.strptime(client_data["trip_end"], "%Y-%m-%d").date()
 
     client = Client(**client_data)
+    client.total_day_duration = 12 * 60  # 12-hour day
 
     # -----------------------------
-    # Define activity
+    # Define activities (same tag!)
     # -----------------------------
-    event_data = {
-        "id": "e_themepark_extreme_01",
-        "name": "Thrill Seeker’s Mega Theme Park",
-        "category": "theme_parks",
-        "tags": ["theme_parks", "roller_coasters", "extreme", "outdoor"],
-        "venue": "Wonderland",
-        "city": "Toronto",
-        "location": {"lat": 43.6426, "lng": -79.3860},
-        "duration_min": 180,
-        "cost_cad": 80,
-        "age_min": 5,
-        "age_max": 99,
-        "opening_hours": {},
-        "fixed_times": [{"date": "2026-08-02", "start": "10:00"}],
-        "requires_booking": True,
-        "weather_blockers": [],
-        "popularity": 0.9
-    }
+    activities = [
+        Activity(
+            id="a1",
+            name="Mega Theme Park",
+            category="theme_parks",
+            tags=["theme_parks"],
+            venue="Wonderland",
+            city="Toronto",
+            location=Location(43.64, -79.38, "Toronto"),
+            duration_min=180,
+            cost_cad=80,
+            age_min=5,
+            age_max=99,
+            opening_hours={},
+            fixed_times=[],
+            requires_booking=True,
+            weather_blockers=[],
+            popularity=0.9,
+        ),
+        Activity(
+            id="a2",
+            name="Smaller Theme Park",
+            category="theme_parks",
+            tags=["theme_parks"],
+            venue="FunLand",
+            city="Toronto",
+            location=Location(43.66, -79.4, "Toronto"),
+            duration_min=120,
+            cost_cad=50,
+            age_min=5,
+            age_max=99,
+            opening_hours={},
+            fixed_times=[],
+            requires_booking=False,
+            weather_blockers=[],
+            popularity=0.6,
+        ),
+        Activity(
+            id="a3",
+            name="Theme Park Parade",
+            category="theme_parks",
+            tags=["theme_parks"],
+            venue="Downtown",
+            city="Toronto",
+            location=Location(43.65, -79.37, "Toronto"),
+            duration_min=60,
+            cost_cad=0,
+            age_min=0,
+            age_max=99,
+            opening_hours={},
+            fixed_times=[],
+            requires_booking=False,
+            weather_blockers=[],
+            popularity=0.4,
+        ),
+    ]
 
-    activity = Activity(**event_data)
+    # -----------------------------
+    # Apply conflict penalty sequentially
+    # -----------------------------
+    tags_count = {}
 
-    print("\nCreds before scoring:")
-    for member, creds in client.credits_left.items():
-        print(f"  {member}: {creds}")
-    # -----------------------------
-    # Compute interest score
-    # -----------------------------
+    print("\n=== Conflict Penalty Test (Sequential) ===\n")
 
-    score = interest_score_age(client, activity)
-    print(f"Computed interest score for activity '{activity.name}': {score:.2f}")
-
-    # -----------------------------
-    # Show which members are extremely interested
-    # -----------------------------
-    print("\nMember extreme interest status:")
-    for member_name, member_info in client.party_members.items():
-        interest_score = sum(client.interest(tag, member_name) for tag in activity.tags)
-        status = "EXTREMELY INTERESTED" if interest_score >= EXTREME_INTEREST_MIN_SCORE else "Not interested"
-        print(f"   {member_name}: {interest_score} → {status}")
-
-    # -----------------------------
-    # Show updated credits
-    # -----------------------------
-    print("\nUpdated credits after scoring:")
-    for member, creds in client.credits_left.items():
-        print(f"  {member}: {creds}")
+    for idx, act in enumerate(activities, start=1):
+        conf_pen = conflict_penalty(act, client, tags_count)
+        print(f"{idx}. {act.name}")
+        print(f"   Tags so far: {tags_count}")
+        print(f"   Conflict penalty applied: {conf_pen:.4f}\n")
