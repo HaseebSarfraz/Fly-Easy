@@ -82,6 +82,7 @@ class Client:
         self.day_start_time = datetime.strptime(day_start_time, "%H:%M").time()
         self.day_end_time = datetime.strptime(day_end_time, "%H:%M").time()
         self.day_start_min, self.day_end_min = _window_to_minutes(_to_minutes(day_start_time), _to_minutes(day_end_time))
+        
         self.credits_left = {}
         # CODE BELOW GETS THE NUMBER OF CREDITS PER MEMBER
         trip_days = (trip_end - trip_start).days

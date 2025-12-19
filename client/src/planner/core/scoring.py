@@ -125,181 +125,41 @@ def conflict_penalty(act: Activity, client: Client, tags_count: dict[str, int],
     return min(conf_pen * 10, 10)
 
 
-if __name__ == "__main__":
-    from datetime import datetime
-
-    # -----------------------------
-    # Define client (extreme-interest case)
-    # -----------------------------
-    client_data = {
-        "id": "family_extreme_interest_01",
-        "party_type": "family",
-        "party_members": {
-            "Parent 1": {"age": 47, "interest_weights": {"theme_parks": 10}},
-            "Parent 2": {"age": 38, "interest_weights": {"theme_parks": 0}},
-            "Child 1": {"age": 12, "interest_weights": {"theme_parks": 0}},
-            "Child 2": {"age": 8, "interest_weights": {"theme_parks": 0}},
-        },
-        "religion": "none",
-        "ethnicity_culture": ["generic"],
-        "vibe": "family-fun",
-        "budget_total": 500,
-        "trip_start": "2026-08-01",
-        "trip_end": "2026-08-25",
-        "home_base": {"lat": 43.65, "lng": -79.38},
-        "avoid_long_transit": 5,
-        "prefer_outdoor": 7,
-        "prefer_cultural": 3,
-        "day_start_time": "08:00",
-        "day_end_time": "20:00",
-    }
-
-    client_data["trip_start"] = datetime.strptime(client_data["trip_start"], "%Y-%m-%d").date()
-    client_data["trip_end"] = datetime.strptime(client_data["trip_end"], "%Y-%m-%d").date()
-
-    client = Client(**client_data)
-    client.total_day_duration = 12 * 60  # 12-hour day
-
-    # -----------------------------
-    # Define activities (same tag!)
-    # -----------------------------
-    activities = [
-        Activity(
-            id="a1",
-            name="Mega Theme Park",
-            category="theme_parks",
-            tags=["theme_parks"],
-            venue="Wonderland",
-            city="Toronto",
-            location=Location(43.64, -79.38, "Toronto"),
-            duration_min=180,
-            cost_cad=80,
-            age_min=5,
-            age_max=99,
-            opening_hours={},
-            fixed_times=[],
-            requires_booking=True,
-            weather_blockers=[],
-            popularity=0.9,
-        ),
-        Activity(
-            id="a2",
-            name="Smaller Theme Park",
-            category="theme_parks",
-            tags=["theme_parks"],
-            venue="FunLand",
-            city="Toronto",
-            location=Location(43.66, -79.4, "Toronto"),
-            duration_min=120,
-            cost_cad=50,
-            age_min=5,
-            age_max=99,
-            opening_hours={},
-            fixed_times=[],
-            requires_booking=False,
-            weather_blockers=[],
-            popularity=0.6,
-        ),
-        Activity(
-            id="a3",
-            name="Theme Park Parade",
-            category="theme_parks",
-            tags=["theme_parks"],
-            venue="Downtown",
-            city="Toronto",
-            location=Location(43.65, -79.37, "Toronto"),
-            duration_min=60,
-            cost_cad=0,
-            age_min=0,
-            age_max=99,
-            opening_hours={},
-            fixed_times=[],
-            requires_booking=False,
-            weather_blockers=[],
-            popularity=0.4,
-        ),
-    ]
-
-    # -----------------------------
-    # Apply conflict penalty sequentially
-    # -----------------------------
-    tags_count = {}
-
-    print("\n=== Conflict Penalty Test (Sequential) ===\n")
-
-    for idx, act in enumerate(activities, start=1):
-        conf_pen = conflict_penalty(act, client, tags_count)
-        print(f"{idx}. {act.name}")
-        print(f"   Tags so far: {tags_count}")
-        print(f"   Conflict penalty applied: {conf_pen:.4f}\n")
-    pop_bonus = act.popularity * 2.0    # slight nudge for popularity of the acitivity
-
-
-def _clamp(x, lo=0.0, hi=10.0):
-    return max(lo, min(hi, x))
-
-def norm_interest(client, act) -> float:
+def _vibe_bonus(client: Client, act: Activity, gamma: float = GAMMA_DEFAULT) -> float:
     """
-    Return interest on a 0..10 scale.
-    If your interest_score() already returns 0..10, this is just a clamp.
+    Small bonus based on how well the activity's vibe matches the client's vibe.
+    Uses VIBE_CLOSE table + exact matches on act.vibe_tags if present.
     """
-    try:
-        return _clamp(float(interest_score(client, act)))
-    except Exception:
+    client_vibe = (getattr(client, "vibe", "") or "").lower().strip()
+    if not client_vibe:
         return 0.0
 
-def norm_popularity(act) -> float:
-    """
-    Popularity is 0..1 in your JSON; scale it to 0..10 to match interest.
-    """
-    try:
-        return _clamp(float(act.popularity) * 10.0)
-    except Exception:
-        return 0.0
-    
-def _infer_vibe_tags(act: Activity) -> list[str]:
-    # Prefer explicit
-    if getattr(act, "vibe_tags", None):
-        return [t.lower() for t in act.vibe_tags if isinstance(t, str)]
-
-    # Fallback: derive from tags (super light heuristic)
-    t = set(s.lower() for s in act.tags or [])
-    derived = []
-    if {"family", "kids", "zoo", "aquarium"} & t: derived.append("family")
-    if {"nightlife", "bar", "club"} & t:        derived.append("party")
-    if {"music", "concerts"} & t:               derived.append("music")
-    if {"history", "culture", "museum"} & t:    derived.append("cultural")
-    if {"outdoor", "park", "hike"} & t:         derived.append("active")
-    if {"views", "walk", "free"}.issubset(t) or "indoors" in t:
-        derived.append("relaxed")
-    if {"shopping", "iconic", "downtown"} & t:  derived.append("urban")
-    if "free" in t or "budget" in t:            derived.append("budget")
-    return derived
-    
-def _vibe_alignment(client_vibe: str, act_vibe_tags: list[str]) -> float:
-    if not client_vibe or not act_vibe_tags:
-        return 0.0
-    client_vibe = client_vibe.lower()
-    tags = [t.lower() for t in act_vibe_tags]
-    if client_vibe in tags:
-        return 1.0
     close = VIBE_CLOSE.get(client_vibe, {})
-    best = 0.0
+    tags = getattr(act, "vibe_tags", None) or getattr(act, "tags", []) or []
+
+    score = 0.0
     for t in tags:
-        best = max(best, close.get(t, 0.0))
-    return best  # 0..1
+        vt = (t or "").lower().strip()
+        if vt == client_vibe:
+            score += 1.0
+        else:
+            score += close.get(vt, 0.0)
 
-def norm_vibe(client: Client, act: Activity) -> float:
-    return _vibe_alignment(getattr(client, "vibe", None), _infer_vibe_tags(act))
+    # Damp + cap so vibe doesn't dominate interest
+    return gamma * min(score, 3.0)
 
-def base_value(client, act, alpha: float = 0.6, beta: float = 0.2, gamma: float = GAMMA_DEFAULT) -> float:
+
+def base_value(client: Client, act: Activity) -> float:
     """
-    All components are 0..1. We only renormalize weights, not scales.
+    Core utility score for an activity, used by the greedy planner.
+
+    Right now:
+      - starts from interest_score (group satisfaction)
+      - adds a small vibe bonus based on client.vibe & act.vibe_tags/tags
+    Budget effects are handled separately in the planner (LAMBDA_BUDGET, etc.).
     """
-    total = max(1e-9, alpha + beta + gamma)
-    a, b, g = alpha/total, beta/total, gamma/total
-    return (
-        a * norm_interest(client, act) +
-        b * norm_popularity(act) +
-        g * norm_vibe(client, act)
-    )
+    i_score, _, _ = interest_score(client, act)   # ~0–10+
+    v_bonus = _vibe_bonus(client, act)            # usually 0–0.6-ish
+
+    return float(i_score + v_bonus)
+
