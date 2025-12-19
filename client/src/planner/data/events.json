@@ -432,7 +432,8 @@
   "requires_booking": false,
   "weather_blockers": [],
   "popularity": 0.88
-{ "id": "e_agakhan_01", "name": "Aga Khan Museum", "category": "museum",
+ },
+ {"id": "e_agakhan_01", "name": "Aga Khan Museum", "category": "museum",
 "tags": ["culture","history","indoors"],
 "vibe_tags": ["cultural","relaxed","leisurely"],
 "venue": "Aga Khan Museum", "city": "Toronto",

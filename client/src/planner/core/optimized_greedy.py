@@ -1,8 +1,3 @@
-# src/planner/core/solver.py
-
-tz_cache = {}
-weather_cache = {}
-
 # src/planner/core/optimized_greedy
 from __future__ import annotations
 from datetime import date, datetime, timedelta
@@ -21,14 +16,48 @@ from planner.core.scoring import interest_score, duration_penalty, conflict_pena
 from typing import Optional
 import re
 from heapq import heappush, heappop
+from dataclasses import dataclass
 
 
 import requests                 # TO MAKE API REQUESTS
 import pandas as pd
 
+
+@dataclass
+class PlannerConfig:
+    # Hard constraints (age, opening hours, etc. via hard_feasible)
+    use_hard_constraints: bool = True
+
+    # Weather constraints (Open-Meteo + blockers list)
+    use_weather: bool = True
+
+    # Daily budget soft cap + over-budget penalty
+    use_budget: bool = True
+
+    # Pre-add meals (restaurant advisor)
+    use_meals: bool = True
+
+    # Use Yash beam-search base-plan as “primary_acts”
+    use_base_plan: bool = True
+
+    # Allow RepairB to nudge events and make room
+    use_repairB: bool = True
+
+    # Debug prints inside make_day_plan (anchors, etc)
+    debug_print: bool = True
+
+def _dbg(cfg: PlannerConfig, *args, **kwargs):
+    """Conditional debug printing."""
+    if cfg.debug_print:
+        print(*args, **kwargs)
+
+
 RADIUS_STEPS = [1500, 3000, 4000]  # meters
 
 _DASHES = {"–","—","−"}  # common unicode dashes
+
+tz_cache = {}
+weather_cache = {}
 
 
 WEATHER_CODE_MAP = {
@@ -58,6 +87,11 @@ LAMBDA_BUDGET = 0.03      # penalty $→points (e.g., 0.03 pts per $1 over)
 SCORE_THRESHOLD = 0.10    # minimum net score to accept when over budget
 
 WEATHER_CACHE: dict[tuple, tuple] = {}  # (lat3,lng3,day_iso,tz) -> (pd.DatetimeIndex, list[int])
+
+def _bump_tags(tags_encountered: dict[str, int], act: Activity) -> None:
+    """Increment tag counts for this activity in the given dict."""
+    for tag in getattr(act, "tags", []) or []:
+        tags_encountered[tag] = tags_encountered.get(tag, 0) + 1
 
 def _cache_key(lat: float, lng: float, day_iso: str, tz: str):
     # round to collapse tiny lat/lng differences at city scale
@@ -646,13 +680,24 @@ def _fixed_dt_candidates(act: Activity, day: date) -> list[datetime]:
 
     return out
 
-def _hard_feasible_for_anchor(client: Client, act: Activity, start_dt: datetime) -> bool:
-    # keep strict checks you care about; skip open-window veto
-    if not hc_age_ok(client, act):
+def _hard_feasible_for_anchor(
+    client: Client,
+    act: Activity,
+    start_dt: datetime,
+    cfg: Optional[PlannerConfig] = None,
+) -> bool:
+    cfg = cfg or PlannerConfig()
+
+    # Age / other “hard” checks
+    if cfg.use_hard_constraints and not hc_age_ok(client, act):
         return False
-    if not is_weather_suitable(act, start_dt):
+
+    # Weather (Open-Meteo + blockers list)
+    if cfg.use_weather and not is_weather_suitable(act, start_dt):
         return False
+
     return True
+
 
 
 
@@ -776,20 +821,16 @@ def _build_base_plan(client: Client,
     return [p[0] for p in plans]
 
 
-def make_day_plan(client: Client, activities: List[Activity], day: date) -> PlanDay:
+def make_day_plan(
+    client: Client,
+    activities: List[Activity],
+    day: date,
+    config: Optional[PlannerConfig] = None,
+) -> PlanDay:
     """
-    Combined Haseeb + Yash logic:
-
-    1) Identify anchors (fixed-time events) vs flex.
-    2) Compute budget soft-cap per day and reserved_cap (for non-anchor).
-    3) Pre-add meals (restaurant advisor).
-    4) Place anchors first, reshaping meals around them if needed.
-    5) Use Yash's beam-search base-plan to pick a high-coverage subset
-       of flex activities (primary_acts).
-    6) Order remaining flex by interest_score (Yash) and then by base_value.
-    7) Greedy scheduling of flex activities in that order using Haseeb's
-       hard_feasible + weather + overlap + budget + repairB.
+    Combined Haseeb + Yash logic with toggles via PlannerConfig.
     """
+    cfg = config or PlannerConfig()
 
     # ─────────────────────────────────────────────────────────────────────
     # 1) Split into anchors vs flex
@@ -797,7 +838,7 @@ def make_day_plan(client: Client, activities: List[Activity], day: date) -> Plan
     anchors = [a for a in activities if _has_fixed_times(a)]
     flex    = [a for a in activities if not _has_fixed_times(a)]
 
-    print("ANCHORS:", [
+    _dbg(cfg, "ANCHORS:", [
         (a.id, type(getattr(a, "fixed_times", None)).__name__,
          getattr(a, "fixed_times", None))
         for a in anchors
@@ -806,15 +847,21 @@ def make_day_plan(client: Client, activities: List[Activity], day: date) -> Plan
     # ─────────────────────────────────────────────────────────────────────
     # 2) Budget per day + reserved_cap for flex (Haseeb logic)
     # ─────────────────────────────────────────────────────────────────────
-    anchor_cost   = sum(float(a.cost_cad or 0.0) for a in anchors)
-    soft_cap_day  = _soft_cap_per_day(client)
-    reserved_cap  = max(0.0, soft_cap_day - anchor_cost)
+    anchor_cost = sum(float(a.cost_cad or 0.0) for a in anchors)
+    if cfg.use_budget:
+        soft_cap_day = _soft_cap_per_day(client)
+        reserved_cap = max(0.0, soft_cap_day - anchor_cost)
+    else:
+        # Effectively "no budget" for scoring decisions
+        soft_cap_day = float("inf")
+        reserved_cap = float("inf")
 
     # ─────────────────────────────────────────────────────────────────────
     # 3) Start plan + pre-add meals
     # ─────────────────────────────────────────────────────────────────────
     plan = PlanDay(day)
-    pre_add_rests(plan, client, day, center_loc=client.home_base)
+    if cfg.use_meals:
+        pre_add_rests(plan, client, day, center_loc=client.home_base)
 
     # ─────────────────────────────────────────────────────────────────────
     # 4) Place anchors first, reshaping meals around them
@@ -827,12 +874,12 @@ def make_day_plan(client: Client, activities: List[Activity], day: date) -> Plan
                 step_minutes=(choose_step_minutes(act) or 60)
             )
         )
-        print(f"[anchor] considering {act.id} at:", candidate_starts)
+        _dbg(cfg, f"[anchor] considering {act.id} at:", candidate_starts)
 
         placed = False
         for start_dt in candidate_starts:
-            if not _hard_feasible_for_anchor(client, act, start_dt):
-                print(f"[anchor] {act.id} @ {start_dt.time()} hard-feasible=NO")
+            if not _hard_feasible_for_anchor(client, act, start_dt, cfg):
+                _dbg(cfg, f"[anchor] {act.id} @ {start_dt.time()} hard-feasible=NO")
                 continue
 
             # enforce a minimum duration so overlap math isn't degenerate
@@ -841,7 +888,7 @@ def make_day_plan(client: Client, activities: List[Activity], day: date) -> Plan
 
             anchor_ev = PlanEvent(act, start_dt)
             plan.add(anchor_ev)
-            print(f"[anchor] added {act.id} @ {start_dt.time()} (dur {act.duration_min}m)")
+            _dbg(cfg, f"[anchor] added {act.id} @ {start_dt.time()} (dur {act.duration_min}m)")
 
             ok = True
             meals = [
@@ -854,36 +901,53 @@ def make_day_plan(client: Client, activities: List[Activity], day: date) -> Plan
                     anchor_ev.start_dt, anchor_ev.activity.duration_min
                 ):
                     moved = _resolve_meal_conflict(plan, client, m, anchor_ev)
-                    print(f"[anchor] meal conflict with {m.activity.name}: moved={moved}")
+                    _dbg(cfg, f"[anchor] meal conflict with {m.activity.name}: moved={moved}")
                     if not moved:
                         ok = False
                         break
 
             if ok:
                 placed = True
-                print(f"[anchor] SUCCESS {act.id} placed @ {start_dt.time()}")
+                _dbg(cfg, f"[anchor] SUCCESS {act.id} placed @ {start_dt.time()}")
                 break
 
             # rollback and try next start_dt
             plan.events.remove(anchor_ev)
-            print(f"[anchor] ROLLBACK {act.id} @ {start_dt.time()}")
+            _dbg(cfg, f"[anchor] ROLLBACK {act.id} @ {start_dt.time()}")
+
+
+    # ─────────────────────────────────────────────────────────────────────
+    # 5) Track tag frequencies for conflict_penalty
+    # ─────────────────────────────────────────────────────────────────────
+    tags_encountered: dict[str, int] = {}
+    for ev in plan.events:
+        _bump_tags(tags_encountered, ev.activity)
 
     # ─────────────────────────────────────────────────────────────────────
     # 5) Use Yash's beam search to pick a good subset of flex activities
     # ─────────────────────────────────────────────────────────────────────
-    base_plans = _build_base_plan(client, flex, threshold=0.75, beam=8)
-    primary_acts: List[Activity] = base_plans[0] if base_plans else []
-    primary_ids = {a.id for a in primary_acts}
-
-    # Remaining flex that weren’t chosen in the primary base-plan
-    remaining_flex = [a for a in flex if a.id not in primary_ids]
+    if cfg.use_base_plan:
+        base_plans = _build_base_plan(client, flex, threshold=0.75, beam=8)
+        primary_acts: List[Activity] = base_plans[0] if base_plans else []
+        primary_ids = {a.id for a in primary_acts}
+        remaining_flex = [a for a in flex if a.id not in primary_ids]
+    else:
+        primary_acts = []
+        remaining_flex = list(flex)
 
     # Sort remaining flex activities by Yash-style interest score, tie-breaking
     # with Haseeb's base_value (pure utility)
     def _interest_total(a: Activity) -> float:
         try:
-            i_score, _, _ = interest_score(client, a)
-            return float(i_score)
+            i_score, e_creds, ii_score = interest_score(client, a)
+            if not ii_score:
+                return 0.0
+            avg_score = sum(ii_score.values()) / len(ii_score)
+
+            dur_pen = duration_penalty(a, client, avg_score)
+            conf_pen = conflict_penalty(a, client, tags_encountered)
+
+            return max(i_score - dur_pen - conf_pen, 0.0)
         except Exception:
             return 0.0
 
@@ -906,48 +970,97 @@ def make_day_plan(client: Client, activities: List[Activity], day: date) -> Plan
 
         for start_dt in generate_candidate_times(act, day, step_minutes=step):
             # Basic hard constraints
-            if not hard_feasible(client, act, start_dt):
+            if cfg.use_hard_constraints and not hard_feasible(client, act, start_dt):
                 continue
-            if not is_weather_suitable(activity=act, start_dt=start_dt):
+            if cfg.use_weather and not is_weather_suitable(activity=act, start_dt=start_dt):
                 continue
 
             # Case A: fits without overlap
             if fits_no_overlap(plan.events, start_dt, act):
-                # Haseeb's budget-aware acceptance
-                projected_spent = _spent_today(plan) + float(act.cost_cad)
-                over = max(0.0, projected_spent - reserved_cap)
-                net = base_value(client, act) - LAMBDA_BUDGET * over
+                # --- intrinsic utility using duration_penalty + conflict_penalty ---
+                i_score, _, indiv_scores = interest_score(client, act)
+                if indiv_scores:
+                    avg_indiv = sum(indiv_scores.values()) / len(indiv_scores)
+                else:
+                    avg_indiv = i_score
 
-                if (over == 0.0) or (over > 0.0 and net >= SCORE_THRESHOLD):
-                    plan.add(PlanEvent(act, start_dt))
-                    break
-                # if not worth going over budget, try next time slot
-                continue
+                dur_pen = duration_penalty(act, client, avg_indiv)
+                conf_pen = conflict_penalty(act, client, tags_encountered)
+                intrinsic = max(i_score - dur_pen - conf_pen, 0.0)
+
+                if cfg.use_budget:
+                    projected_spent = _spent_today(plan) + float(act.cost_cad)
+                    over = max(0.0, projected_spent - reserved_cap)
+                    net = intrinsic - LAMBDA_BUDGET * over
+
+                    if (over == 0.0) or (over > 0.0 and net >= SCORE_THRESHOLD):
+                        plan.add(PlanEvent(act, start_dt))
+                        _bump_tags(tags_encountered, act)  # record tags for this day
+                        break
+                    # not worth it at this start time → try next candidate
+                    continue
+                else:
+                    # No budget logic: just require the intrinsic score to be decent
+                    if intrinsic >= SCORE_THRESHOLD:
+                        plan.add(PlanEvent(act, start_dt))
+                        _bump_tags(tags_encountered, act)
+                        break
+                    # otherwise, reject this time and try the next start
+                    continue
 
             # Case B: try to repair by nudging existing events (RepairB)
-            snapshot = [(ev, ev.start_dt, ev.end_dt) for ev in plan.events]
-            if repairB(plan, client, act, day, start_dt, max_moves=1, try_others=True):
-                # After repairB we *did* place the activity, so re-evaluate budget
-                projected_spent = _spent_today(plan)
-                over = max(0.0, projected_spent - reserved_cap)
-                net = base_value(client, act) - LAMBDA_BUDGET * over
-
-                if (over == 0.0) or (over > 0.0 and net >= SCORE_THRESHOLD):
-                    # keep the repair + activity
-                    break
-
-                # otherwise roll back: remove newly-added act and restore times
-                # (assumes repairB appended the new PlanEvent at the end)
-                plan.events.pop()
-                for ev, s, e in snapshot:
-                    ev.start_dt, ev.end_dt = s, e
+            if not cfg.use_repairB:
+                # not allowed to nudge, just try next time slot
                 continue
+
+            snapshot = [(ev, ev.start_dt, ev.end_dt) for ev in plan.events]
+            if repairB(plan, client, act, day, start_dt,
+                       max_moves=1, try_others=True, config=cfg):
+                # After RepairB, act has been tentatively placed.
+                # Compute intrinsic utility with duration + conflict penalties.
+                i_score, _, indiv_scores = interest_score(client, act)
+                if indiv_scores:
+                    avg_indiv = sum(indiv_scores.values()) / len(indiv_scores)
+                else:
+                    avg_indiv = i_score
+
+                dur_pen = duration_penalty(act, client, avg_indiv)
+                # IMPORTANT: still use *current* tags_encountered (before bumping for this act)
+                conf_pen = conflict_penalty(act, client, tags_encountered)
+                intrinsic = max(i_score - dur_pen - conf_pen, 0.0)
+
+                if cfg.use_budget:
+                    projected_spent = _spent_today(plan)
+                    over = max(0.0, projected_spent - reserved_cap)
+                    net = intrinsic - LAMBDA_BUDGET * over
+
+                    if (over == 0.0) or (over > 0.0 and net >= SCORE_THRESHOLD):
+                        _bump_tags(tags_encountered, act)
+                        break
+
+                    # otherwise roll back: remove newly-added act and restore times
+                    plan.events.pop()
+                    for ev, s, e in snapshot:
+                        ev.start_dt, ev.end_dt = s, e
+                    continue
+                else:
+                    if intrinsic >= SCORE_THRESHOLD:
+                        _bump_tags(tags_encountered, act)
+                        break
+
+                    # intrinsic too low → rollback RepairB changes
+                    plan.events.pop()
+                    for ev, s, e in snapshot:
+                        ev.start_dt, ev.end_dt = s, e
+                    continue
+
 
     # ─────────────────────────────────────────────────────────────────────
     # 7) Finalize
     # ─────────────────────────────────────────────────────────────────────
     plan.events.sort(key=lambda e: e.start_dt)
     return plan
+
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -989,13 +1102,27 @@ def _future_candidates(activity: Activity,
     return [t for t in cands if t > after_dt]
 
 
-def _can_place_against(events: List[PlanEvent],
-                       client: Client,
-                       act: Activity,
-                       when: datetime) -> bool:
+def _can_place_against(
+    events: List[PlanEvent],
+    client: Client,
+    act: Activity,
+    when: datetime,
+    cfg: Optional[PlannerConfig] = None,
+) -> bool:
     """Hard checks + no-overlap against `events`."""
-    return (hard_feasible(client, act, when) and fits_no_overlap(events, when, act) and is_weather_suitable(act, when)
-            and fits_in_window(act, client, when.hour * 60 + when.minute))
+    cfg = cfg or PlannerConfig()
+
+    if cfg.use_hard_constraints and not hard_feasible(client, act, when):
+        return False
+    if not fits_no_overlap(events, when, act):
+        return False
+    if cfg.use_weather and not is_weather_suitable(act, when):
+        return False
+    # day window is always respected (otherwise plans get weird)
+    if not fits_in_window(act, client, when.hour * 60 + when.minute):
+        return False
+    return True
+
 
 
 def _time_to_minutes(dt):
@@ -1011,12 +1138,15 @@ def _try_nudge_forward(plan: PlanDay,
                        day: date,
                        target_act: Activity,
                        target_start: datetime,
-                       max_moves: int) -> bool:
+                       max_moves: int,
+                       cfg: Optional[PlannerConfig] = None) -> bool:
     """
     Try moving `ev` forward by up to `max_moves` later candidate starts.
     If a move makes space, place (target_act @ target_start) and return True.
     Reverts the move if it didn't help.
     """
+    cfg = cfg or PlannerConfig()
+
     if ev.activity.fixed_times:  # anchors don't move
         return False
 
@@ -1028,13 +1158,13 @@ def _try_nudge_forward(plan: PlanDay,
         if tried >= max_moves:
             break
 
-        if _can_place_against(others, client, ev.activity, t2):
+        if _can_place_against(others, client, ev.activity, t2, cfg):
             # tentatively move the blocker
             ev.start_dt = t2
             ev.end_dt = t2 + timedelta(minutes=ev.activity.duration_min)
 
             # did that free the slot for E?
-            if _can_place_against(plan.events, client, target_act, target_start):
+            if _can_place_against(plan.events, client, target_act, target_start, cfg):
                 plan.add(PlanEvent(target_act, target_start))
                 return True
 
@@ -1046,22 +1176,27 @@ def _try_nudge_forward(plan: PlanDay,
     return False
 
 
+
 def _flexibility_now(plan: PlanDay,
                      client: Client,
                      ev: PlanEvent,
-                     day: date) -> int:
+                     day: date,
+                     cfg: Optional[PlannerConfig] = None) -> int:
     """
     Approx count of alternative feasible starts (forward only) available
     to `ev` right now (excluding fixed-times).
     """
+    cfg = cfg or PlannerConfig()
+
     if ev.activity.fixed_times:
         return 0
     others = [x for x in plan.events if x is not ev]
     count = 0
     for t2 in _future_candidates(ev.activity, day, after_dt=ev.start_dt):
-        if _can_place_against(others, client, ev.activity, t2):
+        if _can_place_against(others, client, ev.activity, t2, cfg):
             count += 1
     return count
+
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -1074,7 +1209,8 @@ def repairB(plan: PlanDay,
             day: date,
             start_dt: datetime,
             max_moves: int = 1,
-            try_others: bool = True) -> bool:
+            try_others: bool = True,
+            config: Optional[PlannerConfig] = None) -> bool:
     """
     Try to place `act` at `start_dt` by minimally adjusting existing events.
 
@@ -1084,6 +1220,8 @@ def repairB(plan: PlanDay,
        ordered by least flexibility first (each by up to `max_moves` moves).
     Returns True iff `act` was placed.
     """
+    cfg = config or PlannerConfig()
+
     conflicts = _blocking_events(plan.events, start_dt, act)
     if not conflicts:
         # defensive: if caller mis-signaled, just place the event
@@ -1092,7 +1230,8 @@ def repairB(plan: PlanDay,
 
     # 1) Direct conflicting event: the one with max overlap
     direct = max(conflicts, key=lambda ev: _overlap_minutes(start_dt, act, ev))
-    if _try_nudge_forward(plan, client, direct, day, act, start_dt, max_moves=max_moves):
+    if _try_nudge_forward(plan, client, direct, day, act, start_dt,
+                          max_moves=max_moves, cfg=cfg):
         return True
 
     # 2) Optionally try other planned events (non-fixed), least flexibility first
@@ -1101,14 +1240,14 @@ def repairB(plan: PlanDay,
             ev for ev in plan.events
             if (ev is not direct and not ev.activity.fixed_times)
         ]
-        candidates.sort(key=lambda ev: _flexibility_now(plan, client, ev, day))
+        candidates.sort(key=lambda ev: _flexibility_now(plan, client, ev, day, cfg))
 
         for ev in candidates:
-            if _try_nudge_forward(plan, client, ev, day, act, start_dt, max_moves=max_moves):
+            if _try_nudge_forward(plan, client, ev, day, act, start_dt,
+                                  max_moves=max_moves, cfg=cfg):
                 return True
 
     return False
-
 
 
 
@@ -1116,6 +1255,81 @@ if __name__ == "__main__":
     from datetime import date, datetime, time
     from copy import deepcopy
     from .utils import load_people, load_events
+
+    # ─────────────────────────────────────────────────────────────────────────────
+    # Config presets for experiments
+    # ─────────────────────────────────────────────────────────────────────────────
+    EXPERIMENT_CONFIGS = [
+        (
+            "FULL_DEFAULT",
+            PlannerConfig(
+                use_hard_constraints=True,
+                use_weather=True,
+                use_budget=True,
+                use_meals=True,
+                use_base_plan=True,
+                use_repairB=True,
+                debug_print=False,  # set True to see anchor/repair logs
+            ),
+        ),
+        (
+            "NO_WEATHER",
+            PlannerConfig(
+                use_hard_constraints=True,
+                use_weather=False,
+                use_budget=True,
+                use_meals=True,
+                use_base_plan=True,
+                use_repairB=True,
+                debug_print=False,
+            ),
+        ),
+        (
+            "NO_BUDGET",
+            PlannerConfig(
+                use_hard_constraints=True,
+                use_weather=True,
+                use_budget=False,
+                use_meals=True,
+                use_base_plan=True,
+                use_repairB=True,
+                debug_print=False,
+            ),
+        ),
+        (
+            "NO_BASEPLAN",
+            PlannerConfig(
+                use_hard_constraints=True,
+                use_weather=True,
+                use_budget=True,
+                use_meals=True,
+                use_base_plan=False,   # Yash beam search OFF
+                use_repairB=True,
+                debug_print=False,
+            ),
+        ),
+        (
+            "NO_REPAIR",
+            PlannerConfig(
+                use_hard_constraints=True,
+                use_weather=True,
+                use_budget=True,
+                use_meals=True,
+                use_base_plan=True,
+                use_repairB=False,     # RepairB OFF
+                debug_print=False,
+            ),
+        ),
+    ]
+
+    def _print_plan(plan: PlanDay, cfg_name: str, day: date, client_name: str):
+        print(f"\n[{client_name}] Plan for {day}  (config={cfg_name})")
+        for ev in plan.events:
+            print(
+                f"- {ev.start_dt.time()}–{ev.end_dt.time()}  "
+                f"{ev.activity.name} ({ev.activity.category})  "
+                f"${ev.activity.cost_cad}"
+            )
 
     # ─────────────────────────────────────────────────────────────────────────────
     # Helpers: read / clamp party ages to satisfy an activity's (amin..amax)
@@ -1146,16 +1360,16 @@ if __name__ == "__main__":
         # Single traveler
         if isinstance(getattr(c, "age", None), (int, float)):
             c.age = max(lo, min(int(c.age), hi))
-        
+
         # Your actual schema: adults_ages + kids_ages
         adults = getattr(c, "adults_ages", None)
         if isinstance(adults, list):
             c.adults_ages = [max(lo, min(int(a), hi)) for a in adults]
-        
+
         kids = getattr(c, "kids_ages", None)
         if isinstance(kids, list):
             c.kids_ages = [max(lo, min(int(k), hi)) for k in kids]
-        
+
         # Legacy: groups with travellers/travelers
         for attr in ("travellers", "travelers"):
             grp = getattr(c, attr, None)
@@ -1181,7 +1395,9 @@ if __name__ == "__main__":
     people = load_people()
     events = load_events()
 
-    # First scenario you currently run (with mock rainy filtering)
+    # ─────────────────────────────────────────────────────────────────────────────
+    # SCENARIO 1: Rainy subset + mock rainy walk, run under all configs
+    # ─────────────────────────────────────────────────────────────────────────────
     client = people[0]
     day = date(2025, 8, 3)  # Arijit concert fixed at 17:00 on this date
 
@@ -1213,7 +1429,7 @@ if __name__ == "__main__":
         "fixed_times": [],
         "requires_booking": False,
         "weather_blockers": ["Slight rain", "Moderate rain", "Heavy rain"],  # blocked
-        "popularity": 0.5
+        "popularity": 0.5,
     }
 
     # Simulate rainy conditions for testing (PRESERVED)
@@ -1223,30 +1439,41 @@ if __name__ == "__main__":
     mock_rain_activity = Activity(**mock_rain_event)
     subset.append(mock_rain_activity)
 
-    # Filter events based on weather for the greedy algorithm (PRESERVED)
-    filtered_subset = [e for e in subset if current_weather not in getattr(e, "weather_blockers", [])]
+    # Filter events based on *current_weather* label (just for comparison prints)
+    filtered_subset = [
+        e for e in subset
+        if current_weather not in getattr(e, "weather_blockers", [])
+    ]
 
     print("Subset BEFORE weather filter:")
     for e in subset:
         print(f"- {e.name} (weather blockers:{str(e.weather_blockers)}")
 
-    print("\nSubset AFTER weather filter:")
+    print("\nSubset AFTER simple weather label filter:")
     for e in filtered_subset:
         print(f"- {e.name}")
 
     for a in filtered_subset:
-        print(a.name,
-              "interest=", interest_score(client, a),
-              "base_value=", base_value(client, a),
-              "cost=", a.cost_cad)
+        print(
+            a.name,
+            "interest=", interest_score(client, a),
+            "base_value=", base_value(client, a),
+            "cost=", a.cost_cad,
+        )
 
-    # ── Ensure ages satisfy concert bounds for THIS run too
-    concert = next((e for e in filtered_subset if e.id == "e_concert_southasian_01"), None)
+    # ── Ensure ages satisfy concert bounds for THIS run too (PRESERVED)
+    concert = next(
+        (e for e in filtered_subset if e.id == "e_concert_southasian_01"),
+        None,
+    )
     if concert:
         # normalize missing bounds/duration
-        if getattr(concert, "age_min", None) in (None, ""): concert.age_min = 0
-        if getattr(concert, "age_max", None) in (None, ""): concert.age_max = 120
-        if getattr(concert, "duration_min", None) in (None, 0): concert.duration_min = 120
+        if getattr(concert, "age_min", None) in (None, ""):
+            concert.age_min = 0
+        if getattr(concert, "age_max", None) in (None, ""):
+            concert.age_max = 120
+        if getattr(concert, "duration_min", None) in (None, 0):
+            concert.duration_min = 120
         amin, amax = int(concert.age_min), int(concert.age_max)
 
         # pick an existing client whose whole party fits; else clone & clamp
@@ -1262,12 +1489,11 @@ if __name__ == "__main__":
         ages_str = ", ".join(map(str, _party_ages(client))) or "unknown"
         print(f"[test] Using client with party ages=[{ages_str}] (allowed {amin}-{amax})")
 
-    # Make the day plan (greedy algorithm should skip rainy event; PRESERVED)
-    plan = make_day_plan(client, filtered_subset, day)
-
-    print(f"\nPlan for {day}:")
-    for ev in plan.events:
-        print(f"- {ev.start_dt.time()}–{ev.end_dt.time()}  {ev.activity.name} ({ev.activity.category})  ${ev.activity.cost_cad}")
+    # Run SCENARIO 1 with EACH config
+    for cfg_name, cfg in EXPERIMENT_CONFIGS:
+        print(f"\n========== SCENARIO 1: RAINY SUBSET (config={cfg_name}) ==========")
+        plan = make_day_plan(client, filtered_subset, day, config=cfg)
+        _print_plan(plan, cfg_name, day, getattr(client, "name", "Client"))
 
     # ─────────────────────────────────────────────────────────────────────────────
     # EXTRA SCENARIOS: Family & Couple, using ALL GTA events (no whitelist)
@@ -1387,11 +1613,16 @@ if __name__ == "__main__":
 
     # Normalize a bit for safety
     for a in all_gta_events:
-        if getattr(a, "duration_min", None) in (None, 0): a.duration_min = 90
-        if getattr(a, "age_min", None) in (None, ""): a.age_min = 0
-        if getattr(a, "age_max", None) in (None, ""): a.age_max = 120
-        if getattr(a, "fixed_times", None) is None: a.fixed_times = []
-        if getattr(a, "weather_blockers", None) is None: a.weather_blockers = []
+        if getattr(a, "duration_min", None) in (None, 0):
+            a.duration_min = 90
+        if getattr(a, "age_min", None) in (None, ""):
+            a.age_min = 0
+        if getattr(a, "age_max", None) in (None, ""):
+            a.age_max = 120
+        if getattr(a, "fixed_times", None) is None:
+            a.fixed_times = []
+        if getattr(a, "weather_blockers", None) is None:
+            a.weather_blockers = []
 
     # Shift any explicit fixed dates inside the forecast horizon
     _retarget_fixed_times_into_horizon(all_gta_events, _ROLLED_DAY0)
@@ -1407,18 +1638,20 @@ if __name__ == "__main__":
         fam.kids_ages = [12, 8]
         fam.budget_total = getattr(fam, "budget_total", 400.0) or 400.0
         if not getattr(fam, "home_base", None):
-            class _Loc: pass
+            class _Loc: ...
             fam.home_base = _Loc()
             fam.home_base.lat, fam.home_base.lng = 43.653, -79.383
             fam.home_base.city = "Toronto"
         fam.meal_prefs = {
             "breakfast": {"window": ["08:00","10:00"], "cuisines": ["bakery","brunch","coffee"]},
             "lunch":     {"window": ["12:00","14:00"], "cuisines": ["pizza","burgers","shawarma"]},
-            "dinner":    {"window": ["18:00","20:30"], "cuisines": ["italian","indian","chinese"]}
+            "dinner":    {"window": ["18:00","20:30"], "cuisines": ["italian","indian","chinese"]},
         }
-        fam.dietary = {"vegetarian": False, "vegan": False, "halal": False, "kosher": False,
-                       "gluten_free": False, "dairy_free": False, "nut_allergy": False,
-                       "avoid": [], "required_terms": []}
+        fam.dietary = {
+            "vegetarian": False, "vegan": False, "halal": False, "kosher": False,
+            "gluten_free": False, "dairy_free": False, "nut_allergy": False,
+            "avoid": [], "required_terms": [],
+        }
         fam.trip_start, fam.trip_end = day1, day2
         return fam
 
@@ -1429,23 +1662,25 @@ if __name__ == "__main__":
         cp.kids_ages = []
         cp.budget_total = getattr(cp, "budget_total", 300.0) or 300.0
         if not getattr(cp, "home_base", None):
-            class _Loc: pass
+            class _Loc: ...
             cp.home_base = _Loc()
             cp.home_base.lat, cp.home_base.lng = 43.653, -79.383
             cp.home_base.city = "Toronto"
         cp.meal_prefs = {
             "breakfast": {"window": ["09:00","10:30"], "cuisines": ["coffee","brunch"]},
             "lunch":     {"window": ["12:30","14:00"], "cuisines": ["sushi","ramen","tacos"]},
-            "dinner":    {"window": ["19:00","21:00"], "cuisines": ["steak","italian","thai"]}
+            "dinner":    {"window": ["19:00","21:00"], "cuisines": ["steak","italian","thai"]},
         }
-        cp.dietary = {"vegetarian": False, "vegan": False, "halal": False, "kosher": False,
-                      "gluten_free": False, "dairy_free": False, "nut_allergy": False,
-                      "avoid": [], "required_terms": []}
+        cp.dietary = {
+            "vegetarian": False, "vegan": False, "halal": False, "kosher": False,
+            "gluten_free": False, "dairy_free": False, "nut_allergy": False,
+            "avoid": [], "required_terms": [],
+        }
         cp.trip_start, cp.trip_end = day1, day2
         return cp
 
     # Base to clone from
-    base_for_clone = client if 'client' in locals() else (people[0] if people else None)
+    base_for_clone = client if "client" in locals() else (people[0] if people else None)
     if base_for_clone is None:
         raise RuntimeError("No base client to clone from; ensure load_people() returned at least one entry.")
 
@@ -1453,33 +1688,45 @@ if __name__ == "__main__":
     family_client = _mk_family(base_for_clone)
     couple_client = _mk_couple(base_for_clone)
 
-    # Helper to plan + print for a given client and day
+    # Helper to plan + print for a given client and day under all configs
     def _run_plan_for(client_obj, acts, d):
+        """
+        Run the SAME client/day/activities under each config
+        and print the plans. Returns a dict config_name -> PlanDay.
+        """
         amin_day = min(int(getattr(a, "age_min", 0) or 0) for a in acts) if acts else 0
         amax_day = max(int(getattr(a, "age_max", 120) or 120) for a in acts) if acts else 120
         _clamp_party_ages(client_obj, amin_day, amax_day)
-        planX = make_day_plan(client_obj, acts, d)
-        print(f"\n[{getattr(client_obj, 'name', 'Client')}] Plan for {d}:")
-        for ev in planX.events:
-            print(f"- {ev.start_dt.time()}–{ev.end_dt.time()}  {ev.activity.name} "
-                  f"({ev.activity.category})  ${ev.activity.cost_cad}")
-        return planX
 
-    # FAMILY: consider ALL GTA events
+        plans = {}
+        for cfg_name, cfg in EXPERIMENT_CONFIGS:
+            print(
+                f"\n[{getattr(client_obj, 'name', 'Client')}] "
+                f"Plan for {d} (config={cfg_name})"
+            )
+            planX = make_day_plan(client_obj, acts, d, config=cfg)
+            for ev in planX.events:
+                print(
+                    f"- {ev.start_dt.time()}–{ev.end_dt.time()}  "
+                    f"{ev.activity.name} ({ev.activity.category})  "
+                    f"${ev.activity.cost_cad}"
+                )
+            plans[cfg_name] = planX
+        return plans
+
+    # FAMILY: consider ALL GTA events under all configs
     print("\n========== FAMILY (ALL GTA EVENTS) ==========")
-    fam_plan_d1 = _run_plan_for(family_client, all_gta_events, day1)
-    fam_plan_d2 = _run_plan_for(family_client, all_gta_events, day2)
+    fam_plans_d1 = _run_plan_for(family_client, all_gta_events, day1)
+    fam_plans_d2 = _run_plan_for(family_client, all_gta_events, day2)
 
-    # COUPLE: consider ALL GTA events
+    # COUPLE: consider ALL GTA events under all configs
     print("\n========== COUPLE (ALL GTA EVENTS) ==========")
-    cpl_plan_d1 = _run_plan_for(couple_client, all_gta_events, day1)
-    cpl_plan_d2 = _run_plan_for(couple_client, all_gta_events, day2)
-
+    cpl_plans_d1 = _run_plan_for(couple_client, all_gta_events, day1)
+    cpl_plans_d2 = _run_plan_for(couple_client, all_gta_events, day2)
 
     # ─────────────────────────────────────────────────────────────────────────────
-    # Second scenario you run later (PRESERVED structure) — meteo-safe
+    # SCENARIO 3: Rolled subset (concert + set) inside forecast horizon
     # ─────────────────────────────────────────────────────────────────────────────
-    # Roll any explicit fixed dates in this subset as well, and run on _ROLLED_DAY0
     day = _ROLLED_DAY0  # instead of hard-coded 2025-08-03
 
     wanted_ids = {
@@ -1500,9 +1747,12 @@ if __name__ == "__main__":
     if not concert:
         raise RuntimeError("Concert e_concert_southasian_01 not found in events!")
 
-    if getattr(concert, "age_min", None) in (None, ""): concert.age_min = 0
-    if getattr(concert, "age_max", None) in (None, ""): concert.age_max = 120
-    if getattr(concert, "duration_min", None) in (None, 0): concert.duration_min = 120
+    if getattr(concert, "age_min", None) in (None, ""):
+        concert.age_min = 0
+    if getattr(concert, "age_max", None) in (None, ""):
+        concert.age_max = 120
+    if getattr(concert, "duration_min", None) in (None, 0):
+        concert.duration_min = 120
 
     amin = int(concert.age_min)
     amax = int(concert.age_max)
@@ -1522,13 +1772,18 @@ if __name__ == "__main__":
         ft = getattr(a, "fixed_times", None)
         return ft if ft is not None else []
 
-    print("ANCHORS:",
-          [(a.id, type(getattr(a, "fixed_times", None)).__name__, _show_fixed(a))
-           for a in subset if getattr(a, "fixed_times", None)])
+    print(
+        "ANCHORS:",
+        [
+            (a.id, type(getattr(a, "fixed_times", None)).__name__, _show_fixed(a))
+            for a in subset
+            if getattr(a, "fixed_times", None)
+        ],
+    )
 
-    plan = make_day_plan(client, subset, day)
+    # Run SCENARIO 3 with EACH config
+    for cfg_name, cfg in EXPERIMENT_CONFIGS:
+        print(f"\n========== SCENARIO 3: ROLLED SUBSET (config={cfg_name}) ==========")
+        plan = make_day_plan(client, subset, day, config=cfg)
+        _print_plan(plan, cfg_name, day, getattr(client, "name", "Client"))
 
-    print(f"\nPlan for {day}:")
-    for ev in plan.events:
-        print(f"- {ev.start_dt.time()}–{ev.end_dt.time()}  {ev.activity.name} "
-              f"({ev.activity.category})  ${ev.activity.cost_cad}")
