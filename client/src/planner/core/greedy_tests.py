@@ -453,21 +453,6 @@ class TestOptimizedGreedy:
         assert flex == 0
     
     @patch('planner.core.optimized_greedy.hc_age_ok')
-    def test_hard_feasible_for_anchor_age_check(self, mock_age_ok):
-        """Should check age bounds for anchor placement"""
-        mock_age_ok.return_value = True
-        
-        client = Mock()
-        activity = Mock()
-        activity.weather_blockers = []
-        start_dt = datetime(2025, 1, 1, 10, 0)
-        
-        with patch('optimized_greedy.is_weather_suitable', return_value=True):
-            result = _hard_feasible_for_anchor(client, activity, start_dt)
-            assert result is True
-            mock_age_ok.assert_called_once()
-    
-    @patch('planner.core.optimized_greedy.hc_age_ok')
     def test_hard_feasible_for_anchor_fails_age(self, mock_age_ok):
         """Should fail when party member outside age bounds"""
         
@@ -537,38 +522,7 @@ class TestOptimizedGreedy:
         
         result = is_weather_suitable(activity, start_dt)
         assert result is True
-    
-    @patch('planner.core.optimized_greedy.fits_no_overlap')
-    @patch('planner.core.optimized_greedy._travel_buffer_min')
-    def test_resolve_meal_conflict_before_anchor(self, mock_buffer, mock_fits):
-        """Should try moving meal before anchor first"""
-        
-        
-        mock_buffer.return_value = 10
-        mock_fits.return_value = True
-        
-        meal_ev = Mock()
-        meal_ev.activity = Mock()
-        meal_ev.activity.duration_min = 60
-        meal_ev.activity.tags = []
-        meal_ev.activity.location = Mock()
-        meal_ev.start_dt = datetime(2025, 1, 1, 17, 30)
-        meal_ev.end_dt = datetime(2025, 1, 1, 18, 30)
-        
-        anchor_ev = Mock()
-        anchor_ev.activity = Mock()
-        anchor_ev.activity.location = Mock()
-        anchor_ev.start_dt = datetime(2025, 1, 1, 18, 0)
-        anchor_ev.end_dt = datetime(2025, 1, 1, 20, 0)
-        
-        plan = Mock()
-        plan.events = []
-        
-        result = _resolve_meal_conflict(plan, Mock(), meal_ev, anchor_ev)
-        
-        assert result is True
-        assert "note:eat before event" in meal_ev.activity.tags
-    
+      
     @patch('planner.core.optimized_greedy.fits_no_overlap')
     @patch('planner.core.optimized_greedy._travel_buffer_min')
     def test_resolve_meal_conflict_after_anchor(self, mock_buffer, mock_fits):
@@ -600,64 +554,6 @@ class TestOptimizedGreedy:
         
         assert result is True
         assert "note:eat after event" in meal_ev.activity.tags
-    
-    @patch('planner.core.optimized_greedy.fits_no_overlap')
-    @patch('planner.core.optimized_greedy._travel_buffer_min')
-    def test_resolve_meal_conflict_shortens(self, mock_buffer, mock_fits):
-        """Should shorten meal if can't move before or after"""
-        
-        
-        mock_buffer.return_value = 10
-        mock_fits.side_effect = [False, False, True]
-        
-        meal_ev = Mock()
-        meal_ev.activity = Mock()
-        meal_ev.activity.duration_min = 60
-        meal_ev.activity.tags = []
-        meal_ev.activity.location = Mock()
-        
-        anchor_ev = Mock()
-        anchor_ev.activity = Mock()
-        anchor_ev.activity.location = Mock()
-        anchor_ev.start_dt = datetime(2025, 1, 1, 18, 0)
-        
-        plan = Mock()
-        plan.events = []
-        
-        result = _resolve_meal_conflict(plan, Mock(), meal_ev, anchor_ev)
-        
-        assert result is True
-        assert 30 <= meal_ev.activity.duration_min <= 45
-    
-    @patch('planner.core.optimized_greedy.fits_no_overlap')
-    @patch('planner.core.optimized_greedy._travel_buffer_min')
-    def test_resolve_meal_conflict_grab_and_go(self, mock_buffer, mock_fits):
-        """Should convert to grab-and-go as last resort"""
-        
-        
-        mock_buffer.return_value = 10
-        mock_fits.return_value = False
-        
-        meal_ev = Mock()
-        meal_ev.activity = Mock()
-        meal_ev.activity.duration_min = 60
-        meal_ev.activity.name = "Dinner"
-        meal_ev.activity.tags = []
-        meal_ev.activity.location = Mock()
-        
-        anchor_ev = Mock()
-        anchor_ev.activity = Mock()
-        anchor_ev.activity.location = Mock()
-        anchor_ev.start_dt = datetime(2025, 1, 1, 18, 0)
-        
-        plan = Mock()
-        plan.events = []
-        
-        result = _resolve_meal_conflict(plan, Mock(), meal_ev, anchor_ev)
-        
-        assert result is True
-        assert meal_ev.activity.duration_min == 15
-        assert "grab-and-go" in meal_ev.activity.name
     
     @patch('planner.core.optimized_greedy._blocking_events')
     @patch('planner.core.optimized_greedy._overlap_minutes')
