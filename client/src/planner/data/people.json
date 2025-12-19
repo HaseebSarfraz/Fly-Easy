@@ -89,6 +89,7 @@
     "prefer_cultural": 3,
     "start_time": "08:00",
     "end_time": "21:00",
+    "early_risers": true,
     "diet": {
       "vegetarian": false,
       "vegan": false,
@@ -100,47 +101,24 @@
     },
     "meal_prefs": {
       "breakfast": {
-        "window": [
-          "08:00",
-          "09:30"
-        ],
-        "cuisines": [
-          "american",
-          "south_asian",
-          "bakery",
-          "cafe"
-        ],
+        "window": ["08:00", "09:30"],
+        "cuisines": ["american", "south_asian", "bakery", "cafe"],
         "budget_cad": 18
       },
       "lunch": {
-        "window": [
-          "12:00",
-          "14:00"
-        ],
-        "cuisines": [
-          "italian",
-          "turkish",
-          "pizza",
-          "mediterranean"
-        ],
+        "window": ["12:00", "14:00"],
+        "cuisines": ["italian", "turkish", "pizza", "mediterranean"],
         "budget_cad": 25
       },
       "dinner": {
-        "window": [
-          "18:00",
-          "20:00"
-        ],
-        "cuisines": [
-          "indian",
-          "mediterranean",
-          "bbq",
-          "family_style"
-        ],
+        "window": ["18:00", "20:00"],
+        "cuisines": ["indian", "mediterranean", "bbq", "family_style"],
         "budget_cad": 40
       },
       "snacks_ok": true
     }
   },
+
   {
     "id": "p_couple_urbanfood_01",
     "party_type": "couple",
@@ -201,6 +179,7 @@
     "prefer_cultural": 5,
     "start_time": "10:00",
     "end_time": "23:00",
+    "early_risers": false,
     "diet": {
       "vegetarian": false,
       "vegan": false,
@@ -212,46 +191,24 @@
     },
     "meal_prefs": {
       "breakfast": {
-        "window": [
-          "09:30",
-          "11:00"
-        ],
-        "cuisines": [
-          "brunch",
-          "cafe",
-          "bakery"
-        ],
+        "window": ["09:30", "11:00"],
+        "cuisines": ["brunch", "cafe", "bakery"],
         "budget_cad": 22
       },
       "lunch": {
-        "window": [
-          "12:30",
-          "14:30"
-        ],
-        "cuisines": [
-          "japanese",
-          "korean",
-          "italian",
-          "ramen"
-        ],
+        "window": ["12:30", "14:30"],
+        "cuisines": ["japanese", "korean", "italian", "ramen"],
         "budget_cad": 28
       },
       "dinner": {
-        "window": [
-          "18:30",
-          "20:30"
-        ],
-        "cuisines": [
-          "tapas",
-          "modern_canadian",
-          "steak",
-          "seafood"
-        ],
+        "window": ["18:30", "20:30"],
+        "cuisines": ["tapas", "modern_canadian", "steak", "seafood"],
         "budget_cad": 55
       },
       "snacks_ok": true
     }
   },
+
   {
     "id": "p_couple_relaxed_nature_01",
     "party_type": "couple",
@@ -312,6 +269,7 @@
     "prefer_cultural": 4,
     "start_time": "08:00",
     "end_time": "21:00",
+    "early_risers": true,
     "diet": {
       "vegetarian": true,
       "vegan": false,
@@ -323,449 +281,155 @@
     },
     "meal_prefs": {
       "breakfast": {
-        "window": [
-          "08:00",
-          "09:30"
-        ],
-        "cuisines": [
-          "cafe",
-          "smoothie",
-          "bakery"
-        ],
+        "window": ["08:00", "09:30"],
+        "cuisines": ["brunch", "cafe", "bakery", "vegan"],
         "budget_cad": 18
       },
       "lunch": {
-        "window": [
-          "12:00",
-          "14:00"
-        ],
-        "cuisines": [
-          "mediterranean",
-          "salad",
-          "vegetarian",
-          "indian"
-        ],
-        "budget_cad": 25
+        "window": ["12:00", "14:00"],
+        "cuisines": ["mediterranean", "vegetarian", "salad"],
+        "budget_cad": 22
       },
       "dinner": {
-        "window": [
-          "18:00",
-          "20:00"
-        ],
-        "cuisines": [
-          "thai",
-          "mediterranean",
-          "indian",
-          "vegetarian"
-        ],
+        "window": ["18:00", "20:00"],
+        "cuisines": ["indian", "italian", "vegetarian"],
         "budget_cad": 35
       },
       "snacks_ok": true
     }
   },
+
   {
-    "id": "p_solo_historybuff_01",
+    "id": "p_solo_cultural_explorer_01",
     "party_type": "solo",
     "party_members": {
       "Solo Traveler": {
-        "age": 24,
+        "age": 35,
         "interest_weights": {
-          "concerts": 2,
-          "food": 6,
-          "nightlife": 1,
-          "history": 10,
+          "concerts": 5,
+          "food": 8,
+          "nightlife": 3,
+          "history": 9,
           "museums": 9,
           "architecture": 8,
-          "aquarium": 3,
+          "aquarium": 4,
           "theme_parks": 0,
-          "zoo": 0,
-          "parks": 5,
-          "islands": 4,
-          "shopping": 2,
-          "pizza": 5,
-          "theatre": 6,
-          "views": 7
-        }
-      }
-    },
-    "religion": null,
-    "ethnicity_culture": [],
-    "vibe": "cultural",
-    "budget_total": 700,
-    "trip_start": "2026-03-10",
-    "trip_end": "2026-03-14",
-    "home_base": {
-      "lat": 43.653,
-      "lng": -79.383
-    },
-    "avoid_long_transit": 4,
-    "prefer_outdoor": 4,
-    "prefer_cultural": 10,
-    "start_time": "08:00",
-    "end_time": "21:00",
-    "diet": {
-      "vegetarian": false,
-      "vegan": false,
-      "halal": false,
-      "kosher": false,
-      "gluten_free": false,
-      "dairy_free": false,
-      "nut_allergy": false
-    },
-    "meal_prefs": {
-      "breakfast": {
-        "window": [
-          "08:30",
-          "09:30"
-        ],
-        "cuisines": [
-          "cafe",
-          "bakery"
-        ],
-        "budget_cad": 15
-      },
-      "lunch": {
-        "window": [
-          "12:00",
-          "13:30"
-        ],
-        "cuisines": [
-          "middle_eastern",
-          "indian",
-          "persian"
-        ],
-        "budget_cad": 20
-      },
-      "dinner": {
-        "window": [
-          "18:00",
-          "19:30"
-        ],
-        "cuisines": [
-          "indian",
-          "ethiopian",
-          "mediterranean"
-        ],
-        "budget_cad": 30
-      },
-      "snacks_ok": true
-    }
-  },
-  {
-    "id": "p_family_teens_thrill_01",
-    "party_type": "family",
-    "party_members": {
-      "Parent 1": {
-        "age": 45,
-        "interest_weights": {
-          "concerts": 7,
-          "food": 7,
-          "nightlife": 4,
-          "history": 2,
-          "museums": 2,
-          "architecture": 2,
-          "aquarium": 3,
-          "theme_parks": 10,
           "zoo": 1,
-          "parks": 5,
-          "islands": 6,
-          "shopping": 6,
-          "pizza": 7,
-          "theatre": 2,
-          "views": 6
-        }
-      },
-      "Parent 2": {
-        "age": 43,
-        "interest_weights": {
-          "concerts": 8,
-          "food": 8,
-          "nightlife": 5,
-          "history": 1,
-          "museums": 1,
-          "architecture": 1,
-          "aquarium": 2,
-          "theme_parks": 9,
-          "zoo": 0,
           "parks": 6,
-          "islands": 7,
-          "shopping": 7,
-          "pizza": 8,
-          "theatre": 3,
-          "views": 7
-        }
-      },
-      "Teen 1": {
-        "age": 16,
-        "interest_weights": {
-          "theme_parks": 10,
-          "concerts": 10,
-          "nightlife": 8,
-          "shopping": 8,
-          "food": 7,
-          "views": 7,
-          "pizza": 7,
-          "islands": 6,
-          "parks": 5,
-          "aquarium": 3
-        }
-      },
-      "Teen 2": {
-        "age": 14,
-        "interest_weights": {
-          "theme_parks": 10,
-          "food": 8,
-          "pizza": 8,
-          "concerts": 7,
-          "shopping": 6,
-          "views": 6,
-          "islands": 5,
-          "parks": 5,
-          "nightlife": 4,
-          "aquarium": 3
-        }
-      }
-    },
-    "religion": null,
-    "ethnicity_culture": [],
-    "vibe": "active",
-    "budget_total": 2200,
-    "trip_start": "2026-07-01",
-    "trip_end": "2026-07-06",
-    "home_base": {
-      "lat": 43.84,
-      "lng": -79.54
-    },
-    "avoid_long_transit": 5,
-    "prefer_outdoor": 8,
-    "prefer_cultural": 2,
-    "start_time": "10:00",
-    "end_time": "23:00",
-    "diet": {
-      "vegetarian": false,
-      "vegan": false,
-      "halal": false,
-      "kosher": false,
-      "gluten_free": false,
-      "dairy_free": false,
-      "nut_allergy": false
-    },
-    "meal_prefs": {
-      "breakfast": {
-        "window": [
-          "09:30",
-          "10:45"
-        ],
-        "cuisines": [
-          "american",
-          "bakery",
-          "cafe"
-        ],
-        "budget_cad": 18
-      },
-      "lunch": {
-        "window": [
-          "12:30",
-          "14:30"
-        ],
-        "cuisines": [
-          "burgers",
-          "pizza",
-          "mexican"
-        ],
-        "budget_cad": 25
-      },
-      "dinner": {
-        "window": [
-          "18:30",
-          "20:30"
-        ],
-        "cuisines": [
-          "bbq",
-          "steak",
-          "asian_fusion"
-        ],
-        "budget_cad": 45
-      },
-      "snacks_ok": true
-    }
-  },
-  {
-    "id": "p_multi_gen_olderparents_01",
-    "party_type": "multi_gen",
-    "party_members": {
-      "Adult Child 1": {
-        "age": 38,
-        "interest_weights": {
-          "concerts": 3,
-          "food": 7,
-          "nightlife": 0,
-          "history": 8,
-          "museums": 8,
-          "architecture": 7,
-          "aquarium": 5,
-          "theme_parks": 2,
-          "zoo": 4,
-          "parks": 7,
           "islands": 5,
           "shopping": 5,
           "pizza": 6,
           "theatre": 7,
           "views": 8
         }
-      },
-      "Adult Child 2": {
-        "age": 36,
-        "interest_weights": {
-          "concerts": 2,
-          "food": 8,
-          "nightlife": 0,
-          "history": 7,
-          "museums": 9,
-          "architecture": 8,
-          "aquarium": 4,
-          "theme_parks": 1,
-          "zoo": 3,
-          "parks": 8,
-          "islands": 6,
-          "shopping": 4,
-          "pizza": 7,
-          "theatre": 8,
-          "views": 9
-        }
-      },
-      "Grandparent 1": {
-        "age": 65,
-        "interest_weights": {
-          "history": 10,
-          "museums": 10,
-          "architecture": 9,
-          "theatre": 9,
-          "views": 8,
-          "food": 7,
-          "parks": 6,
-          "islands": 5,
-          "shopping": 5,
-          "concerts": 3
-        }
-      },
-      "Grandparent 2": {
-        "age": 63,
-        "interest_weights": {
-          "history": 9,
-          "museums": 9,
-          "architecture": 8,
-          "theatre": 10,
-          "views": 7,
-          "food": 6,
-          "parks": 7,
-          "islands": 4,
-          "shopping": 6,
-          "concerts": 2
-        }
-      },
-      "Grandchild": {
-        "age": 9,
-        "interest_weights": {
-          "aquarium": 8,
-          "parks": 9,
-          "zoo": 7,
-          "theme_parks": 6,
-          "pizza": 7,
-          "food": 6,
-          "history": 5,
-          "museums": 5,
-          "views": 4,
-          "shopping": 3
-        }
       }
     },
     "religion": null,
     "ethnicity_culture": [],
-    "vibe": "leisurely",
-    "budget_total": 2600,
-    "trip_start": "2026-04-15",
-    "trip_end": "2026-04-20",
+    "vibe": "cultural",
+    "budget_total": 800,
+    "trip_start": "2026-04-12",
+    "trip_end": "2026-04-15",
     "home_base": {
-      "lat": 43.62,
-      "lng": -79.51
+      "lat": 43.65,
+      "lng": -79.38
     },
-    "avoid_long_transit": 8,
-    "prefer_outdoor": 5,
-    "prefer_cultural": 8,
-    "start_time": "08:00",
-    "end_time": "21:00",
+    "avoid_long_transit": 4,
+    "prefer_outdoor": 4,
+    "prefer_cultural": 9,
+    "start_time": "09:00",
+    "end_time": "22:00",
+    "early_risers": false,
     "diet": {
-      "vegetarian": true,
+      "vegetarian": false,
       "vegan": false,
       "halal": false,
       "kosher": false,
-      "gluten_free": true,
+      "gluten_free": false,
       "dairy_free": false,
       "nut_allergy": false
     },
     "meal_prefs": {
       "breakfast": {
-        "window": [
-          "08:00",
-          "09:15"
-        ],
-        "cuisines": [
-          "cafe",
-          "gluten_free",
-          "bakery"
-        ],
-        "budget_cad": 18
+        "window": ["09:00", "10:30"],
+        "cuisines": ["cafe", "bakery"],
+        "budget_cad": 15
       },
       "lunch": {
-        "window": [
-          "12:00",
-          "13:45"
-        ],
-        "cuisines": [
-          "mediterranean",
-          "vegetarian",
-          "salad",
-          "soup"
-        ],
-        "budget_cad": 25
+        "window": ["12:30", "14:00"],
+        "cuisines": ["italian", "asian", "mediterranean"],
+        "budget_cad": 22
       },
       "dinner": {
-        "window": [
-          "18:00",
-          "20:00"
-        ],
-        "cuisines": [
-          "italian",
-          "greek",
-          "indian"
-        ],
+        "window": ["18:30", "20:00"],
+        "cuisines": ["fine_dining", "local", "fusion"],
         "budget_cad": 40
       },
       "snacks_ok": true
     }
   },
+
   {
-    "id": "p_solo_nightlife_foodie_01",
-    "party_type": "solo",
+    "id": "p_friends_partygroup_01",
+    "party_type": "friends",
     "party_members": {
-      "Solo Traveler": {
-        "age": 27,
+      "Friend 1": {
+        "age": 26,
         "interest_weights": {
-          "concerts": 8,
-          "food": 9,
+          "concerts": 10,
+          "food": 8,
           "nightlife": 10,
           "history": 2,
           "museums": 2,
           "architecture": 2,
           "aquarium": 1,
-          "theme_parks": 1,
+          "theme_parks": 5,
+          "zoo": 0,
+          "parks": 4,
+          "islands": 6,
+          "shopping": 7,
+          "pizza": 8,
+          "theatre": 3,
+          "views": 5
+        }
+      },
+      "Friend 2": {
+        "age": 25,
+        "interest_weights": {
+          "concerts": 9,
+          "food": 9,
+          "nightlife": 9,
+          "history": 1,
+          "museums": 1,
+          "architecture": 1,
+          "aquarium": 0,
+          "theme_parks": 4,
           "zoo": 0,
           "parks": 3,
-          "islands": 3,
-          "shopping": 6,
+          "islands": 5,
+          "shopping": 8,
           "pizza": 9,
-          "theatre": 3,
+          "theatre": 4,
+          "views": 6
+        }
+      },
+      "Friend 3": {
+        "age": 27,
+        "interest_weights": {
+          "concerts": 10,
+          "food": 7,
+          "nightlife": 10,
+          "history": 1,
+          "museums": 1,
+          "architecture": 1,
+          "aquarium": 1,
+          "theme_parks": 3,
+          "zoo": 0,
+          "parks": 5,
+          "islands": 5,
+          "shopping": 6,
+          "pizza": 7,
+          "theatre": 2,
           "views": 4
         }
       }
@@ -773,18 +437,19 @@
     "religion": null,
     "ethnicity_culture": [],
     "vibe": "party",
-    "budget_total": 950,
-    "trip_start": "2026-06-12",
-    "trip_end": "2026-06-15",
+    "budget_total": 1400,
+    "trip_start": "2026-06-19",
+    "trip_end": "2026-06-22",
     "home_base": {
       "lat": 43.648,
-      "lng": -79.381
+      "lng": -79.378
     },
-    "avoid_long_transit": 3,
+    "avoid_long_transit": 2,
     "prefer_outdoor": 3,
-    "prefer_cultural": 2,
-    "start_time": "10:00",
-    "end_time": "23:00",
+    "prefer_cultural": 1,
+    "start_time": "11:00",
+    "end_time": "02:00",
+    "early_risers": false,
     "diet": {
       "vegetarian": false,
       "vegan": false,
@@ -796,79 +461,60 @@
     },
     "meal_prefs": {
       "breakfast": {
-        "window": [
-          "10:00",
-          "11:15"
-        ],
-        "cuisines": [
-          "brunch",
-          "cafe"
-        ],
-        "budget_cad": 22
+        "window": ["10:00", "12:00"],
+        "cuisines": ["brunch", "cafe"],
+        "budget_cad": 20
       },
       "lunch": {
-        "window": [
-          "13:00",
-          "14:30"
-        ],
-        "cuisines": [
-          "ramen",
-          "tacos",
-          "pizza"
-        ],
+        "window": ["14:00", "16:00"],
+        "cuisines": ["pizza", "burger", "tacos"],
         "budget_cad": 25
       },
       "dinner": {
-        "window": [
-          "19:00",
-          "21:00"
-        ],
-        "cuisines": [
-          "izakaya",
-          "gastropub",
-          "mexican"
-        ],
+        "window": ["19:00", "21:00"],
+        "cuisines": ["tapas", "bbq", "korean"],
         "budget_cad": 45
       },
       "snacks_ok": true
     }
   },
+
   {
-    "id": "p_couple_bollywood_01",
+    "id": "p_couple_music_southasian_01",
     "party_type": "couple",
     "party_members": {
       "Partner 1": {
         "age": 29,
         "interest_weights": {
           "concerts": 10,
-          "food": 8,
+          "food": 7,
           "nightlife": 6,
           "history": 4,
-          "museums": 3,
-          "architecture": 3,
+          "museums": 4,
+          "architecture": 4,
           "aquarium": 2,
-          "theme_parks": 0,
+          "theme_parks": 1,
           "zoo": 0,
-          "parks": 4,
-          "islands": 4,
+          "parks": 5,
+          "islands": 5,
           "shopping": 7,
           "pizza": 6,
-          "theatre": 5,
+          "theatre": 7,
           "views": 6
         }
       },
       "Partner 2": {
         "age": 28,
         "interest_weights": {
-          "concerts": 9,
-          "food": 7,
-          "nightlife": 7,
-          "history": 3,
-          "museums": 4,
-          "architecture": 4,
-          "aquarium": 1,
-          "theme_parks": 0,
-          "zoo": 0,
+          "concerts": 10,
+          "food": 8,
+          "nightlife": 5,
+          "history": 5,
+          "museums": 5,
+          "architecture": 5,
+          "aquarium": 3,
+          "theme_parks": 2,
+          "zoo": 1,
           "parks": 5,
           "islands": 5,
           "shopping": 8,
@@ -879,9 +525,7 @@
       }
     },
     "religion": null,
-    "ethnicity_culture": [
-      "south_asian"
-    ],
+    "ethnicity_culture": ["south_asian"],
     "vibe": "music",
     "budget_total": 1300,
     "trip_start": "2026-08-08",
@@ -895,6 +539,7 @@
     "prefer_cultural": 5,
     "start_time": "10:00",
     "end_time": "23:00",
+    "early_risers": false,
     "diet": {
       "vegetarian": false,
       "vegan": false,
@@ -906,43 +551,24 @@
     },
     "meal_prefs": {
       "breakfast": {
-        "window": [
-          "09:30",
-          "11:00"
-        ],
-        "cuisines": [
-          "cafe",
-          "bakery"
-        ],
+        "window": ["09:30", "11:00"],
+        "cuisines": ["cafe", "bakery"],
         "budget_cad": 18
       },
       "lunch": {
-        "window": [
-          "12:30",
-          "14:30"
-        ],
-        "cuisines": [
-          "indian",
-          "pakistani",
-          "thai"
-        ],
+        "window": ["12:30", "14:30"],
+        "cuisines": ["indian", "pakistani", "thai"],
         "budget_cad": 28
       },
       "dinner": {
-        "window": [
-          "18:30",
-          "20:30"
-        ],
-        "cuisines": [
-          "indian",
-          "bbq",
-          "mediterranean"
-        ],
+        "window": ["18:30", "20:30"],
+        "cuisines": ["indian", "bbq", "mediterranean"],
         "budget_cad": 45
       },
       "snacks_ok": true
     }
   },
+
   {
     "id": "p_budget_student_duo_01",
     "party_type": "friends",
@@ -1003,6 +629,7 @@
     "prefer_cultural": 2,
     "start_time": "10:00",
     "end_time": "23:00",
+    "early_risers": false,
     "diet": {
       "vegetarian": false,
       "vegan": false,
@@ -1014,43 +641,24 @@
     },
     "meal_prefs": {
       "breakfast": {
-        "window": [
-          "09:30",
-          "10:45"
-        ],
-        "cuisines": [
-          "cafe",
-          "bakery"
-        ],
+        "window": ["09:30", "10:45"],
+        "cuisines": ["cafe", "bakery"],
         "budget_cad": 12
       },
       "lunch": {
-        "window": [
-          "12:30",
-          "14:00"
-        ],
-        "cuisines": [
-          "fast_casual",
-          "pizza",
-          "shawarma"
-        ],
+        "window": ["12:30", "14:00"],
+        "cuisines": ["fast_casual", "pizza", "shawarma"],
         "budget_cad": 15
       },
       "dinner": {
-        "window": [
-          "18:30",
-          "20:00"
-        ],
-        "cuisines": [
-          "burger",
-          "tacos",
-          "noodles"
-        ],
+        "window": ["18:30", "20:00"],
+        "cuisines": ["burger", "tacos", "noodles"],
         "budget_cad": 22
       },
       "snacks_ok": true
     }
   },
+
   {
     "id": "p_couple_with_parents_early20kid_01",
     "party_type": "multi_gen",
@@ -1112,9 +720,7 @@
       }
     },
     "religion": "muslim",
-    "ethnicity_culture": [
-      "south_asian"
-    ],
+    "ethnicity_culture": ["south_asian"],
     "vibe": "family-cultural",
     "budget_total": 2400,
     "trip_start": "2026-09-10",
@@ -1128,6 +734,7 @@
     "prefer_cultural": 8,
     "start_time": "08:00",
     "end_time": "21:00",
+    "early_risers": true,
     "diet": {
       "vegetarian": false,
       "vegan": false,
@@ -1139,38 +746,18 @@
     },
     "meal_prefs": {
       "breakfast": {
-        "window": [
-          "08:30",
-          "09:45"
-        ],
-        "cuisines": [
-          "cafe",
-          "bakery"
-        ],
+        "window": ["08:30", "09:45"],
+        "cuisines": ["cafe", "bakery"],
         "budget_cad": 18
       },
       "lunch": {
-        "window": [
-          "12:00",
-          "14:00"
-        ],
-        "cuisines": [
-          "indian",
-          "middle_eastern",
-          "mediterranean"
-        ],
+        "window": ["12:00", "14:00"],
+        "cuisines": ["indian", "middle_eastern", "mediterranean"],
         "budget_cad": 28
       },
       "dinner": {
-        "window": [
-          "18:00",
-          "20:00"
-        ],
-        "cuisines": [
-          "indian",
-          "afghani",
-          "turkish"
-        ],
+        "window": ["18:00", "20:00"],
+        "cuisines": ["indian", "afghani", "turkish"],
         "budget_cad": 45
       },
       "snacks_ok": true
