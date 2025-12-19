@@ -63,16 +63,12 @@ class Client:
         prefer_outdoor: int,             # 0–10
         prefer_cultural: int,            # 0–10
         day_start_time: str,
-        day_end_time: str
-    ):
-        
-        self.party_members = party_members
+        day_end_time: str,
         early_risers: bool,
         dietary: Optional[dict],
         meal_prefs: Optional[dict]
     ):
-        self.adults_ages = [int(age) for age in adults_ages]
-        self.kids_ages = [int(age) for age in kids_ages]
+        self.party_members = party_members
         self.id = str(id)
         self.party_type = party_type
         self.religion = religion
@@ -88,6 +84,7 @@ class Client:
         self.day_start_time = datetime.strptime(day_start_time, "%H:%M").time()
         self.day_end_time = datetime.strptime(day_end_time, "%H:%M").time()
         self.day_start_min, self.day_end_min = _window_to_minutes(_to_minutes(day_start_time), _to_minutes(day_end_time))
+        
         self.credits_left = {}
         # CODE BELOW GETS THE NUMBER OF CREDITS PER MEMBER
         trip_days = (trip_end - trip_start).days
