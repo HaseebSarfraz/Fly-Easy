@@ -49,11 +49,9 @@ def load_people(path: Path = DATA_DIR / "people.json") -> List[Client]:
         c = Client(
             id=d["id"],
             party_type=d["party_type"],
-            adults_ages=d.get("adults_ages", []),
-            kids_ages=d.get("kids_ages", []),
+            party_members=d.get("party_members", {}),
             religion=d.get("religion"),
             ethnicity_culture=d.get("ethnicity_culture", []),
-            interest_weights=d.get("interest_weights", {}),
             vibe=d.get("vibe", ""),
             budget_total=d.get("budget_total", 0.0),
             trip_start=date.fromisoformat(d["trip_start"]),
@@ -66,6 +64,8 @@ def load_people(path: Path = DATA_DIR / "people.json") -> List[Client]:
             avoid_long_transit=d.get("avoid_long_transit", 0),
             prefer_outdoor=d.get("prefer_outdoor", 0),
             prefer_cultural=d.get("prefer_cultural", 0),
+            day_start_time=d.get("start_time", "0:00"),
+            day_end_time=d.get("end_time", "23:59"),
             early_risers=d.get("early_risers", False),
             # NEW: pass through if your Client supports these
             dietary=d.get("dietary", {"restrictions": [], "avoid": [], "cuisine_likes": []}),
@@ -105,6 +105,7 @@ def load_events(path: Path = DATA_DIR / "events.json") -> List[Activity]:
         )
         out.append(a)
     return out
+
 
 def to_minutes(hhmm: str) -> int:
     h, m = hhmm.split(":")
