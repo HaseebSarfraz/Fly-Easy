@@ -42,6 +42,9 @@ class Client:
     day_start_min: int              # STARTING TIME FOR THEIR DAY (IN MINUTES)
     day_end_min: int                # ENDING TIME FOR THEIR DAY (IN MINUTES)
     credits_left: Dict[str, int]    # KEEPS A COUNT OF THE NUMBER OF ACCOMMODATION CREDITS LEFT FOR EVERY MEMBER
+    early_risers: bool
+    dietary: Optional[dict]
+    meal_prefs: Optional[dict]
 
 
     def __init__(
@@ -64,6 +67,12 @@ class Client:
     ):
         
         self.party_members = party_members
+        early_risers: bool,
+        dietary: Optional[dict],
+        meal_prefs: Optional[dict]
+    ):
+        self.adults_ages = [int(age) for age in adults_ages]
+        self.kids_ages = [int(age) for age in kids_ages]
         self.id = str(id)
         self.party_type = party_type
         self.religion = religion
@@ -97,6 +106,13 @@ class Client:
         self.times_satisfied = {}
         for name in party_members:
             self.times_satisfied[name] = 0
+        self.early_risers = bool(early_risers)
+        self.dietary = dietary or {"restrictions": [], "avoid": [], "cuisine_likes": []}
+        self.meal_prefs = meal_prefs or {
+            "breakfast": {"start": "08:00", "end": "10:00"},
+            "lunch":     {"start": "12:00", "end": "14:00"},
+            "dinner":    {"start": "18:00", "end": "20:00"},
+        }
 
     def size(self) -> int:
         return len(self.party_members)
@@ -136,6 +152,8 @@ class Activity:
         requires_booking: bool,
         weather_blockers: list[str],
         popularity: float,
+        vibe_tags: List[str] = None
+
     ):
         self.id = str(id)
         self.name = name
@@ -153,6 +171,7 @@ class Activity:
         self.requires_booking = bool(requires_booking)
         self.weather_blockers = list(weather_blockers or [])
         self.popularity = float(popularity)
+        self.vibe_tags = list(vibe_tags or [])
 
 
   # helpers we might need.

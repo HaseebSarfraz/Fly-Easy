@@ -1,17 +1,35 @@
 # src/planner/core/solver.py
-from datetime import date, datetime, timedelta  # MAKE SURE THIS IS INSTALLED
-from typing import List  # MAKE SURE THIS IS INSTALLED
-from planner.core.models import Client, Activity, PlanDay, PlanEvent, Location
-from planner.core.constraints import hard_feasible
-from planner.core.timegrid import generate_candidate_times, choose_step_minutes
-from planner.core.scoring import interest_score, duration_penalty, conflict_penalty
-from heapq import heappush, heappop
-
-import requests  # TO MAKE API REQUESTS (MUST BE INSTALLED ON DEVICE)
-import pandas as pd  # MAKE SURE THIS IS INSTALLED ON THE DEVICE
 
 tz_cache = {}
 weather_cache = {}
+
+# src/planner/core/optimized_greedy
+from __future__ import annotations
+from datetime import date, datetime, timedelta
+from typing import List
+from planner.core.models import Client, Activity, PlanDay, PlanEvent, Location
+from planner.core.constraints import hard_feasible, hc_open_window_ok, hc_age_ok
+from planner.core.timegrid import generate_candidate_times, choose_step_minutes
+from planner.core.scoring import interest_score
+from planner.core.utils import to_minutes
+from planner.core.scoring import base_value
+from .utils import place_to_activity
+from .food_filter import cuisine_query, violates_avoid
+from .places import fetch_nearby_food
+from math import cos, radians
+from planner.core.scoring import interest_score, duration_penalty, conflict_penalty
+from typing import Optional
+import re
+from heapq import heappush, heappop
+
+
+import requests                 # TO MAKE API REQUESTS
+import pandas as pd
+
+RADIUS_STEPS = [1500, 3000, 4000]  # meters
+
+_DASHES = {"–","—","−"}  # common unicode dashes
+
 
 WEATHER_CODE_MAP = {
     0: "Clear sky",
@@ -36,6 +54,57 @@ WEATHER_CODE_MAP = {
     99: "Heavy hail thunderstorm",
 }
 
+LAMBDA_BUDGET = 0.03      # penalty $→points (e.g., 0.03 pts per $1 over)
+SCORE_THRESHOLD = 0.10    # minimum net score to accept when over budget
+
+WEATHER_CACHE: dict[tuple, tuple] = {}  # (lat3,lng3,day_iso,tz) -> (pd.DatetimeIndex, list[int])
+
+def _cache_key(lat: float, lng: float, day_iso: str, tz: str):
+    # round to collapse tiny lat/lng differences at city scale
+    return (round(float(lat), 3), round(float(lng), 3), day_iso, tz)
+
+def _fetch_hourly_once(lat: float, lng: float, day_iso: str, tz: str):
+    """Fetch hourly weathercode for a single date; cached."""
+    key = _cache_key(lat, lng, day_iso, tz)
+    if key in WEATHER_CACHE:
+        return WEATHER_CACHE[key]
+
+    r = requests.get(
+        "https://api.open-meteo.com/v1/forecast",
+        params={
+            "latitude": lat,
+            "longitude": lng,
+            "hourly": "weathercode",
+            "start_date": day_iso,
+            "end_date": day_iso,  # same day
+            "timezone": tz,
+        },
+        timeout=2.0,
+    )
+    r.raise_for_status()
+    j = r.json()
+    hourly = j.get("hourly") or {}
+    times = pd.to_datetime(hourly.get("time", []), errors="coerce")
+    codes = hourly.get("weathercode", []) or []
+    WEATHER_CACHE[key] = (times, codes)
+    return WEATHER_CACHE[key]
+
+def _days_in_trip(client: Client) -> int:
+    # Guard against 0
+    return max(1, (client.trip_end - client.trip_start).days + 1)
+
+def _soft_cap_per_day(client: Client) -> float:
+    return float(client.budget_total) / _days_in_trip(client)
+
+def _spent_today(plan: PlanDay) -> float:
+    return float(sum(ev.activity.cost_cad for ev in plan.events))
+
+def _net_score_with_budget(client, act, plan, soft_cap_day, already_added=False):
+    base = base_value(client, act)
+    spent = _spent_today(plan) + (0.0 if already_added else float(act.cost_cad))
+    over  = max(0.0, spent - soft_cap_day)
+    penalty = LAMBDA_BUDGET * over
+    return base - penalty
 
 def overlaps(a_start, a_end, b_start, b_end) -> bool:
     return not (a_end <= b_start or b_end <= a_start)
@@ -60,41 +129,531 @@ def get_timezone(city: str) -> str:
     return tz
 
 
-# ───────────── WEATHER CHECK WITH CACHE ─────────────
+_TZ_CACHE: dict[str, str] = {}
+
 def is_weather_suitable(activity: Activity, start_dt: datetime) -> bool:
-    wb = activity.weather_blockers
-    if not wb:
+    blockers = getattr(activity, "weather_blockers", None) or []
+    if not blockers:
         return True
 
-    end_dt = start_dt + timedelta(minutes=activity.duration_min)
-    tz = get_timezone(activity.city)
+    # guard event window
+    dur_min = int(getattr(activity, "duration_min", 0) or 60)
+    end_dt = start_dt + timedelta(minutes=dur_min)
 
-    # Use cache key based on location + date
-    cache_key = (activity.location.lat, activity.location.lng, start_dt.date())
-    if cache_key in weather_cache:
-        data = weather_cache[cache_key]
-    else:
-        url = "https://api.open-meteo.com/v1/forecast"
-        params = {
-            "latitude": activity.location.lat,
-            "longitude": activity.location.lng,
-            "hourly": "weathercode",
-            "start_date": start_dt.strftime("%Y-%m-%d"),
-            "end_date": end_dt.strftime("%Y-%m-%d"),
-            "timezone": tz
-        }
-        response = requests.get(url, params=params)
-        data = response.json()
-        weather_cache[cache_key] = data  # store in cache
+    # timezone (you already have _TZ_CACHE)
+    try:
+        city = getattr(activity, "city", "") or ""
+        tz = _TZ_CACHE.get(city)
+        if not tz:
+            gres = requests.get(
+                "https://geocoding-api.open-meteo.com/v1/search",
+                params={"name": city},
+                timeout=2.0,
+            )
+            gres.raise_for_status()
+            gj = gres.json()
+            if not gj or "results" not in gj or not gj["results"]:
+                return True
+            tz = gj["results"][0].get("timezone")
+            if not tz:
+                return True
+            _TZ_CACHE[city] = tz
+    except Exception as e:
+        print(f"[weather] Geocoding failed: {e}")
+        return True
 
-    times = pd.to_datetime(data["hourly"]["time"])
-    weather_codes = data["hourly"]["weathercode"]
+    # fetch hourly once for each date the event touches (handles rare cross-midnight)
+    try:
+        day1 = start_dt.strftime("%Y-%m-%d")
+        times1, codes1 = _fetch_hourly_once(activity.location.lat, activity.location.lng, day1, tz)
 
-    event_mask = (times >= start_dt) & (times <= end_dt)
-    event_weather_codes = [weather_codes[i] for i, m in enumerate(event_mask) if m]
-    event_weather = [WEATHER_CODE_MAP[code] for code in event_weather_codes]
+        # if event ends the next calendar day, fetch that too
+        times_all, codes_all = list(times1), list(codes1)
+        if end_dt.date() != start_dt.date():
+            day2 = end_dt.strftime("%Y-%m-%d")
+            t2, c2 = _fetch_hourly_once(activity.location.lat, activity.location.lng, day2, tz)
+            times_all += list(t2)
+            codes_all += list(c2)
 
-    return not any(w in activity.weather_blockers for w in event_weather)
+        if not times_all or len(times_all) != len(codes_all):
+            print("[weather] times/codes missing or mismatched; fail-open")
+            return True
+
+        # select hours that overlap the event window
+        s = pd.Timestamp(start_dt)
+        e = pd.Timestamp(end_dt)
+        event_names = []
+        for t, code in zip(times_all, codes_all):
+            if pd.isna(t):
+                continue
+            if s <= t <= e:
+                event_names.append(WEATHER_CODE_MAP.get(int(code), str(code)))
+
+        if not event_names:
+            return True  # no samples in window → don't block
+
+        return not any(name in blockers for name in event_names)
+
+    except Exception as e:
+        print(f"[weather] Forecast failed: {e}; fail-open")
+        return True
+
+
+
+def _to_minutes(hhmm):
+    h, m = hhmm.split(":")
+    return int(h) * 60 + int(m)
+
+def _from_minutes(day, minutes_from_midnight):
+    h = minutes_from_midnight // 60
+    m = minutes_from_midnight % 60
+    return datetime(day.year, day.month, day.day, h, m)
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Restaurant advisor 
+# ─────────────────────────────────────────────────────────────────────────────
+def _window_midpoint(start_hhmm, end_hhmm, duration_min=60, buffer_min=10):
+    """
+    Choose a human-ish start time for a meal inside [start,end],
+    centered near the midpoint, padded by a small buffer on both ends.
+    """
+    s = _to_minutes(start_hhmm) + buffer_min
+    e = _to_minutes(end_hhmm) - buffer_min
+    if e - s < duration_min:
+        # If the declared window is too small, just start at s (best effort)
+        return s
+    mid = (s + e - duration_min) // 2
+    return max(s, min(mid, e - duration_min))
+
+def _dist_m(lat1, lng1, lat2, lng2):
+    # Quick-and-cheerful planar distance (meters) for ranking; fine at city scale.
+    k = 111_320.0
+    dx = (lng2 - lng1) * k * cos(radians(lat1))
+    dy = (lat2 - lat1) * k
+    return (dx*dx + dy*dy) ** 0.5
+
+def _google_places_candidates(center_loc, cuisine_query_str: Optional[str]):
+    """Return (status, results_list). Keeps status for debugging."""
+    # try 1: cuisine-biased search (TextSearch)
+    if cuisine_query_str:
+        for r in RADIUS_STEPS:
+            data = fetch_nearby_food(center_loc.lat, center_loc.lng, radius_m=r, query=cuisine_query_str)
+            if data.get("results"):
+                return data.get("status","OK"), data["results"]
+    # try 2: any restaurant (Nearby)
+    for r in RADIUS_STEPS:
+        data = fetch_nearby_food(center_loc.lat, center_loc.lng, radius_m=r, query=None)
+        if data.get("results"):
+            return data.get("status","OK"), data["results"]
+    return data.get("status","ZERO_RESULTS"), []
+
+
+def _positive_keywords_ok(place, positives):
+    """Optional: enforce halal/kosher/vegan/gluten-free etc. if provided."""
+    if not positives:
+        return True
+    text = " ".join([
+        place.get("name",""),
+        place.get("vicinity",""),
+        " ".join(place.get("types", []))
+    ]).lower()
+    return all(p.lower() in text for p in positives)
+
+
+def _best_restaurant_for_window(center_loc, city, likes, avoid_terms, required_terms=None):
+    """
+    Expand over cuisines and radius. If nothing with cuisines, fall back to any restaurant.
+    Apply negative + positive filters. Rank and pick best.
+    """
+    # Build cuisine text query from all likes (do separate passes rather than one mega-string)
+    # Pass 1: try each cuisine individually (tends to be higher quality than one giant OR)
+    liked_queries = likes or []
+    tried_statuses = []
+
+    def _rank_key(p):
+        rating = float(p.get("rating", 0.0))
+        reviews = int(p.get("user_ratings_total", p.get("user_ratings", 0)) or 0)
+        loc = (p.get("geometry") or {}).get("location") or {}
+        plat, plng = float(loc.get("lat", center_loc.lat)), float(loc.get("lng", center_loc.lng))
+        dist = _dist_m(center_loc.lat, center_loc.lng, plat, plng)
+        return (rating, reviews, -dist)
+
+    # Try each cuisine on its own
+    for q in liked_queries:
+        status, results = _google_places_candidates(center_loc, q)
+        tried_statuses.append(("q:"+q, status, len(results)))
+        filtered = [p for p in results if not violates_avoid(p, avoid_terms)]
+        if required_terms:
+            filtered = [p for p in filtered if _positive_keywords_ok(p, required_terms)]
+        if filtered:
+            return max(filtered, key=_rank_key)
+
+    # Try all cuisines together (sometimes this catches multi-tag places)
+    if liked_queries:
+        status, results = _google_places_candidates(center_loc, " ".join(liked_queries))
+        tried_statuses.append(("q:ALL", status, len(results)))
+        filtered = [p for p in results if not violates_avoid(p, avoid_terms)]
+        if required_terms:
+            filtered = [p for p in filtered if _positive_keywords_ok(p, required_terms)]
+        if filtered:
+            return max(filtered, key=_rank_key)
+
+    # Fallback: any restaurant nearby
+    status, results = _google_places_candidates(center_loc, None)
+    tried_statuses.append(("q:any", status, len(results)))
+    filtered = [p for p in results if not violates_avoid(p, avoid_terms)]
+    if required_terms:
+        filtered = [p for p in filtered if _positive_keywords_ok(p, required_terms)]
+    if filtered:
+        return max(filtered, key=_rank_key)
+
+    # Last resort: We coudln't find any restauntants near by. 
+    print("[places] no candidates:", tried_statuses)
+    return None
+
+def _meal_window(client: Client, meal: str) -> tuple[str, str]:
+    """
+    Supports either:
+      client.meal_prefs[meal]["window"] = ["09:30","11:00"]
+    or
+      client.meal_windows[meal] = {"start":"09:30","end":"11:00"}
+    """
+    # preferred new schema
+    if hasattr(client, "meal_prefs") and client.meal_prefs and meal in client.meal_prefs:
+        win = client.meal_prefs[meal].get("window")
+        if isinstance(win, (list, tuple)) and len(win) == 2:
+            return win[0], win[1]
+
+    # legacy schema
+    if hasattr(client, "meal_windows") and client.meal_windows and meal in client.meal_windows:
+        w = client.meal_windows[meal]
+        return w["start"], w["end"]
+
+    raise KeyError(f"Meal window missing for '{meal}'")
+
+def _meal_cuisines(client: Client, meal: str) -> list[str]:
+    """
+    Returns cuisine likes for a given meal if present; else [].
+    Expects client.meal_prefs[meal]["cuisines"] under your new schema.
+    """
+    if hasattr(client, "meal_prefs") and client.meal_prefs and meal in client.meal_prefs:
+        return client.meal_prefs[meal].get("cuisines", []) or []
+    return []
+
+def _derive_diet_terms(diet: dict) -> tuple[list[str], list[str]]:
+    """
+    Convert booleans into positive requirements and avoid lists.
+    Example input (current schema):
+      {"vegetarian": False, "vegan": False, "halal": True, "kosher": False,
+       "gluten_free": False, "dairy_free": False, "nut_allergy": True,
+       "avoid": ["pork"], "required_terms": []}
+    """
+    req = list(diet.get("required_terms", []))  # allow explicit overrides
+    avoid = list(diet.get("avoid", []))
+
+    # Positive requirements (if True => require)
+    if diet.get("halal"):        req.append("halal")
+    if diet.get("kosher"):       req.append("kosher")
+    if diet.get("vegan"):        req.append("vegan")
+    if diet.get("vegetarian"):   req.append("vegetarian")
+    if diet.get("gluten_free"):  req.extend(["gluten free", "gluten-free"])
+    if diet.get("dairy_free"):   req.extend(["dairy free", "dairy-free"])
+
+    # Allergies -> avoid terms
+    if diet.get("nut_allergy"):
+        avoid.extend(["peanut", "peanuts", "almond", "walnut", "cashew", "tree nut", "nuts"])
+
+    # Dedup + normalize
+    req   = sorted({t.lower() for t in req})
+    avoid = sorted({t.lower() for t in avoid})
+    return req, avoid
+
+def _dist_m(lat1, lng1, lat2, lng2):
+    k = 111_320.0
+    dx = (lng2 - lng1) * k * cos(radians(lat1))
+    dy = (lat2 - lat1) * k
+    return (dx*dx + dy*dy) ** 0.5
+
+def _travel_buffer_min(a_act: Activity, b_act: Activity) -> int:
+    """Very light travel estimate for padding between events."""
+    d_m = _dist_m(a_act.location.lat, a_act.location.lng, b_act.location.lat, b_act.location.lng)
+    # ~12 min/km walk, clamp [5, 35]
+    return max(5, min(int((d_m/1000.0)*12), 35))
+
+def _overlaps_ev(a_start, a_dur_min, b_start, b_dur_min) -> bool:
+    a_end = a_start + timedelta(minutes=a_dur_min)
+    b_end = b_start + timedelta(minutes=b_dur_min)
+    return not (a_end <= b_start or b_end <= a_start)
+
+def reconcile_meals_with_anchors(plan: PlanDay) -> None:
+    """If a meal overlaps a fixed event, prefer moving meal before, else after,
+    else shorten, else convert to grab-and-go. Adds small travel buffers."""
+    meals = [ev for ev in plan.events if ev.activity.category == "food"]
+    anchors = [ev for ev in plan.events if ev.activity.fixed_times]
+
+    if not meals or not anchors:
+        return
+
+    # Work per anchor; if multiple anchors exist, this still behaves locally well
+    for anchor in anchors:
+        for meal in meals:
+            if not _overlaps_ev(meal.start_dt, meal.activity.duration_min, anchor.start_dt, anchor.activity.duration_min):
+                continue  # no conflict
+
+            # Try BEFORE anchor
+            buf = _travel_buffer_min(meal.activity, anchor.activity)
+            new_end = anchor.start_dt - timedelta(minutes=buf)
+            new_start = new_end - timedelta(minutes=meal.activity.duration_min)
+            if new_start.date() == meal.start_dt.date() and new_start < new_end:
+                # also avoid colliding with anything else
+                if fits_no_overlap([e for e in plan.events if e is not meal and e is not anchor], new_start, meal.activity):
+                    meal.start_dt = new_start
+                    meal.end_dt   = new_end
+                    meal.activity.tags.append("note:eat before fixed event")
+                    continue  # resolved
+
+            # Try AFTER anchor
+            buf2 = _travel_buffer_min(anchor.activity, meal.activity)
+            new_start2 = anchor.end_dt + timedelta(minutes=buf2)
+            if fits_no_overlap([e for e in plan.events if e is not meal and e is not anchor], new_start2, meal.activity):
+                meal.start_dt = new_start2
+                meal.end_dt   = new_start2 + timedelta(minutes=meal.activity.duration_min)
+                meal.activity.tags.append("note:eat after fixed event")
+                continue  # resolved
+
+            # Try SHORTEN (quick bite, keep before if possible)
+            quick_min = max(30, min(45, meal.activity.duration_min))  # 30–45min quick meal
+            new_end3 = anchor.start_dt - timedelta(minutes=buf)
+            new_start3 = new_end3 - timedelta(minutes=quick_min)
+            if new_start3 < new_end3 and fits_no_overlap([e for e in plan.events if e is not meal and e is not anchor], new_start3, meal.activity):
+                meal.activity.duration_min = quick_min
+                meal.start_dt = new_start3
+                meal.end_dt   = new_end3
+                meal.activity.tags.append("note:shortened quick meal")
+                continue  # resolved
+
+            # Last resort: convert to grab-and-go snack (15–20 min) immediately before anchor
+            snack_min = 15
+            new_end4 = anchor.start_dt - timedelta(minutes=buf)
+            new_start4 = new_end4 - timedelta(minutes=snack_min)
+            meal.activity.name = f"{meal.activity.name} (grab-and-go)"
+            meal.activity.duration_min = snack_min
+            meal.activity.tags += ["note:grab-and-go", "note:anchor overlap"]
+            meal.start_dt = new_start4
+            meal.end_dt   = new_end4
+
+
+def _overlaps_ev(a_start, a_dur_min, b_start, b_dur_min) -> bool:
+    a_end = a_start + timedelta(minutes=a_dur_min)
+    b_end = b_start + timedelta(minutes=b_dur_min)
+    return not (a_end <= b_start or b_end <= a_start)
+
+def _dist_m(lat1, lng1, lat2, lng2):
+    # quick planar distance (meters)
+    from math import cos, radians
+    k = 111_320.0
+    dx = (lng2 - lng1) * k * cos(radians(lat1))
+    dy = (lat2 - lat1) * k
+    return (dx*dx + dy*dy) ** 0.5
+
+def _travel_buffer_min(a_act, b_act) -> int:
+    d_m = _dist_m(a_act.location.lat, a_act.location.lng,
+                  b_act.location.lat, b_act.location.lng)
+    return max(5, min(int((d_m/1000.0)*12), 35))  # ~12 min/km, clamp [5,35]
+
+def _resolve_meal_conflict(plan, client, meal_ev, anchor_ev) -> bool:
+    """
+    Try to keep the meal if it overlaps with a fixed-time anchor:
+      1) move meal before show with travel buffer
+      2) else move after show with buffer
+      3) else shorten meal (30–45m) before show
+      4) else convert to 15m grab-and-go before show
+    Returns True iff conflict resolved (meal kept in some form).
+    """
+    # no-op if no overlap
+    if not _overlaps_ev(meal_ev.start_dt, meal_ev.activity.duration_min,
+                        anchor_ev.start_dt, anchor_ev.activity.duration_min):
+        return True
+
+    others = [e for e in plan.events if e is not meal_ev and e is not anchor_ev]
+
+    # 1) BEFORE
+    buf = _travel_buffer_min(meal_ev.activity, anchor_ev.activity)
+    new_end = anchor_ev.start_dt - timedelta(minutes=buf)
+    new_start = new_end - timedelta(minutes=meal_ev.activity.duration_min)
+    if new_start < new_end and fits_no_overlap(others, new_start, meal_ev.activity):
+        meal_ev.start_dt, meal_ev.end_dt = new_start, new_end
+        meal_ev.activity.tags.append("note:eat before event")
+        return True
+
+    # 2) AFTER
+    buf2 = _travel_buffer_min(anchor_ev.activity, meal_ev.activity)
+    new_start2 = anchor_ev.end_dt + timedelta(minutes=buf2)
+    if fits_no_overlap(others, new_start2, meal_ev.activity):
+        meal_ev.start_dt = new_start2
+        meal_ev.end_dt = new_start2 + timedelta(minutes=meal_ev.activity.duration_min)
+        meal_ev.activity.tags.append("note:eat after event")
+        return True
+
+    # 3) SHORTEN before show (quick bite 30–45m)
+    quick_min = max(30, min(45, meal_ev.activity.duration_min))
+    new_end3 = anchor_ev.start_dt - timedelta(minutes=buf)
+    new_start3 = new_end3 - timedelta(minutes=quick_min)
+    if new_start3 < new_end3 and fits_no_overlap(others, new_start3, meal_ev.activity):
+        meal_ev.activity.duration_min = quick_min
+        meal_ev.start_dt, meal_ev.end_dt = new_start3, new_end3
+        meal_ev.activity.tags.append("note:shortened quick meal")
+        return True
+
+    # 4) GRAB-AND-GO immediately before show (15m)
+    snack_min = 15
+    new_end4 = anchor_ev.start_dt - timedelta(minutes=buf)
+    new_start4 = new_end4 - timedelta(minutes=snack_min)
+    meal_ev.activity.name = f"{meal_ev.activity.name} (grab-and-go)"
+    meal_ev.activity.duration_min = snack_min
+    meal_ev.activity.tags += ["note:grab-and-go", "note:anchor overlap"]
+    meal_ev.start_dt, meal_ev.end_dt = new_start4, new_end4
+    return True
+
+
+def pre_add_rests(plan, client, day, center_loc=None, default_duration_min=60):
+    center = center_loc or client.home_base
+
+    # derive avoid/required terms below (see Issue #2)
+    req_terms, avoid_terms = _derive_diet_terms(client.dietary or {})
+
+    for meal in ["breakfast", "lunch", "dinner"]:
+        s, e = _meal_window(client, meal)
+        start_minute = _window_midpoint(s, e, duration_min=default_duration_min, buffer_min=10)
+        start_dt = _from_minutes(day, start_minute)
+
+        likes = _meal_cuisines(client, meal)
+        place = _best_restaurant_for_window(center, center.city, likes, avoid_terms=avoid_terms, required_terms=req_terms)
+
+        if place:
+            meal_act = place_to_activity(place, center.city, default_duration_min, 0.0)
+        else:
+            meal_act = Activity(
+                id=f"meal_{meal}_{day.isoformat()}",
+                name=f"{meal.capitalize()} (nearby options)",
+                category="food",
+                tags=["food","restaurant"],
+                venue=center.city,
+                city=center.city,
+                location=center,
+                duration_min=default_duration_min,
+                cost_cad=0.0,
+                age_min=0, age_max=99,
+                opening_hours={"daily":["06:00","23:00"]},
+                fixed_times=[],
+                requires_booking=False,
+                weather_blockers=[],
+                popularity=0.0,
+                vibe_tags=[],
+            )
+        plan.add(PlanEvent(meal_act, start_dt))
+
+def _fixed_dt_candidates(act: Activity, day: date) -> list[datetime]:
+    """Turn act.fixed_times (like ['17:00']) into datetime starts on `day`."""
+    out = []
+    fts = getattr(act, "fixed_times", []) or []
+    for ft in fts:
+        # accept 'HH:MM' or 'HH:MM–HH:MM' (use the first time)
+        s = ft
+        if isinstance(ft, str) and " " not in ft and "-" in ft:
+            s = ft.split("-")[0].strip()
+        if isinstance(s, str) and ":" in s:
+            hh, mm = s.split(":")
+            try:
+                out.append(datetime(day.year, day.month, day.day, int(hh), int(mm)))
+            except ValueError:
+                pass
+    return out
+
+def _has_fixed_times(a: Activity) -> bool:
+    ft = getattr(a, "fixed_times", None)
+    # treat any non-empty list/str/dict as "has fixed times"
+    if isinstance(ft, list):
+        return len(ft) > 0
+    if isinstance(ft, (str, dict)):
+        return bool(ft)
+    return False
+
+
+def _normalize_time_str(s: str) -> str:
+    s = s.strip()
+    for d in _DASHES:
+        s = s.replace(d, "-")
+    return s
+
+def _parse_one_time(s: str, day: date) -> datetime | None:
+    s = s.strip()
+    # 24h HH:MM
+    if re.match(r"^\d{1,2}:\d{2}$", s):
+        hh, mm = s.split(":")
+        try:
+            return datetime(day.year, day.month, day.day, int(hh), int(mm))
+        except ValueError:
+            return None
+    # AM/PM variants
+    for fmt in ("%I:%M %p", "%I %p", "%I%p"):
+        try:
+            t = datetime.strptime(s.upper(), fmt).time()
+            return datetime(day.year, day.month, day.day, t.hour, t.minute)
+        except ValueError:
+            pass
+    return None
+
+def _fixed_dt_candidates(act: Activity, day: date) -> list[datetime]:
+    fts = getattr(act, "fixed_times", []) or []
+    # normalize to list
+    if isinstance(fts, (str, dict)):
+        fts = [fts]
+
+    out: list[datetime] = []
+    for raw in fts:
+        # case 1: dict schema like {'date':'YYYY-MM-DD','start':'17:00'} (your concert)
+        if isinstance(raw, dict):
+            dstr = raw.get("date")
+            tstr = raw.get("start") or raw.get("time") or raw.get("start_time")
+            # if a date is given and doesn't match this day, skip
+            if dstr and dstr != day.isoformat():
+                continue
+            if tstr:
+                dt = _parse_one_time(tstr, day)
+                if dt:
+                    out.append(dt)
+            continue
+
+        # case 2: string "HH:MM" or "HH:MM-HH:MM" or "YYYY-MM-DD HH:MM"
+        if isinstance(raw, str):
+            s = _normalize_time_str(raw)
+            # optional "YYYY-MM-DD HH:MM"
+            if " " in s and re.match(r"^\d{4}-\d{2}-\d{2}\s+\d{1,2}:\d{2}$", s):
+                dpart, tpart = s.split(None, 1)
+                if dpart == day.isoformat():
+                    dt = _parse_one_time(tpart, day)
+                    if dt:
+                        out.append(dt)
+                continue
+            # "HH:MM" or "HH:MM-HH:MM" -> take the left side
+            start_part = s.split("-", 1)[0].strip()
+            dt = _parse_one_time(start_part, day)
+            if dt:
+                out.append(dt)
+            continue
+        # ignore anything else silently
+
+    return out
+
+def _hard_feasible_for_anchor(client: Client, act: Activity, start_dt: datetime) -> bool:
+    # keep strict checks you care about; skip open-window veto
+    if not hc_age_ok(client, act):
+        return False
+    if not is_weather_suitable(act, start_dt):
+        return False
+    return True
+
 
 
 def fits_in_window(activity: Activity, client: Client, start_min: int) -> bool:
@@ -113,212 +672,282 @@ def fits_in_window(activity: Activity, client: Client, start_min: int) -> bool:
     return fits
 
 
-def _make_day_plan_helper(client: Client, activities: List[Activity], day: date) -> PlanDay:
-    """
-    Helper function to make a day plan.
-    This helper is used multiple times for layered-scoring and planning.
-    """
-    plan = PlanDay(day)
-    engagement_time = client.engagement_time.copy()
-    for act in activities:
-        step = choose_step_minutes(act) or 60
-        for start_dt in generate_candidate_times(act, day, step_minutes=step):
-            # Checks if the age restriction and start time is feasible based on
-            # when client starts and the duration of the activity with respect to its closing time
-            start_min = start_dt.hour * 60 + start_dt.minute
-            if not (client.day_start_min <= start_min < client.day_end_min):
-                continue  # skip times outside client day
-            _, _, individual_scores = interest_score(client, act)
-
-            if sum(individual_scores.values()) == 0:
-                continue
-            time_allocation = _allocate_time_by_interest(act, individual_scores)
-            hard_check = hard_feasible(client, act, start_dt)
-            no_overlap = fits_no_overlap(plan.events, start_dt, act)
-            window_fits = fits_in_window(act, client, start_dt.hour * 60 + start_dt.minute)
-            can_add_time = all(
-                engagement_time[p] + t <= client.daily_act_time_per_member
-                for p, t in time_allocation.items()
-            )
-            if no_overlap and hard_check and window_fits and can_add_time:
-                if is_weather_suitable(act, start_dt):  # ONLY RUNS WEATHER CHECKS IF THE EVENT CAN FIT (OPTIMIZATION)
-                    plan.add(PlanEvent(act, start_dt))
-                    for p, t in time_allocation.items():
-                        engagement_time[p] += t
-                    break
-
-            placed = repairB(plan, client, act, day, start_dt, engagement_time, max_moves=1, try_others=True)
-
-            if placed:
-                break  # E placed; move to next activity
-            # else: try next candidate time for this act
-
-    return plan
-
-
 def _allocate_time_by_interest(act, interest_scores, beta=1.3) -> dict:
     """
-    Helper function to compute the time allocated per-member for this activity.
+    Yash helper: compute per-member time allocation for an activity
+    proportional to interest_scores.
+    (We only use this indirectly via _build_base_plan for now.)
     """
     duration = act.duration_min
+    if not interest_scores:
+        return {}
+
     max_interest = max(interest_scores.values())
-    most_interested = [m for m, s in interest_scores.items() if max_interest == interest_scores[m]][0]
-    fair_pen_factors = {m: (score / 10) ** beta for m, score in interest_scores.items() if score > 0}  # EXPONENTIAL PENALTY FACTORS
-    total_weight = float(sum(fair_pen_factors.values()))  # TOTAL INTEREST SCORES
-    member_time_allocation = {
-        m: duration * (w / total_weight) for m, w in fair_pen_factors.items()
+    most_interested = [m for m, s in interest_scores.items()
+                       if s == max_interest][0]
+
+    # Exponential weighting: higher interest ⇒ more time
+    fair_pen_factors = {
+        m: (score / 10) ** beta
+        for m, score in interest_scores.items()
+        if score > 0
     }
-    if len(member_time_allocation) < len(interest_scores):
-        member_time_allocation[most_interested] += (duration - sum(member_time_allocation.values()))
+    total_weight = float(sum(fair_pen_factors.values())) or 1.0
+
+    member_time_allocation = {
+        m: duration * (w / total_weight)
+        for m, w in fair_pen_factors.items()
+    }
+
+    # If some members had 0 interest, give any leftover time to the most interested
+    allocated = sum(member_time_allocation.values())
+    leftover = duration - allocated
+    if leftover > 0:
+        member_time_allocation[most_interested] = \
+            member_time_allocation.get(most_interested, 0) + leftover
+
     return member_time_allocation
 
 
-def _build_base_plan(client, activities, threshold=0.75, beam=8) -> list[list[Activity]]:
+def _build_base_plan(client: Client,
+                     activities: List[Activity],
+                     threshold: float = 0.75,
+                     beam: int = 8) -> list[list[Activity]]:
     """
-    Helper function to build a base-plan.
-    """
-    candidates = []
+    Yash helper: build several "base plans" that maximize group satisfaction.
 
-    # Precompute interest sets
+    Returns a list of candidate activity lists.
+    We'll take the first (best) one and try to schedule those activities first.
+    """
+    candidates: list[tuple[Activity, set, float]] = []
+
+    # Precompute which party members like which activity
     for act in activities:
         interested = set()
-        score = 0
+        total_score = 0.0
 
-        for person in client.party_members:
+        for person in getattr(client, "party_members", []):
             iw = sum(client.interest(tag, person) for tag in act.tags)
             if iw > 0:
-                max_possible = 10 * len(act.tags)
-
-                # PREVENTS ACTIVITIES FROM BEING ADDED IF THEY EXCEED EACH MEMBER'S TIMING
-                if (iw / max_possible >= threshold and
-                        act.duration_min / client.total_day_duration <= client.daily_act_time_per_member):
+                max_possible = 10 * max(1, len(act.tags))
+                # per-activity threshold & sanity check w.r.t. day length
+                if (
+                    iw / max_possible >= threshold
+                    and act.duration_min / max(1, client.total_day_duration)
+                    <= getattr(client, "daily_act_time_per_member", 1.0)
+                ):
                     interested.add(person)
-                    score += iw
+                    total_score += iw
 
         if interested:
-            candidates.append((act, interested, score))
+            candidates.append((act, interested, total_score))
 
-    # Sort strong candidates first
+    # Strong candidates first: more people + higher score
     candidates.sort(key=lambda x: (len(x[1]), x[2]), reverse=True)
 
-    # Beam search
-    plans = [([], set(), 0)]  # (activities, satisfied_people, score)
+    # Beam search over subsets of activities
+    plans: list[tuple[list[Activity], set, float]] = [([], set(), 0.0)]
+    # (chosen_acts, satisfied_people, score)
 
     for act, interested, score in candidates:
-        new_plans = []
+        new_plans: list[tuple[list[Activity], set, float]] = []
 
         for acts, sat, s in plans:
-            # Option 1: skip
+            # Option 1: skip act
             new_plans.append((acts, sat, s))
 
-            # Option 2: take if it adds value
+            # Option 2: include act if it adds at least one new satisfied person
             new_people = interested - sat
             if new_people:
                 new_plans.append((
                     acts + [act],
                     sat | new_people,
-                    s + score
+                    s + score,
                 ))
 
-        # Prune
+        # Keep only top `beam` partial plans
         new_plans.sort(
-            key=lambda p: (len(p[1]), p[2]),
-            reverse=True
+            key=lambda p: (len(p[1]), p[2]),  # more people, higher score
+            reverse=True,
         )
         plans = new_plans[:beam]
 
-    return [p[0] for p in plans]  # base PLANS
+    # Drop satisfaction metadata; return just activity lists
+    return [p[0] for p in plans]
 
 
 def make_day_plan(client: Client, activities: List[Activity], day: date) -> PlanDay:
-    # --- Using beam search, generate the 8 best base plans (this aims to maximize overall base satisfaction)  ---
-    BEAM = 8
-    base_plans = _build_base_plan(client, activities, threshold=0.75, beam=BEAM)
+    """
+    Combined Haseeb + Yash logic:
 
-    final_plan = None
-    # Try each base plan in order
-    for candidate_acts in base_plans:
-        plan = _make_day_plan_helper(client, candidate_acts, day)
-        # Check if all base activities were successfully placed
-        if len(plan.events) == len(candidate_acts):
-            final_plan = plan
-            break
-        # Otherwise, continue to next candidate
-    if final_plan is None:
-        # None of the base plans could be fully placed; pick the first one anyway and try to repair
-        final_plan = _make_day_plan_helper(client, base_plans[0], day)
+    1) Identify anchors (fixed-time events) vs flex.
+    2) Compute budget soft-cap per day and reserved_cap (for non-anchor).
+    3) Pre-add meals (restaurant advisor).
+    4) Place anchors first, reshaping meals around them if needed.
+    5) Use Yash's beam-search base-plan to pick a high-coverage subset
+       of flex activities (primary_acts).
+    6) Order remaining flex by interest_score (Yash) and then by base_value.
+    7) Greedy scheduling of flex activities in that order using Haseeb's
+       hard_feasible + weather + overlap + budget + repairB.
+    """
 
-    # --- Step 2: Prepare remaining activities for normal scheduling ---
-    scheduled_ids = {ev.activity.id for ev in final_plan.events}
-    remaining_activities = [act for act in activities if act.id not in scheduled_ids]
+    # ─────────────────────────────────────────────────────────────────────
+    # 1) Split into anchors vs flex
+    # ─────────────────────────────────────────────────────────────────────
+    anchors = [a for a in activities if _has_fixed_times(a)]
+    flex    = [a for a in activities if not _has_fixed_times(a)]
 
-    # Build a heap of remaining activities by group interest
-    act_heap = []
-    tags_encountered = {"concerts": 0,
-                        "food": 0,
-                        "nightlife": 0,
-                        "history": 0,
-                        "museums": 0,
-                        "architecture": 0,
-                        "aquarium": 0,
-                        "theme_parks": 0,
-                        "zoo": 0,
-                        "parks": 0,
-                        "islands": 0,
-                        "shopping": 0,
-                        "pizza": 0,
-                        "theatre": 0,
-                        "views": 0}  # track tags seen so far (USED FOR CONFLICT_PENALTY)
-    engagement_time = client.engagement_time.copy()
+    print("ANCHORS:", [
+        (a.id, type(getattr(a, "fixed_times", None)).__name__,
+         getattr(a, "fixed_times", None))
+        for a in anchors
+    ])
 
-    for ind, act in enumerate(remaining_activities):
-        i_score, e_creds, ii_score = interest_score(client, act)
-        if sum(ii_score.values()) == 0:
-            continue
-        avg_score = sum(ii_score.values())/len(ii_score)
-        i_score = max(i_score - duration_penalty(act, client, avg_score), 0)
-        # LINE BELOW STORES THE CURRENT ACTIVITY BY INTEREST SCORE, THEN ALSO STORES EACH MEMBERS EXT_CREDS IF ANY
-        conf_penalty = conflict_penalty(act, client, tags_encountered)
-        i_score = max(i_score - conf_penalty, 0)
-        time_allocation = _allocate_time_by_interest(act, ii_score)
-        heappush(act_heap, (-i_score, ind, act, e_creds, ii_score, time_allocation))
-        for tag in act.tags:
-            tags_encountered.setdefault(tag, 0)
-            tags_encountered[tag] += 1
-            # PENALIZES REPETITIVE ACTIVITIES. WE ARE SCHEDULING BASED ON A PRIORITY-FIRST BASIS ANYWAY SO THIS IS FINE.
+    # ─────────────────────────────────────────────────────────────────────
+    # 2) Budget per day + reserved_cap for flex (Haseeb logic)
+    # ─────────────────────────────────────────────────────────────────────
+    anchor_cost   = sum(float(a.cost_cad or 0.0) for a in anchors)
+    soft_cap_day  = _soft_cap_per_day(client)
+    reserved_cap  = max(0.0, soft_cap_day - anchor_cost)
 
-    # --- Step 3: Try to place remaining activities ---
-    while act_heap:
-        iscore, _, act, ecreds, iiscore, time_allocation = heappop(act_heap)
+    # ─────────────────────────────────────────────────────────────────────
+    # 3) Start plan + pre-add meals
+    # ─────────────────────────────────────────────────────────────────────
+    plan = PlanDay(day)
+    pre_add_rests(plan, client, day, center_loc=client.home_base)
+
+    # ─────────────────────────────────────────────────────────────────────
+    # 4) Place anchors first, reshaping meals around them
+    # ─────────────────────────────────────────────────────────────────────
+    for act in anchors:
+        fixed_slots = _fixed_dt_candidates(act, day)
+        candidate_starts = fixed_slots or list(
+            generate_candidate_times(
+                act, day,
+                step_minutes=(choose_step_minutes(act) or 60)
+            )
+        )
+        print(f"[anchor] considering {act.id} at:", candidate_starts)
+
+        placed = False
+        for start_dt in candidate_starts:
+            if not _hard_feasible_for_anchor(client, act, start_dt):
+                print(f"[anchor] {act.id} @ {start_dt.time()} hard-feasible=NO")
+                continue
+
+            # enforce a minimum duration so overlap math isn't degenerate
+            if getattr(act, "duration_min", None) in (None, 0):
+                act.duration_min = 120  # e.g., concerts default to 2h
+
+            anchor_ev = PlanEvent(act, start_dt)
+            plan.add(anchor_ev)
+            print(f"[anchor] added {act.id} @ {start_dt.time()} (dur {act.duration_min}m)")
+
+            ok = True
+            meals = [
+                e for e in plan.events
+                if e is not anchor_ev and e.activity.category == "food"
+            ]
+            for m in meals:
+                if _overlaps_ev(
+                    m.start_dt, m.activity.duration_min,
+                    anchor_ev.start_dt, anchor_ev.activity.duration_min
+                ):
+                    moved = _resolve_meal_conflict(plan, client, m, anchor_ev)
+                    print(f"[anchor] meal conflict with {m.activity.name}: moved={moved}")
+                    if not moved:
+                        ok = False
+                        break
+
+            if ok:
+                placed = True
+                print(f"[anchor] SUCCESS {act.id} placed @ {start_dt.time()}")
+                break
+
+            # rollback and try next start_dt
+            plan.events.remove(anchor_ev)
+            print(f"[anchor] ROLLBACK {act.id} @ {start_dt.time()}")
+
+    # ─────────────────────────────────────────────────────────────────────
+    # 5) Use Yash's beam search to pick a good subset of flex activities
+    # ─────────────────────────────────────────────────────────────────────
+    base_plans = _build_base_plan(client, flex, threshold=0.75, beam=8)
+    primary_acts: List[Activity] = base_plans[0] if base_plans else []
+    primary_ids = {a.id for a in primary_acts}
+
+    # Remaining flex that weren’t chosen in the primary base-plan
+    remaining_flex = [a for a in flex if a.id not in primary_ids]
+
+    # Sort remaining flex activities by Yash-style interest score, tie-breaking
+    # with Haseeb's base_value (pure utility)
+    def _interest_total(a: Activity) -> float:
+        try:
+            i_score, _, _ = interest_score(client, a)
+            return float(i_score)
+        except Exception:
+            return 0.0
+
+    remaining_sorted = sorted(
+        remaining_flex,
+        key=lambda a: (_interest_total(a), base_value(client, a)),
+        reverse=True,
+    )
+
+    # Final order to try scheduling flex activities:
+    #   1) high-coverage base-plan activities
+    #   2) other flex ordered by interest + base_value
+    acts_sorted: List[Activity] = list(primary_acts) + remaining_sorted
+
+    # ─────────────────────────────────────────────────────────────────────
+    # 6) Greedy scheduling of flex activities (Haseeb's engine)
+    # ─────────────────────────────────────────────────────────────────────
+    for act in acts_sorted:
         step = choose_step_minutes(act) or 60
 
         for start_dt in generate_candidate_times(act, day, step_minutes=step):
-            start_min = start_dt.hour * 60 + start_dt.minute
-            if not (client.day_start_min <= start_min < client.day_end_min):
+            # Basic hard constraints
+            if not hard_feasible(client, act, start_dt):
                 continue
-            hard_check = hard_feasible(client, act, start_dt)
-            no_overlap = fits_no_overlap(final_plan.events, start_dt, act)
-            window_fits = fits_in_window(act, client, start_min)
-            ext_creds_usable = len(ecreds) > 0 and all([c - ecreds.get(p, 0) >= 0 for p, c in client.credits_left.items()])
+            if not is_weather_suitable(activity=act, start_dt=start_dt):
+                continue
 
-            # IF THIS ACTIVITY CAN ALLOCATE SUFFICIENT TIME PER MEMBER THROUGHOUT THE DAY.
-            can_add_time = all([time_allocation[p] + client.engagement_time[p] < client.daily_act_time_per_member for p in time_allocation])
+            # Case A: fits without overlap
+            if fits_no_overlap(plan.events, start_dt, act):
+                # Haseeb's budget-aware acceptance
+                projected_spent = _spent_today(plan) + float(act.cost_cad)
+                over = max(0.0, projected_spent - reserved_cap)
+                net = base_value(client, act) - LAMBDA_BUDGET * over
 
-            try_repair = False
-            if no_overlap and hard_check and window_fits and can_add_time:
-                if is_weather_suitable(act, start_dt):
-                    final_plan.add(PlanEvent(act, start_dt))
-                    if ext_creds_usable:
-                        for p, c in ecreds.items():
-                            client.credits_left[p] -= c  # UPDATES THE REMAINING CREDITS LEFT FOR THE CLIENT
+                if (over == 0.0) or (over > 0.0 and net >= SCORE_THRESHOLD):
+                    plan.add(PlanEvent(act, start_dt))
                     break
-                try_repair = True
-            if try_repair:
-                placed = repairB(final_plan, client, act, day, start_dt, engagement_time, max_moves=1, try_others=True)
-                if placed:
+                # if not worth going over budget, try next time slot
+                continue
+
+            # Case B: try to repair by nudging existing events (RepairB)
+            snapshot = [(ev, ev.start_dt, ev.end_dt) for ev in plan.events]
+            if repairB(plan, client, act, day, start_dt, max_moves=1, try_others=True):
+                # After repairB we *did* place the activity, so re-evaluate budget
+                projected_spent = _spent_today(plan)
+                over = max(0.0, projected_spent - reserved_cap)
+                net = base_value(client, act) - LAMBDA_BUDGET * over
+
+                if (over == 0.0) or (over > 0.0 and net >= SCORE_THRESHOLD):
+                    # keep the repair + activity
                     break
-    final_plan.events.sort(key=lambda ev: ev.start_dt)
-    return final_plan
+
+                # otherwise roll back: remove newly-added act and restore times
+                # (assumes repairB appended the new PlanEvent at the end)
+                plan.events.pop()
+                for ev, s, e in snapshot:
+                    ev.start_dt, ev.end_dt = s, e
+                continue
+
+    # ─────────────────────────────────────────────────────────────────────
+    # 7) Finalize
+    # ─────────────────────────────────────────────────────────────────────
+    plan.events.sort(key=lambda e: e.start_dt)
+    return plan
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -444,7 +1073,6 @@ def repairB(plan: PlanDay,
             act: Activity,
             day: date,
             start_dt: datetime,
-            engagement_time: dict,
             max_moves: int = 1,
             try_others: bool = True) -> bool:
     """
@@ -456,16 +1084,9 @@ def repairB(plan: PlanDay,
        ordered by least flexibility first (each by up to `max_moves` moves).
     Returns True iff `act` was placed.
     """
-    # who blocks E right now?
     conflicts = _blocking_events(plan.events, start_dt, act)
     if not conflicts:
-        # defensive: if caller mis-signaled, just place E
-        time_allocation = _allocate_time_by_interest(act, individual_scores)
-        if not all(
-                engagement_time[p] + t <= client.daily_act_time_per_member
-                for p, t in time_allocation.items()
-        ):
-            return False
+        # defensive: if caller mis-signaled, just place the event
         plan.add(PlanEvent(act, start_dt))
         return True
 
@@ -476,7 +1097,10 @@ def repairB(plan: PlanDay,
 
     # 2) Optionally try other planned events (non-fixed), least flexibility first
     if try_others:
-        candidates = [ev for ev in plan.events if (ev is not direct and not ev.activity.fixed_times)]
+        candidates = [
+            ev for ev in plan.events
+            if (ev is not direct and not ev.activity.fixed_times)
+        ]
         candidates.sort(key=lambda ev: _flexibility_now(plan, client, ev, day))
 
         for ev in candidates:
@@ -486,55 +1110,425 @@ def repairB(plan: PlanDay,
     return False
 
 
-if __name__ == "__main__":
-    # Force the test day to the concert day
-    from datetime import date, datetime, time
-    from planner.core.utils import load_people, load_events
 
-    client = load_people()[0]
+
+if __name__ == "__main__":
+    from datetime import date, datetime, time
+    from copy import deepcopy
+    from .utils import load_people, load_events
+
+    # ─────────────────────────────────────────────────────────────────────────────
+    # Helpers: read / clamp party ages to satisfy an activity's (amin..amax)
+    # ─────────────────────────────────────────────────────────────────────────────
+    def _party_ages(c) -> list[int]:
+        ages = []
+        # single traveler
+        if isinstance(getattr(c, "age", None), (int, float)):
+            ages.append(int(c.age))
+        # groups: travellers / travelers (objects or dicts)
+        for attr in ("travellers", "travelers"):
+            grp = getattr(c, attr, None)
+            if not grp:
+                continue
+            for p in grp:
+                a = getattr(p, "age", None)
+                if a is None and isinstance(p, dict):
+                    a = p.get("age")
+                if isinstance(a, (int, float)):
+                    ages.append(int(a))
+        return ages
+
+    def _all_within_bounds(c, lo: int, hi: int) -> bool:
+        ages = _party_ages(c)
+        return bool(ages) and all(lo <= a <= hi for a in ages)
+
+    def _clamp_party_ages(c, lo: int, hi: int):
+        # Single traveler
+        if isinstance(getattr(c, "age", None), (int, float)):
+            c.age = max(lo, min(int(c.age), hi))
+        
+        # Your actual schema: adults_ages + kids_ages
+        adults = getattr(c, "adults_ages", None)
+        if isinstance(adults, list):
+            c.adults_ages = [max(lo, min(int(a), hi)) for a in adults]
+        
+        kids = getattr(c, "kids_ages", None)
+        if isinstance(kids, list):
+            c.kids_ages = [max(lo, min(int(k), hi)) for k in kids]
+        
+        # Legacy: groups with travellers/travelers
+        for attr in ("travellers", "travelers"):
+            grp = getattr(c, attr, None)
+            if not grp:
+                continue
+            for p in grp:
+                if hasattr(p, "age"):
+                    pa = getattr(p, "age", None)
+                    if isinstance(pa, (int, float)):
+                        setattr(p, "age", max(lo, min(int(pa), hi)))
+                    else:
+                        setattr(p, "age", max(lo, min(25, hi)))
+                elif isinstance(p, dict):
+                    pa = p.get("age")
+                    if isinstance(pa, (int, float)):
+                        p["age"] = max(lo, min(int(pa), hi))
+                    else:
+                        p["age"] = max(lo, min(25, hi))
+
+    # ─────────────────────────────────────────────────────────────────────────────
+    # Setup (PRESERVED): load data
+    # ─────────────────────────────────────────────────────────────────────────────
+    people = load_people()
     events = load_events()
 
-    # --------------------------------------------------
-    # RUN PLANNER
-    # --------------------------------------------------
-    test_day = date(2025, 11, 23)
-    plan = make_day_plan(client, events, test_day)
+    # First scenario you currently run (with mock rainy filtering)
+    client = people[0]
+    day = date(2025, 8, 3)  # Arijit concert fixed at 17:00 on this date
 
-    # --------------------------------------------------
-    # SCORE BREAKDOWN
-    # --------------------------------------------------
-    print(f"\n📅 FINAL PLAN FOR {test_day}\n" + "-" * 60)
+    # Existing subset of events (PRESERVED)
+    wanted_ids = {
+        "e_st_lawrence_01",
+        "e_rom_01",
+        "e_ago_01",
+        "e_distillery_01",
+        "e_cn_tower_01",
+        "e_concert_southasian_01",
+    }
+    subset = [e for e in events if e.id in wanted_ids]
 
-    tags_count = {}
+    # --- NEW MOCK EVENT: Outdoor walk blocked by rain (PRESERVED) ---
+    mock_rain_event = {
+        "id": "e_mock_rain_01",
+        "name": "Rainy Outdoor Stroll",
+        "category": "walk",
+        "tags": ["outdoor", "nature"],
+        "venue": "Mock Park",
+        "city": "Toronto",
+        "location": {"lat": 43.650, "lng": -79.380},
+        "duration_min": 60,
+        "cost_cad": 0,
+        "age_min": 0,
+        "age_max": 99,
+        "opening_hours": {"daily": ["08:00", "20:00"]},
+        "fixed_times": [],
+        "requires_booking": False,
+        "weather_blockers": ["Slight rain", "Moderate rain", "Heavy rain"],  # blocked
+        "popularity": 0.5
+    }
+
+    # Simulate rainy conditions for testing (PRESERVED)
+    current_weather = "Heavy rain"
+
+    # Add mock event to the subset (PRESERVED)
+    mock_rain_activity = Activity(**mock_rain_event)
+    subset.append(mock_rain_activity)
+
+    # Filter events based on weather for the greedy algorithm (PRESERVED)
+    filtered_subset = [e for e in subset if current_weather not in getattr(e, "weather_blockers", [])]
+
+    print("Subset BEFORE weather filter:")
+    for e in subset:
+        print(f"- {e.name} (weather blockers:{str(e.weather_blockers)}")
+
+    print("\nSubset AFTER weather filter:")
+    for e in filtered_subset:
+        print(f"- {e.name}")
+
+    for a in filtered_subset:
+        print(a.name,
+              "interest=", interest_score(client, a),
+              "base_value=", base_value(client, a),
+              "cost=", a.cost_cad)
+
+    # ── Ensure ages satisfy concert bounds for THIS run too
+    concert = next((e for e in filtered_subset if e.id == "e_concert_southasian_01"), None)
+    if concert:
+        # normalize missing bounds/duration
+        if getattr(concert, "age_min", None) in (None, ""): concert.age_min = 0
+        if getattr(concert, "age_max", None) in (None, ""): concert.age_max = 120
+        if getattr(concert, "duration_min", None) in (None, 0): concert.duration_min = 120
+        amin, amax = int(concert.age_min), int(concert.age_max)
+
+        # pick an existing client whose whole party fits; else clone & clamp
+        chosen = None
+        for p in people:
+            if _all_within_bounds(p, amin, amax):
+                chosen = p
+                break
+        if chosen is None:
+            chosen = deepcopy(people[0])
+            _clamp_party_ages(chosen, amin, amax)
+        client = chosen
+        ages_str = ", ".join(map(str, _party_ages(client))) or "unknown"
+        print(f"[test] Using client with party ages=[{ages_str}] (allowed {amin}-{amax})")
+
+    # Make the day plan (greedy algorithm should skip rainy event; PRESERVED)
+    plan = make_day_plan(client, filtered_subset, day)
+
+    print(f"\nPlan for {day}:")
     for ev in plan.events:
-        act = ev.activity
-        iscore, ext_creds, individual_scores = interest_score(client, act)
-        dur_pen = duration_penalty(act, client, iscore)
-        time_split = _allocate_time_by_interest(act, individual_scores)
-        conf_pen = conflict_penalty(act, client, tags_count)
-        final_score = max((iscore - dur_pen) - conf_pen, 0)
+        print(f"- {ev.start_dt.time()}–{ev.end_dt.time()}  {ev.activity.name} ({ev.activity.category})  ${ev.activity.cost_cad}")
 
-        print(f"\n▶ {act.name}")
-        print(f"  Time: {ev.start_dt.time()}–{ev.end_dt.time()}")
-        print(f"  Interest score:        {iscore:.2f}")
-        print(f"  Duration penalty:     {dur_pen:.2f}")
-        print(f"  Conflict penalty:     {conf_pen:.2f}")
-        print(f"  FINAL SCORE:          {final_score:.2f}")
+    # ─────────────────────────────────────────────────────────────────────────────
+    # EXTRA SCENARIOS: Family & Couple, using ALL GTA events (no whitelist)
+    # Meteo-safe: roll scenario days + shift any explicit fixed dates into horizon
+    # ─────────────────────────────────────────────────────────────────────────────
 
-        print("  Time allocation:")
-        for m, t in time_split.items():
-            print(f"    {m}: {t:.1f} min")
+    # === Meteo forecast horizon handling ===
+    HORIZON_DAYS = 14           # Open-Meteo reliable forecast window
+    BASE_OFFSET_DAYS = 2        # start runs ~2 days from "today"
 
-    # --------------------------------------------------
-    # SUMMARY
-    # --------------------------------------------------
-    print("\n✅ Scheduled activities:")
+    today = date.today()
+    _ROLLED_DAY0 = today + timedelta(days=min(BASE_OFFSET_DAYS, HORIZON_DAYS - 1))
+    _ROLLED_DAY1 = min(_ROLLED_DAY0 + timedelta(days=1), today + timedelta(days=HORIZON_DAYS - 1))
+
+    def _parse_dt_str_maybe(s: str) -> tuple[date | None, str | None]:
+        s = s.strip()
+        # "YYYY-MM-DD HH:MM"
+        if " " in s:
+            dpart, tpart = s.split(None, 1)
+            try:
+                y, m, d_ = map(int, dpart.split("-"))
+                datetime(y, m, d_)  # validate
+                return date(y, m, d_), tpart
+            except Exception:
+                return None, None
+        # "YYYY-MM-DD"
+        try:
+            y, m, d_ = map(int, s.split("-"))
+            datetime(y, m, d_)  # validate
+            return date(y, m, d_), None
+        except Exception:
+            return None, None
+
+    def _retarget_fixed_times_into_horizon(evts: list[Activity], base_start: date):
+        """
+        Find earliest explicit fixed-date across `evts`; shift all explicit fixed-dates
+        by a constant delta so that earliest lands on `base_start`. Keeps relative gaps.
+        Accepts dict {"date":"YYYY-MM-DD","start":"HH:MM"} and strings "YYYY-MM-DD" or "YYYY-MM-DD HH:MM".
+        """
+        explicit_dates: list[date] = []
+
+        # Collect explicit dates
+        for a in evts:
+            fts = getattr(a, "fixed_times", None)
+            if not fts:
+                continue
+            if isinstance(fts, dict):
+                dstr = fts.get("date")
+                if dstr:
+                    try:
+                        y, m, d_ = map(int, dstr.split("-"))
+                        explicit_dates.append(date(y, m, d_))
+                    except Exception:
+                        pass
+            elif isinstance(fts, list):
+                for it in fts:
+                    if isinstance(it, dict) and it.get("date"):
+                        try:
+                            y, m, d_ = map(int, it["date"].split("-"))
+                            explicit_dates.append(date(y, m, d_))
+                        except Exception:
+                            pass
+                    elif isinstance(it, str):
+                        dmaybe, _ = _parse_dt_str_maybe(it)
+                        if dmaybe:
+                            explicit_dates.append(dmaybe)
+
+        if not explicit_dates:
+            return  # nothing to shift
+
+        oldest = min(explicit_dates)
+        delta = base_start - oldest
+
+        def _shift_date_str(dstr: str) -> str:
+            y, m, d_ = map(int, dstr.split("-"))
+            return (date(y, m, d_) + delta).isoformat()
+
+        # Apply shift
+        for a in evts:
+            fts = getattr(a, "fixed_times", None)
+            if not fts:
+                continue
+
+            if isinstance(fts, dict):
+                if fts.get("date"):
+                    fts = dict(fts)
+                    fts["date"] = _shift_date_str(fts["date"])
+                    setattr(a, "fixed_times", fts)
+                continue
+
+            if isinstance(fts, list):
+                new_list = []
+                for it in fts:
+                    if isinstance(it, dict) and it.get("date"):
+                        it = dict(it)
+                        it["date"] = _shift_date_str(it["date"])
+                        new_list.append(it)
+                    elif isinstance(it, str):
+                        dmaybe, tmaybe = _parse_dt_str_maybe(it)
+                        if dmaybe:
+                            newd = (dmaybe + delta).isoformat()
+                            new_list.append(f"{newd} {tmaybe}" if tmaybe else newd)
+                        else:
+                            new_list.append(it)
+                    else:
+                        new_list.append(it)
+                setattr(a, "fixed_times", new_list)
+
+    GTA_CITIES = {
+        "Toronto","Etobicoke","North York","Scarborough","York","East York",
+        "Mississauga","Brampton","Vaughan","Markham","Richmond Hill",
+        "Oakville","Pickering","Ajax","Whitby"
+    }
+
+    # Use every event in GTA so the new activities are in play
+    all_gta_events = [e for e in events if getattr(e, "city", "") in GTA_CITIES]
+
+    # Normalize a bit for safety
+    for a in all_gta_events:
+        if getattr(a, "duration_min", None) in (None, 0): a.duration_min = 90
+        if getattr(a, "age_min", None) in (None, ""): a.age_min = 0
+        if getattr(a, "age_max", None) in (None, ""): a.age_max = 120
+        if getattr(a, "fixed_times", None) is None: a.fixed_times = []
+        if getattr(a, "weather_blockers", None) is None: a.weather_blockers = []
+
+    # Shift any explicit fixed dates inside the forecast horizon
+    _retarget_fixed_times_into_horizon(all_gta_events, _ROLLED_DAY0)
+
+    # 2-day window inside horizon
+    day1 = _ROLLED_DAY0
+    day2 = _ROLLED_DAY1
+
+    def _mk_family(base_client):
+        fam = deepcopy(base_client)
+        fam.name = getattr(fam, "name", "Family (Demo)")
+        fam.adults_ages = [34, 33]
+        fam.kids_ages = [12, 8]
+        fam.budget_total = getattr(fam, "budget_total", 400.0) or 400.0
+        if not getattr(fam, "home_base", None):
+            class _Loc: pass
+            fam.home_base = _Loc()
+            fam.home_base.lat, fam.home_base.lng = 43.653, -79.383
+            fam.home_base.city = "Toronto"
+        fam.meal_prefs = {
+            "breakfast": {"window": ["08:00","10:00"], "cuisines": ["bakery","brunch","coffee"]},
+            "lunch":     {"window": ["12:00","14:00"], "cuisines": ["pizza","burgers","shawarma"]},
+            "dinner":    {"window": ["18:00","20:30"], "cuisines": ["italian","indian","chinese"]}
+        }
+        fam.dietary = {"vegetarian": False, "vegan": False, "halal": False, "kosher": False,
+                       "gluten_free": False, "dairy_free": False, "nut_allergy": False,
+                       "avoid": [], "required_terms": []}
+        fam.trip_start, fam.trip_end = day1, day2
+        return fam
+
+    def _mk_couple(base_client):
+        cp = deepcopy(base_client)
+        cp.name = getattr(cp, "name", "Couple (Demo)")
+        cp.adults_ages = [28, 27]
+        cp.kids_ages = []
+        cp.budget_total = getattr(cp, "budget_total", 300.0) or 300.0
+        if not getattr(cp, "home_base", None):
+            class _Loc: pass
+            cp.home_base = _Loc()
+            cp.home_base.lat, cp.home_base.lng = 43.653, -79.383
+            cp.home_base.city = "Toronto"
+        cp.meal_prefs = {
+            "breakfast": {"window": ["09:00","10:30"], "cuisines": ["coffee","brunch"]},
+            "lunch":     {"window": ["12:30","14:00"], "cuisines": ["sushi","ramen","tacos"]},
+            "dinner":    {"window": ["19:00","21:00"], "cuisines": ["steak","italian","thai"]}
+        }
+        cp.dietary = {"vegetarian": False, "vegan": False, "halal": False, "kosher": False,
+                      "gluten_free": False, "dairy_free": False, "nut_allergy": False,
+                      "avoid": [], "required_terms": []}
+        cp.trip_start, cp.trip_end = day1, day2
+        return cp
+
+    # Base to clone from
+    base_for_clone = client if 'client' in locals() else (people[0] if people else None)
+    if base_for_clone is None:
+        raise RuntimeError("No base client to clone from; ensure load_people() returned at least one entry.")
+
+    # Create family & couple
+    family_client = _mk_family(base_for_clone)
+    couple_client = _mk_couple(base_for_clone)
+
+    # Helper to plan + print for a given client and day
+    def _run_plan_for(client_obj, acts, d):
+        amin_day = min(int(getattr(a, "age_min", 0) or 0) for a in acts) if acts else 0
+        amax_day = max(int(getattr(a, "age_max", 120) or 120) for a in acts) if acts else 120
+        _clamp_party_ages(client_obj, amin_day, amax_day)
+        planX = make_day_plan(client_obj, acts, d)
+        print(f"\n[{getattr(client_obj, 'name', 'Client')}] Plan for {d}:")
+        for ev in planX.events:
+            print(f"- {ev.start_dt.time()}–{ev.end_dt.time()}  {ev.activity.name} "
+                  f"({ev.activity.category})  ${ev.activity.cost_cad}")
+        return planX
+
+    # FAMILY: consider ALL GTA events
+    print("\n========== FAMILY (ALL GTA EVENTS) ==========")
+    fam_plan_d1 = _run_plan_for(family_client, all_gta_events, day1)
+    fam_plan_d2 = _run_plan_for(family_client, all_gta_events, day2)
+
+    # COUPLE: consider ALL GTA events
+    print("\n========== COUPLE (ALL GTA EVENTS) ==========")
+    cpl_plan_d1 = _run_plan_for(couple_client, all_gta_events, day1)
+    cpl_plan_d2 = _run_plan_for(couple_client, all_gta_events, day2)
+
+
+    # ─────────────────────────────────────────────────────────────────────────────
+    # Second scenario you run later (PRESERVED structure) — meteo-safe
+    # ─────────────────────────────────────────────────────────────────────────────
+    # Roll any explicit fixed dates in this subset as well, and run on _ROLLED_DAY0
+    day = _ROLLED_DAY0  # instead of hard-coded 2025-08-03
+
+    wanted_ids = {
+        "e_st_lawrence_01",
+        "e_rom_01",
+        "e_ago_01",
+        "e_distillery_01",
+        "e_cn_tower_01",
+        "e_concert_southasian_01",
+    }
+    subset = [e for e in events if e.id in wanted_ids]
+
+    # Shift fixed dates for this subset too
+    _retarget_fixed_times_into_horizon(subset, _ROLLED_DAY0)
+
+    # Pull the concert to read age bounds / set sane defaults (PRESERVED)
+    concert = next((e for e in subset if e.id == "e_concert_southasian_01"), None)
+    if not concert:
+        raise RuntimeError("Concert e_concert_southasian_01 not found in events!")
+
+    if getattr(concert, "age_min", None) in (None, ""): concert.age_min = 0
+    if getattr(concert, "age_max", None) in (None, ""): concert.age_max = 120
+    if getattr(concert, "duration_min", None) in (None, 0): concert.duration_min = 120
+
+    amin = int(concert.age_min)
+    amax = int(concert.age_max)
+
+    client = None
+    for p in people:
+        if _all_within_bounds(p, amin, amax):
+            client = p
+            break
+    if client is None:
+        client = deepcopy(people[0])
+        _clamp_party_ages(client, amin, amax)
+
+    print(f"[test] Using client age(s)={_party_ages(client)} (allowed {amin}-{amax})")
+
+    def _show_fixed(a):
+        ft = getattr(a, "fixed_times", None)
+        return ft if ft is not None else []
+
+    print("ANCHORS:",
+          [(a.id, type(getattr(a, "fixed_times", None)).__name__, _show_fixed(a))
+           for a in subset if getattr(a, "fixed_times", None)])
+
+    plan = make_day_plan(client, subset, day)
+
+    print(f"\nPlan for {day}:")
     for ev in plan.events:
-        print(f"  - {ev.activity.name}")
-
-    scheduled_ids = {ev.activity.id for ev in plan.events}
-    rejected = [a for a in events if a.id not in scheduled_ids]
-
-    print("\n❌ Rejected activities:")
-    for a in rejected:
-        print(f"  - {a.name}")
+        print(f"- {ev.start_dt.time()}–{ev.end_dt.time()}  {ev.activity.name} "
+              f"({ev.activity.category})  ${ev.activity.cost_cad}")

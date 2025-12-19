@@ -73,7 +73,7 @@ export default function HotelPreferencesScreen({ route, navigation }: Props) {
   };
 
   return (
-    <SafeAreaView style={styles.safe}>
+    <SafeAreaView style={styles.safe} edges={['bottom', 'left', 'right']}>
       <View style={styles.content}>
         <Text style={styles.title}>Tailor Your Stay</Text>
 
@@ -103,7 +103,7 @@ export default function HotelPreferencesScreen({ route, navigation }: Props) {
         </View>
 
         {/* Rating */}
-        <Text style={[styles.sectionTitle, { marginTop: 16 }]}>Minimum rating</Text>
+        <Text style={[styles.sectionTitle, { marginTop: 16 }]}>Minimum rating*</Text>
         <View style={styles.rowWrap}>
           {[1, 2, 3, 4, 5].map((r) => (
             <Chip key={r} label={`${r}★+`} selected={rating === r} onPress={() => setRating(r)} />
@@ -111,7 +111,7 @@ export default function HotelPreferencesScreen({ route, navigation }: Props) {
         </View>
 
         {/* Cancellation */}
-        <Text style={[styles.sectionTitle, { marginTop: 16 }]}>Cancellation</Text>
+        <Text style={[styles.sectionTitle, { marginTop: 16 }]}>Cancellation*</Text>
         <View style={styles.rowWrap}>
           {(["24h", "48h", "Free", "Any"] as CancelOpt[]).map((c) => (
             <Chip
@@ -124,7 +124,7 @@ export default function HotelPreferencesScreen({ route, navigation }: Props) {
         </View>
 
         {/* Payment */}
-        <Text style={[styles.sectionTitle, { marginTop: 16 }]}>Preferred Payment Method</Text>
+        <Text style={[styles.sectionTitle, { marginTop: 16 }]}>Preferred Payment Method*</Text>
         <View style={styles.rowWrap}>
           {(["Online", "In-person", "Any"] as PaymentOpt[]).map((p) => (
             <Chip key={p} label={p} selected={payOpt === p} onPress={() => setPayOpt(p)} />
