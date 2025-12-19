@@ -304,6 +304,26 @@ export default function EventPreferences() {
                 Your travelers
               </h2>
 
+              {Object.keys(formData.party_members).length === 0 && (
+                <div style={{
+                  background: '#fef3c7',
+                  border: '1px solid #fbbf24',
+                  borderRadius: '12px',
+                  padding: '16px',
+                  marginBottom: '16px',
+                  textAlign: 'center'
+                }}>
+                  <p style={{
+                    margin: 0,
+                    fontSize: '14px',
+                    color: '#92400e',
+                    fontWeight: '500'
+                  }}>
+                    👋 Click "+ Add Person" below to add travelers
+                  </p>
+                </div>
+              )}
+
               <div style={{ maxHeight: '60vh', overflowY: 'auto', marginBottom: '16px' }}>
                 {Object.entries(formData.party_members).map(([memberName, memberData]) => (
                   <div key={memberName} style={{
@@ -721,6 +741,9 @@ export default function EventPreferences() {
                     <input
                       type="time"
                       required
+                      min="00:00"
+                      value={formData.start_time}
+                      onChange={(e) => setFormData({...formData, start_time: e.target.value})}
                       style={{
                         width: '100%',
                         height: '48px',
@@ -745,9 +768,9 @@ export default function EventPreferences() {
                     <input
                       type="time"
                       required
+                      max="23:59"
                       value={formData.end_time}
                       onChange={(e) => setFormData({...formData, end_time: e.target.value})}
-                      disabled={!formData.start_time}
                       style={{
                         width: '100%',
                         height: '48px',

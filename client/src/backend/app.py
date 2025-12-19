@@ -169,7 +169,6 @@ def get_boarding_passes():
                     metadata["imageUrl"] = f"/boarding_pass_image/{metadata['filename']}"
                     passes.append(metadata)
         
-        # Sort by timestamp (newest first)
         passes.sort(key=lambda x: x.get("timestamp", ""), reverse=True)
         
         return jsonify({
