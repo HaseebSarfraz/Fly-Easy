@@ -2,6 +2,7 @@ from flask import Flask, request, jsonify, send_file
 from flask_cors import CORS
 from hotel_search_engine import HotelSearchEngine
 from restaurant_search_engine import RestaurantSearchEngine
+from flight_tracker import FlightTracker
 import os
 import base64
 import json
@@ -224,6 +225,22 @@ def delete_boarding_pass(pass_id):
         print(f"Error deleting boarding pass: {e}")
         return jsonify({"error": str(e)}), 500
 
+@app.get("/airport_tracker/<airport_code>")
+def airport_tracker(airport_code):
+    try:
+        direction = request.args.get("direction", "Both")
+        
+        eng = FlightTracker()
+        eng.set_airport(airport_code)
+        result = eng.get_flights(direction)
+        
+        if "error" in result:
+            return jsonify(result), 400
+        
+        return jsonify(result), 200
+        
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
 if __name__ == "__main__":
     print("Starting Flask on http://0.0.0.0:5001 …")
