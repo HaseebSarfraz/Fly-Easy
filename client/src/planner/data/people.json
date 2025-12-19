@@ -138,9 +138,17 @@
         ],
         "budget_cad": 40
       },
+    "early_risers": true,
+
+    "diet": { "vegetarian": false, "vegan": false, "halal": true, "kosher": false, "gluten_free": false, "dairy_free": false, "nut_allergy": false },
+    "meal_prefs": {
+      "breakfast": { "window": ["08:00","09:30"], "cuisines": ["american","south_asian","bakery","cafe"], "budget_cad": 18 },
+      "lunch":     { "window": ["12:00","14:00"], "cuisines": ["italian","turkish","pizza","mediterranean"], "budget_cad": 25 },
+      "dinner":    { "window": ["18:00","20:00"], "cuisines": ["indian","mediterranean","bbq","family_style"], "budget_cad": 40 },
       "snacks_ok": true
     }
   },
+
   {
     "id": "p_couple_urbanfood_01",
     "party_type": "couple",
@@ -188,6 +196,23 @@
     },
     "religion": null,
     "ethnicity_culture": [],
+    "interest_weights": {
+      "concerts": 9,
+      "food": 8,
+      "nightlife": 7,
+      "history": 6,
+      "museums": 5,
+      "architecture": 4,
+      "aquarium": 2,
+      "theme_parks": 0,
+      "zoo": 0,
+      "parks": 3,
+      "islands": 4,
+      "shopping": 7,
+      "pizza": 8,
+      "theatre": 5,
+      "views": 6
+    },
     "vibe": "urban",
     "budget_total": 1100,
     "trip_start": "2025-12-05",
@@ -249,9 +274,17 @@
         ],
         "budget_cad": 55
       },
+    "early_risers": false,
+
+    "diet": { "vegetarian": false, "vegan": false, "halal": false, "kosher": false, "gluten_free": false, "dairy_free": false, "nut_allergy": false },
+    "meal_prefs": {
+      "breakfast": { "window": ["09:30","11:00"], "cuisines": ["brunch","cafe","bakery"], "budget_cad": 22 },
+      "lunch":     { "window": ["12:30","14:30"], "cuisines": ["japanese","korean","italian","ramen"], "budget_cad": 28 },
+      "dinner":    { "window": ["18:30","20:30"], "cuisines": ["tapas","modern_canadian","steak","seafood"], "budget_cad": 55 },
       "snacks_ok": true
     }
   },
+
   {
     "id": "p_couple_relaxed_nature_01",
     "party_type": "couple",
@@ -360,9 +393,17 @@
         ],
         "budget_cad": 35
       },
+    "early_risers": true,
+
+    "diet": { "vegetarian": true, "vegan": false, "halal": false, "kosher": false, "gluten_free": false, "dairy_free": false, "nut_allergy": false },
+    "meal_prefs": {
+      "breakfast": { "window": ["08:00","09:30"], "cuisines": ["cafe","smoothie","bakery"], "budget_cad": 18 },
+      "lunch":     { "window": ["12:00","14:00"], "cuisines": ["mediterranean","salad","vegetarian","indian"], "budget_cad": 25 },
+      "dinner":    { "window": ["18:00","20:00"], "cuisines": ["thai","mediterranean","indian","vegetarian"], "budget_cad": 35 },
       "snacks_ok": true
     }
   },
+
   {
     "id": "p_solo_historybuff_01",
     "party_type": "solo",
@@ -448,9 +489,17 @@
         ],
         "budget_cad": 30
       },
+    "early_risers": true,
+
+    "diet": { "vegetarian": false, "vegan": false, "halal": false, "kosher": false, "gluten_free": false, "dairy_free": false, "nut_allergy": false },
+    "meal_prefs": {
+      "breakfast": { "window": ["08:30","09:30"], "cuisines": ["cafe","bakery"], "budget_cad": 15 },
+      "lunch":     { "window": ["12:00","13:30"], "cuisines": ["middle_eastern","indian","persian"], "budget_cad": 20 },
+      "dinner":    { "window": ["18:00","19:30"], "cuisines": ["indian","ethiopian","mediterranean"], "budget_cad": 30 },
       "snacks_ok": true
     }
   },
+
   {
     "id": "p_family_teens_thrill_01",
     "party_type": "family",
@@ -587,9 +636,17 @@
         ],
         "budget_cad": 45
       },
+    "early_risers": false,
+
+    "diet": { "vegetarian": false, "vegan": false, "halal": false, "kosher": false, "gluten_free": false, "dairy_free": false, "nut_allergy": false },
+    "meal_prefs": {
+      "breakfast": { "window": ["09:30","10:45"], "cuisines": ["american","bakery","cafe"], "budget_cad": 18 },
+      "lunch":     { "window": ["12:30","14:30"], "cuisines": ["burgers","pizza","mexican"], "budget_cad": 25 },
+      "dinner":    { "window": ["18:30","20:30"], "cuisines": ["bbq","steak","asian_fusion"], "budget_cad": 45 },
       "snacks_ok": true
     }
   },
+
   {
     "id": "p_multi_gen_olderparents_01",
     "party_type": "multi_gen",
@@ -742,9 +799,17 @@
         ],
         "budget_cad": 40
       },
+    "early_risers": true,
+
+    "diet": { "vegetarian": true, "vegan": false, "halal": false, "kosher": false, "gluten_free": true, "dairy_free": false, "nut_allergy": false },
+    "meal_prefs": {
+      "breakfast": { "window": ["08:00","09:15"], "cuisines": ["cafe","gluten_free","bakery"], "budget_cad": 18 },
+      "lunch":     { "window": ["12:00","13:45"], "cuisines": ["mediterranean","vegetarian","salad","soup"], "budget_cad": 25 },
+      "dinner":    { "window": ["18:00","20:00"], "cuisines": ["italian","greek","indian"], "budget_cad": 40 },
       "snacks_ok": true
     }
   },
+
   {
     "id": "p_solo_nightlife_foodie_01",
     "party_type": "solo",
@@ -830,9 +895,17 @@
         ],
         "budget_cad": 45
       },
+    "early_risers": false,
+
+    "diet": { "vegetarian": false, "vegan": false, "halal": false, "kosher": false, "gluten_free": false, "dairy_free": false, "nut_allergy": false },
+    "meal_prefs": {
+      "breakfast": { "window": ["10:00","11:15"], "cuisines": ["brunch","cafe"], "budget_cad": 22 },
+      "lunch":     { "window": ["13:00","14:30"], "cuisines": ["ramen","tacos","pizza"], "budget_cad": 25 },
+      "dinner":    { "window": ["19:00","21:00"], "cuisines": ["izakaya","gastropub","mexican"], "budget_cad": 45 },
       "snacks_ok": true
     }
   },
+
   {
     "id": "p_couple_bollywood_01",
     "party_type": "couple",
@@ -940,9 +1013,17 @@
         ],
         "budget_cad": 45
       },
+    "early_risers": false,
+
+    "diet": { "vegetarian": false, "vegan": false, "halal": true, "kosher": false, "gluten_free": false, "dairy_free": false, "nut_allergy": false },
+    "meal_prefs": {
+      "breakfast": { "window": ["09:30","11:00"], "cuisines": ["cafe","bakery"], "budget_cad": 18 },
+      "lunch":     { "window": ["12:30","14:30"], "cuisines": ["indian","pakistani","thai"], "budget_cad": 28 },
+      "dinner":    { "window": ["18:30","20:30"], "cuisines": ["indian","bbq","mediterranean"], "budget_cad": 45 },
       "snacks_ok": true
     }
   },
+
   {
     "id": "p_budget_student_duo_01",
     "party_type": "friends",
@@ -1048,9 +1129,17 @@
         ],
         "budget_cad": 22
       },
+    "early_risers": false,
+
+    "diet": { "vegetarian": false, "vegan": false, "halal": false, "kosher": false, "gluten_free": false, "dairy_free": false, "nut_allergy": false },
+    "meal_prefs": {
+      "breakfast": { "window": ["09:30","10:45"], "cuisines": ["cafe","bakery"], "budget_cad": 12 },
+      "lunch":     { "window": ["12:30","14:00"], "cuisines": ["fast_casual","pizza","shawarma"], "budget_cad": 15 },
+      "dinner":    { "window": ["18:30","20:00"], "cuisines": ["burger","tacos","noodles"], "budget_cad": 22 },
       "snacks_ok": true
     }
   },
+
   {
     "id": "p_couple_with_parents_early20kid_01",
     "party_type": "multi_gen",
@@ -1173,6 +1262,13 @@
         ],
         "budget_cad": 45
       },
+    "early_risers": true,
+
+    "diet": { "vegetarian": false, "vegan": false, "halal": true, "kosher": false, "gluten_free": false, "dairy_free": false, "nut_allergy": false },
+    "meal_prefs": {
+      "breakfast": { "window": ["08:30","09:45"], "cuisines": ["cafe","bakery"], "budget_cad": 18 },
+      "lunch":     { "window": ["12:00","14:00"], "cuisines": ["indian","middle_eastern","mediterranean"], "budget_cad": 28 },
+      "dinner":    { "window": ["18:00","20:00"], "cuisines": ["indian","afghani","turkish"], "budget_cad": 45 },
       "snacks_ok": true
     }
   }
