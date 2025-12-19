@@ -1,8 +1,13 @@
+# src/planner/core/solver.py
+
+tz_cache = {}
+weather_cache = {}
+
 # src/planner/core/optimized_greedy
 from __future__ import annotations
 from datetime import date, datetime, timedelta
 from typing import List
-from planner.core.models import Client, Activity, PlanDay, PlanEvent
+from planner.core.models import Client, Activity, PlanDay, PlanEvent, Location
 from planner.core.constraints import hard_feasible, hc_open_window_ok, hc_age_ok
 from planner.core.timegrid import generate_candidate_times, choose_step_minutes
 from planner.core.scoring import interest_score
@@ -12,8 +17,11 @@ from .utils import place_to_activity
 from .food_filter import cuisine_query, violates_avoid
 from .places import fetch_nearby_food
 from math import cos, radians
+from planner.core.scoring import interest_score, duration_penalty, conflict_penalty
 from typing import Optional
 import re
+from heapq import heappush, heappop
+
 
 import requests                 # TO MAKE API REQUESTS
 import pandas as pd
@@ -98,9 +106,9 @@ def _net_score_with_budget(client, act, plan, soft_cap_day, already_added=False)
     penalty = LAMBDA_BUDGET * over
     return base - penalty
 
-
 def overlaps(a_start, a_end, b_start, b_end) -> bool:
     return not (a_end <= b_start or b_end <= a_start)
+
 
 def fits_no_overlap(events: List[PlanEvent], start_dt: datetime, act: Activity) -> bool:
     end_dt = start_dt + timedelta(minutes=act.duration_min)
@@ -108,6 +116,17 @@ def fits_no_overlap(events: List[PlanEvent], start_dt: datetime, act: Activity) 
         if overlaps(start_dt, end_dt, ev.start_dt, ev.end_dt):
             return False
     return True
+
+
+def get_timezone(city: str) -> str:
+    if city in tz_cache:
+        return tz_cache[city]
+
+    res = requests.get("https://geocoding-api.open-meteo.com/v1/search", params={"name": city})
+    data = res.json()
+    tz = data["results"][0]["timezone"]
+    tz_cache[city] = tz
+    return tz
 
 
 _TZ_CACHE: dict[str, str] = {}
@@ -629,7 +648,7 @@ def _fixed_dt_candidates(act: Activity, day: date) -> list[datetime]:
 
 def _hard_feasible_for_anchor(client: Client, act: Activity, start_dt: datetime) -> bool:
     # keep strict checks you care about; skip open-window veto
-    if not hc_age_ok(client, act): 
+    if not hc_age_ok(client, act):
         return False
     if not is_weather_suitable(act, start_dt):
         return False
@@ -637,30 +656,177 @@ def _hard_feasible_for_anchor(client: Client, act: Activity, start_dt: datetime)
 
 
 
+def fits_in_window(activity: Activity, client: Client, start_min: int) -> bool:
+    """
+    Checks if the currently-planned event fits in the client's day-planning window.
+    Returns true if both the event start and end are within the client's day-plan window, false otherwise.
+    """
+    client_start_m, client_end_m = client.day_start_min, client.day_end_min
+
+    e_start_m = start_min
+    e_end_m = activity.duration_min + start_min
+
+    if e_end_m < e_start_m:
+        e_end_m += (24 * 60)
+    fits = (client_start_m <= e_start_m < client_end_m) and (client_start_m < e_end_m <= client_end_m)
+    return fits
+
+
+def _allocate_time_by_interest(act, interest_scores, beta=1.3) -> dict:
+    """
+    Yash helper: compute per-member time allocation for an activity
+    proportional to interest_scores.
+    (We only use this indirectly via _build_base_plan for now.)
+    """
+    duration = act.duration_min
+    if not interest_scores:
+        return {}
+
+    max_interest = max(interest_scores.values())
+    most_interested = [m for m, s in interest_scores.items()
+                       if s == max_interest][0]
+
+    # Exponential weighting: higher interest ⇒ more time
+    fair_pen_factors = {
+        m: (score / 10) ** beta
+        for m, score in interest_scores.items()
+        if score > 0
+    }
+    total_weight = float(sum(fair_pen_factors.values())) or 1.0
+
+    member_time_allocation = {
+        m: duration * (w / total_weight)
+        for m, w in fair_pen_factors.items()
+    }
+
+    # If some members had 0 interest, give any leftover time to the most interested
+    allocated = sum(member_time_allocation.values())
+    leftover = duration - allocated
+    if leftover > 0:
+        member_time_allocation[most_interested] = \
+            member_time_allocation.get(most_interested, 0) + leftover
+
+    return member_time_allocation
+
+
+def _build_base_plan(client: Client,
+                     activities: List[Activity],
+                     threshold: float = 0.75,
+                     beam: int = 8) -> list[list[Activity]]:
+    """
+    Yash helper: build several "base plans" that maximize group satisfaction.
+
+    Returns a list of candidate activity lists.
+    We'll take the first (best) one and try to schedule those activities first.
+    """
+    candidates: list[tuple[Activity, set, float]] = []
+
+    # Precompute which party members like which activity
+    for act in activities:
+        interested = set()
+        total_score = 0.0
+
+        for person in getattr(client, "party_members", []):
+            iw = sum(client.interest(tag, person) for tag in act.tags)
+            if iw > 0:
+                max_possible = 10 * max(1, len(act.tags))
+                # per-activity threshold & sanity check w.r.t. day length
+                if (
+                    iw / max_possible >= threshold
+                    and act.duration_min / max(1, client.total_day_duration)
+                    <= getattr(client, "daily_act_time_per_member", 1.0)
+                ):
+                    interested.add(person)
+                    total_score += iw
+
+        if interested:
+            candidates.append((act, interested, total_score))
+
+    # Strong candidates first: more people + higher score
+    candidates.sort(key=lambda x: (len(x[1]), x[2]), reverse=True)
+
+    # Beam search over subsets of activities
+    plans: list[tuple[list[Activity], set, float]] = [([], set(), 0.0)]
+    # (chosen_acts, satisfied_people, score)
+
+    for act, interested, score in candidates:
+        new_plans: list[tuple[list[Activity], set, float]] = []
+
+        for acts, sat, s in plans:
+            # Option 1: skip act
+            new_plans.append((acts, sat, s))
+
+            # Option 2: include act if it adds at least one new satisfied person
+            new_people = interested - sat
+            if new_people:
+                new_plans.append((
+                    acts + [act],
+                    sat | new_people,
+                    s + score,
+                ))
+
+        # Keep only top `beam` partial plans
+        new_plans.sort(
+            key=lambda p: (len(p[1]), p[2]),  # more people, higher score
+            reverse=True,
+        )
+        plans = new_plans[:beam]
+
+    # Drop satisfaction metadata; return just activity lists
+    return [p[0] for p in plans]
+
+
 def make_day_plan(client: Client, activities: List[Activity], day: date) -> PlanDay:
+    """
+    Combined Haseeb + Yash logic:
 
+    1) Identify anchors (fixed-time events) vs flex.
+    2) Compute budget soft-cap per day and reserved_cap (for non-anchor).
+    3) Pre-add meals (restaurant advisor).
+    4) Place anchors first, reshaping meals around them if needed.
+    5) Use Yash's beam-search base-plan to pick a high-coverage subset
+       of flex activities (primary_acts).
+    6) Order remaining flex by interest_score (Yash) and then by base_value.
+    7) Greedy scheduling of flex activities in that order using Haseeb's
+       hard_feasible + weather + overlap + budget + repairB.
+    """
+
+    # ─────────────────────────────────────────────────────────────────────
+    # 1) Split into anchors vs flex
+    # ─────────────────────────────────────────────────────────────────────
     anchors = [a for a in activities if _has_fixed_times(a)]
-
-    print("ANCHORS:", [
-    (a.id, type(getattr(a, "fixed_times", None)).__name__, getattr(a, "fixed_times", None))
-    for a in anchors
-    ])
-
     flex    = [a for a in activities if not _has_fixed_times(a)]
 
-    # Reserve budget for anchors so flex items don't eat it.
+    print("ANCHORS:", [
+        (a.id, type(getattr(a, "fixed_times", None)).__name__,
+         getattr(a, "fixed_times", None))
+        for a in anchors
+    ])
+
+    # ─────────────────────────────────────────────────────────────────────
+    # 2) Budget per day + reserved_cap for flex (Haseeb logic)
+    # ─────────────────────────────────────────────────────────────────────
     anchor_cost   = sum(float(a.cost_cad or 0.0) for a in anchors)
     soft_cap_day  = _soft_cap_per_day(client)
     reserved_cap  = max(0.0, soft_cap_day - anchor_cost)
 
+    # ─────────────────────────────────────────────────────────────────────
+    # 3) Start plan + pre-add meals
+    # ─────────────────────────────────────────────────────────────────────
     plan = PlanDay(day)
     pre_add_rests(plan, client, day, center_loc=client.home_base)
 
-    # 1) place anchors first — keep meals by reshaping them
+    # ─────────────────────────────────────────────────────────────────────
+    # 4) Place anchors first, reshaping meals around them
+    # ─────────────────────────────────────────────────────────────────────
     for act in anchors:
         fixed_slots = _fixed_dt_candidates(act, day)
-        
-        candidate_starts = fixed_slots or list(generate_candidate_times(act, day, step_minutes=(choose_step_minutes(act) or 60)))
+        candidate_starts = fixed_slots or list(
+            generate_candidate_times(
+                act, day,
+                step_minutes=(choose_step_minutes(act) or 60)
+            )
+        )
         print(f"[anchor] considering {act.id} at:", candidate_starts)
 
         placed = False
@@ -669,18 +835,24 @@ def make_day_plan(client: Client, activities: List[Activity], day: date) -> Plan
                 print(f"[anchor] {act.id} @ {start_dt.time()} hard-feasible=NO")
                 continue
 
-            # sanity: enforce a minimum duration so overlap math isn't degenerate
+            # enforce a minimum duration so overlap math isn't degenerate
             if getattr(act, "duration_min", None) in (None, 0):
-                act.duration_min = 120  # concerts default to 2h
+                act.duration_min = 120  # e.g., concerts default to 2h
 
             anchor_ev = PlanEvent(act, start_dt)
             plan.add(anchor_ev)
             print(f"[anchor] added {act.id} @ {start_dt.time()} (dur {act.duration_min}m)")
 
             ok = True
-            meals = [e for e in plan.events if e is not anchor_ev and e.activity.category == "food"]
+            meals = [
+                e for e in plan.events
+                if e is not anchor_ev and e.activity.category == "food"
+            ]
             for m in meals:
-                if _overlaps_ev(m.start_dt, m.activity.duration_min, anchor_ev.start_dt, anchor_ev.activity.duration_min):
+                if _overlaps_ev(
+                    m.start_dt, m.activity.duration_min,
+                    anchor_ev.start_dt, anchor_ev.activity.duration_min
+                ):
                     moved = _resolve_meal_conflict(plan, client, m, anchor_ev)
                     print(f"[anchor] meal conflict with {m.activity.name}: moved={moved}")
                     if not moved:
@@ -692,39 +864,88 @@ def make_day_plan(client: Client, activities: List[Activity], day: date) -> Plan
                 print(f"[anchor] SUCCESS {act.id} placed @ {start_dt.time()}")
                 break
 
-            # rollback
+            # rollback and try next start_dt
             plan.events.remove(anchor_ev)
             print(f"[anchor] ROLLBACK {act.id} @ {start_dt.time()}")
 
-    # 2) place flexible activities with remaining (reserved) cap
-    acts_sorted = sorted(flex, key=lambda a: base_value(client, a), reverse=True)
+    # ─────────────────────────────────────────────────────────────────────
+    # 5) Use Yash's beam search to pick a good subset of flex activities
+    # ─────────────────────────────────────────────────────────────────────
+    base_plans = _build_base_plan(client, flex, threshold=0.75, beam=8)
+    primary_acts: List[Activity] = base_plans[0] if base_plans else []
+    primary_ids = {a.id for a in primary_acts}
 
+    # Remaining flex that weren’t chosen in the primary base-plan
+    remaining_flex = [a for a in flex if a.id not in primary_ids]
+
+    # Sort remaining flex activities by Yash-style interest score, tie-breaking
+    # with Haseeb's base_value (pure utility)
+    def _interest_total(a: Activity) -> float:
+        try:
+            i_score, _, _ = interest_score(client, a)
+            return float(i_score)
+        except Exception:
+            return 0.0
+
+    remaining_sorted = sorted(
+        remaining_flex,
+        key=lambda a: (_interest_total(a), base_value(client, a)),
+        reverse=True,
+    )
+
+    # Final order to try scheduling flex activities:
+    #   1) high-coverage base-plan activities
+    #   2) other flex ordered by interest + base_value
+    acts_sorted: List[Activity] = list(primary_acts) + remaining_sorted
+
+    # ─────────────────────────────────────────────────────────────────────
+    # 6) Greedy scheduling of flex activities (Haseeb's engine)
+    # ─────────────────────────────────────────────────────────────────────
     for act in acts_sorted:
         step = choose_step_minutes(act) or 60
-        for start_dt in generate_candidate_times(act, day, step_minutes=step):
-            if not hard_feasible(client, act, start_dt): continue
-            if not is_weather_suitable(activity=act, start_dt=start_dt): continue  # if you kept signature (activity, start_dt), use that
 
+        for start_dt in generate_candidate_times(act, day, step_minutes=step):
+            # Basic hard constraints
+            if not hard_feasible(client, act, start_dt):
+                continue
+            if not is_weather_suitable(activity=act, start_dt=start_dt):
+                continue
+
+            # Case A: fits without overlap
             if fits_no_overlap(plan.events, start_dt, act):
-                net  = base_value(client, act) - LAMBDA_BUDGET * max(0.0, _spent_today(plan) + float(act.cost_cad) - reserved_cap)
-                over = max(0.0, _spent_today(plan) + float(act.cost_cad) - reserved_cap)
+                # Haseeb's budget-aware acceptance
+                projected_spent = _spent_today(plan) + float(act.cost_cad)
+                over = max(0.0, projected_spent - reserved_cap)
+                net = base_value(client, act) - LAMBDA_BUDGET * over
+
                 if (over == 0.0) or (over > 0.0 and net >= SCORE_THRESHOLD):
                     plan.add(PlanEvent(act, start_dt))
                     break
+                # if not worth going over budget, try next time slot
                 continue
 
+            # Case B: try to repair by nudging existing events (RepairB)
             snapshot = [(ev, ev.start_dt, ev.end_dt) for ev in plan.events]
             if repairB(plan, client, act, day, start_dt, max_moves=1, try_others=True):
-                net  = base_value(client, act) - LAMBDA_BUDGET * max(0.0, _spent_today(plan) - reserved_cap)
-                over = max(0.0, _spent_today(plan) - reserved_cap)
+                # After repairB we *did* place the activity, so re-evaluate budget
+                projected_spent = _spent_today(plan)
+                over = max(0.0, projected_spent - reserved_cap)
+                net = base_value(client, act) - LAMBDA_BUDGET * over
+
                 if (over == 0.0) or (over > 0.0 and net >= SCORE_THRESHOLD):
+                    # keep the repair + activity
                     break
+
+                # otherwise roll back: remove newly-added act and restore times
+                # (assumes repairB appended the new PlanEvent at the end)
                 plan.events.pop()
                 for ev, s, e in snapshot:
                     ev.start_dt, ev.end_dt = s, e
                 continue
 
-    # ←←← IMPORTANT: finalize AFTER all loops
+    # ─────────────────────────────────────────────────────────────────────
+    # 7) Finalize
+    # ─────────────────────────────────────────────────────────────────────
     plan.events.sort(key=lambda e: e.start_dt)
     return plan
 
@@ -744,6 +965,7 @@ def _blocking_events(events: List[PlanEvent],
             out.append(ev)
     return out
 
+
 def _overlap_minutes(start_dt: datetime,
                      act: Activity,
                      ev: PlanEvent) -> int:
@@ -754,8 +976,9 @@ def _overlap_minutes(start_dt: datetime,
     if a2 <= b1 or b2 <= a1:
         return 0
     inter_start = max(a1, b1)
-    inter_end   = min(a2, b2)
+    inter_end = min(a2, b2)
     return int((inter_end - inter_start).total_seconds() // 60)
+
 
 def _future_candidates(activity: Activity,
                        day: date,
@@ -765,12 +988,22 @@ def _future_candidates(activity: Activity,
     cands = generate_candidate_times(activity, day, step_minutes=step)
     return [t for t in cands if t > after_dt]
 
+
 def _can_place_against(events: List[PlanEvent],
                        client: Client,
                        act: Activity,
                        when: datetime) -> bool:
     """Hard checks + no-overlap against `events`."""
-    return hard_feasible(client, act, when) and fits_no_overlap(events, when, act) and is_weather_suitable(act, when)
+    return (hard_feasible(client, act, when) and fits_no_overlap(events, when, act) and is_weather_suitable(act, when)
+            and fits_in_window(act, client, when.hour * 60 + when.minute))
+
+
+def _time_to_minutes(dt):
+    """
+    Converts the time into actual minutes.
+    """
+    return dt.hour * 60 + dt.minute
+
 
 def _try_nudge_forward(plan: PlanDay,
                        client: Client,
@@ -798,7 +1031,7 @@ def _try_nudge_forward(plan: PlanDay,
         if _can_place_against(others, client, ev.activity, t2):
             # tentatively move the blocker
             ev.start_dt = t2
-            ev.end_dt   = t2 + timedelta(minutes=ev.activity.duration_min)
+            ev.end_dt = t2 + timedelta(minutes=ev.activity.duration_min)
 
             # did that free the slot for E?
             if _can_place_against(plan.events, client, target_act, target_start):
@@ -811,6 +1044,7 @@ def _try_nudge_forward(plan: PlanDay,
         tried += 1
 
     return False
+
 
 def _flexibility_now(plan: PlanDay,
                      client: Client,
@@ -850,10 +1084,9 @@ def repairB(plan: PlanDay,
        ordered by least flexibility first (each by up to `max_moves` moves).
     Returns True iff `act` was placed.
     """
-    # who blocks E right now?
     conflicts = _blocking_events(plan.events, start_dt, act)
     if not conflicts:
-        # defensive: if caller mis-signaled, just place E
+        # defensive: if caller mis-signaled, just place the event
         plan.add(PlanEvent(act, start_dt))
         return True
 
@@ -864,7 +1097,10 @@ def repairB(plan: PlanDay,
 
     # 2) Optionally try other planned events (non-fixed), least flexibility first
     if try_others:
-        candidates = [ev for ev in plan.events if (ev is not direct and not ev.activity.fixed_times)]
+        candidates = [
+            ev for ev in plan.events
+            if (ev is not direct and not ev.activity.fixed_times)
+        ]
         candidates.sort(key=lambda ev: _flexibility_now(plan, client, ev, day))
 
         for ev in candidates:
@@ -872,6 +1108,7 @@ def repairB(plan: PlanDay,
                 return True
 
     return False
+
 
 
 
