@@ -65,7 +65,7 @@ def load_people(path: Path = DATA_DIR / "people.json") -> List[Client]:
             prefer_outdoor=d.get("prefer_outdoor", 0),
             prefer_cultural=d.get("prefer_cultural", 0),
             day_start_time=d.get("start_time", "0:00"),
-            day_end_time=d.get("end_time", "23:59")
+            day_end_time=d.get("end_time", "23:59"),
             early_risers=d.get("early_risers", False),
             # NEW: pass through if your Client supports these
             dietary=d.get("dietary", {"restrictions": [], "avoid": [], "cuisine_likes": []}),
