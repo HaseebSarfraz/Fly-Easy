@@ -64,7 +64,7 @@ def interest_score(client: Client, act: Activity) -> tuple[float, dict, dict]:
     # ======= OPTIMIZATION MEASURE: IF THE ENTIRE FAMILY IS IN THE SAME INTEREST GROUP THEN WE RETURN THE
     # AVERAGE INTEREST SCORE. =======
     if total_ext_count == 0 or total_not_ext_count == 0:
-        return average_interest_score, {}, interest_scores
+        return min(average_interest_score, 0), {}, interest_scores
 
     ext_interested_avg = sum(ext_interested) / len(ext_interested)  # AVG SCORE OF EXTREMELY INTERESTED
     not_ext_interested_avg = sum(not_ext_interested) / len(not_ext_interested)  # AVG SCORE OF NOT EXTREMELY INTERESTED
@@ -89,9 +89,9 @@ def interest_score(client: Client, act: Activity) -> tuple[float, dict, dict]:
             creds_required -= use_creds
             i += 1
     if creds_required == 0 and extreme_score > average_interest_score:  # EVERYONE IN THE GROUP HAS ENOUGH CREDITS TO DO THIS
-        return extreme_score, ext_interested_creds, interest_scores  # RETURN THE MAX SCORE
+        return min(extreme_score, 10), ext_interested_creds, interest_scores  # RETURN THE MAX SCORE
     else:  # OTHERWISE IF THERE IS NOT ENOUGH CREDITS LEFT THEN WE CONSIDER THIS A REGULAR EVENT
-        return average_interest_score, {}, interest_scores
+        return min(average_interest_score, 10), {}, interest_scores
 
 
 # FIRST PENALTY APPLIED IN INITIAL SCORING
@@ -230,7 +230,6 @@ if __name__ == "__main__":
         print(f"   Tags so far: {tags_count}")
         print(f"   Conflict penalty applied: {conf_pen:.4f}\n")
     pop_bonus = act.popularity * 2.0    # slight nudge for popularity of the acitivity
-    return float(tag_sum) + pop_bonus
 
 
 def _clamp(x, lo=0.0, hi=10.0):

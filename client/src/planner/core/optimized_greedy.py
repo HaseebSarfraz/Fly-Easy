@@ -1,36 +1,27 @@
-# src/planner/core/solver.py
-
-tz_cache = {}
-weather_cache = {}
-
 # src/planner/core/optimized_greedy
 from __future__ import annotations
-from datetime import date, datetime, timedelta
-from typing import List
-from planner.core.models import Client, Activity, PlanDay, PlanEvent, Location
-from planner.core.constraints import hard_feasible, hc_open_window_ok, hc_age_ok
-from planner.core.timegrid import generate_candidate_times, choose_step_minutes
-from planner.core.scoring import interest_score
-from planner.core.utils import to_minutes
-from planner.core.scoring import base_value
-from .utils import place_to_activity
-from .food_filter import cuisine_query, violates_avoid
-from .places import fetch_nearby_food
-from math import cos, radians
-from planner.core.scoring import interest_score, duration_penalty, conflict_penalty
-from typing import Optional
+
 import re
-from heapq import heappush, heappop
+from datetime import date, datetime, timedelta
+from math import cos, radians
+from typing import List
+from typing import Optional
 
-
-import requests                 # TO MAKE API REQUESTS
 import pandas as pd
+import requests  # TO MAKE API REQUESTS
 
+from planner.core.constraints import hard_feasible, hc_age_ok
+from planner.core.models import Client, Activity, PlanDay, PlanEvent
+from planner.core.scoring import base_value
+from planner.core.scoring import interest_score
+from planner.core.timegrid import generate_candidate_times, choose_step_minutes
+from .food_filter import violates_avoid
+from .places import fetch_nearby_food
+from .utils import place_to_activity
+
+# IMPORTANT CONSTANTS
 RADIUS_STEPS = [1500, 3000, 4000]  # meters
-
 _DASHES = {"–","—","−"}  # common unicode dashes
-
-
 WEATHER_CODE_MAP = {
     0: "Clear sky",
     1: "Mainly clear",
@@ -53,11 +44,16 @@ WEATHER_CODE_MAP = {
     95: "Thunderstorm",
     99: "Heavy hail thunderstorm",
 }
-
 LAMBDA_BUDGET = 0.03      # penalty $→points (e.g., 0.03 pts per $1 over)
 SCORE_THRESHOLD = 0.10    # minimum net score to accept when over budget
-
 WEATHER_CACHE: dict[tuple, tuple] = {}  # (lat3,lng3,day_iso,tz) -> (pd.DatetimeIndex, list[int])
+
+# USED FOR "CACHING"
+tz_cache = {}
+weather_cache = {}
+
+# USED TO STORE ACTIVITIES ALREADY ADDED TO PLAN
+added_activities = {}  # {ACTIVITY_ID: BOOL}
 
 def _cache_key(lat: float, lng: float, day_iso: str, tz: str):
     # round to collapse tiny lat/lng differences at city scale
@@ -776,7 +772,7 @@ def _build_base_plan(client: Client,
     return [p[0] for p in plans]
 
 
-def make_day_plan(client: Client, activities: List[Activity], day: date) -> PlanDay:
+def make_day_plan(client: Client, activities: List[Activity], day: date, person_satisfaction: dict) -> PlanDay:
     """
     Combined Haseeb + Yash logic:
 
@@ -871,7 +867,7 @@ def make_day_plan(client: Client, activities: List[Activity], day: date) -> Plan
     # ─────────────────────────────────────────────────────────────────────
     # 5) Use Yash's beam search to pick a good subset of flex activities
     # ─────────────────────────────────────────────────────────────────────
-    base_plans = _build_base_plan(client, flex, threshold=0.75, beam=8)
+    base_plans = _build_base_plan(client, flex, person_satisfaction, threshold=0.75, beam=8)
     primary_acts: List[Activity] = base_plans[0] if base_plans else []
     primary_ids = {a.id for a in primary_acts}
 
@@ -902,6 +898,13 @@ def make_day_plan(client: Client, activities: List[Activity], day: date) -> Plan
     # 6) Greedy scheduling of flex activities (Haseeb's engine)
     # ─────────────────────────────────────────────────────────────────────
     for act in acts_sorted:
+        i_score, ecreds, individual_scores = interest_score(client, act)
+        time_allocation = _allocate_time_by_interest(act, individual_scores)
+
+        added_activities.setdefault(act.id, False)
+        if added_activities[act.id]:
+            continue
+
         step = choose_step_minutes(act) or 60
 
         for start_dt in generate_candidate_times(act, day, step_minutes=step):
@@ -911,6 +914,14 @@ def make_day_plan(client: Client, activities: List[Activity], day: date) -> Plan
             if not is_weather_suitable(activity=act, start_dt=start_dt):
                 continue
 
+            can_add_time = all(
+                client.engagement_time[p] + time_allocation.get(p, 0)
+                <= client.daily_act_time_per_member
+                for p in time_allocation
+            )
+
+            if not can_add_time:
+                continue
             # Case A: fits without overlap
             if fits_no_overlap(plan.events, start_dt, act):
                 # Haseeb's budget-aware acceptance
@@ -920,6 +931,7 @@ def make_day_plan(client: Client, activities: List[Activity], day: date) -> Plan
 
                 if (over == 0.0) or (over > 0.0 and net >= SCORE_THRESHOLD):
                     plan.add(PlanEvent(act, start_dt))
+                    added_activities[act.id] = True
                     break
                 # if not worth going over budget, try next time slot
                 continue
@@ -934,6 +946,7 @@ def make_day_plan(client: Client, activities: List[Activity], day: date) -> Plan
 
                 if (over == 0.0) or (over > 0.0 and net >= SCORE_THRESHOLD):
                     # keep the repair + activity
+                    added_activities[act.id] = True
                     break
 
                 # otherwise roll back: remove newly-added act and restore times
@@ -944,10 +957,44 @@ def make_day_plan(client: Client, activities: List[Activity], day: date) -> Plan
                 continue
 
     # ─────────────────────────────────────────────────────────────────────
-    # 7) Finalize
+    # 7) UPDATE SATISFACTION COUNT
+    # ─────────────────────────────────────────────────────────────────────
+    for ev in plan.events:
+        if ev.activity.category != "food":  # Don't count meals
+            for person in getattr(client, "party_members", []):
+                iw = sum(client.interest(tag, person) for tag in ev.activity.tags)
+                if iw > 0:
+                    person_satisfaction[person] = person_satisfaction.get(person, 0) + 1
+
+    # ─────────────────────────────────────────────────────────────────────
+    # 8) Finalize
     # ─────────────────────────────────────────────────────────────────────
     plan.events.sort(key=lambda e: e.start_dt)
     return plan
+
+
+# ─────────────────────────────────────────────────────────────────────
+# FUNCTION TO MAKE A MULTI-DAY PLAN
+# ─────────────────────────────────────────────────────────────────────
+def make_multi_day_plan(client: Client, activities: list[Activity]) -> list[PlanDay]:
+    """
+    This function returns a list of plans, one for each day.
+    """
+    result = []
+    current_day = client.trip_start
+
+    # DICTIONARY TO STORE NUMBER OF SATISFACTIONS PER PERSON, USED FOR PRIORITIZATION OF ACTIVITIES.
+    person_satisfaction = {
+        person: 0
+        for person in getattr(client, "party_members", [])
+    }
+
+    for _ in client.trip_days:
+        result.append(make_day_plan(client, activities, current_day, person_satisfaction))
+        current_day += timedelta(1)
+        client.credits_left = {c["name"]: client.cpm for c in client.party_members}
+    added_activities.clear()    # ONCE DONE MAKING PLAN, RESET
+    return result
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -1113,7 +1160,7 @@ def repairB(plan: PlanDay,
 
 
 if __name__ == "__main__":
-    from datetime import date, datetime, time
+    from datetime import date, datetime
     from copy import deepcopy
     from .utils import load_people, load_events
 

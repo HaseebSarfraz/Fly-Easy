@@ -1,12 +1,11 @@
 from __future__ import annotations
 
 import math
-from dataclasses import dataclass, field
-from datetime import date, datetime, time, timedelta
-from enum import Enum
-from typing import Dict, List, Optional, Set, Tuple, Union
+from datetime import time, timedelta
+from typing import Dict, List, Optional, Union
 
-class Location: 
+
+class Location:
 
     lat: float
     lng: float 
@@ -63,16 +62,12 @@ class Client:
         prefer_outdoor: int,             # 0–10
         prefer_cultural: int,            # 0–10
         day_start_time: str,
-        day_end_time: str
-    ):
-        
-        self.party_members = party_members
+        day_end_time: str,
         early_risers: bool,
         dietary: Optional[dict],
         meal_prefs: Optional[dict]
     ):
-        self.adults_ages = [int(age) for age in adults_ages]
-        self.kids_ages = [int(age) for age in kids_ages]
+        self.party_members = party_members
         self.id = str(id)
         self.party_type = party_type
         self.religion = religion
@@ -90,10 +85,10 @@ class Client:
         self.day_start_min, self.day_end_min = _window_to_minutes(_to_minutes(day_start_time), _to_minutes(day_end_time))
         self.credits_left = {}
         # CODE BELOW GETS THE NUMBER OF CREDITS PER MEMBER
-        trip_days = (trip_end - trip_start).days
-        cpm = math.floor(trip_days // len(self.party_members))
+        self.trip_days = (trip_end - trip_start).days
+        self.cpm = math.floor(self.trip_days // len(self.party_members))
         for name in self.party_members:
-            self.credits_left[name] = cpm
+            self.credits_left[name] = self.cpm
 
         # THE NUMBER OF HOURS EACH MEMBER CAN GET PER EVENT IN THE DAY (ASSUMING RIGHT NOW THAT IT IS EQUAL PER PERSON)
         self.total_day_duration = self.day_end_min - self.day_start_min
