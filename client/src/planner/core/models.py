@@ -85,10 +85,10 @@ class Client:
         
         self.credits_left = {}
         # CODE BELOW GETS THE NUMBER OF CREDITS PER MEMBER
-        trip_days = (trip_end - trip_start).days
-        cpm = math.floor(trip_days // len(self.party_members))
+        self.trip_days = (trip_end - trip_start).days
+        self.cpm = math.floor(self.trip_days // len(self.party_members))
         for name in self.party_members:
-            self.credits_left[name] = cpm
+            self.credits_left[name] = self.cpm
 
         # THE NUMBER OF HOURS EACH MEMBER CAN GET PER EVENT IN THE DAY (ASSUMING RIGHT NOW THAT IT IS EQUAL PER PERSON)
         self.total_day_duration = self.day_end_min - self.day_start_min

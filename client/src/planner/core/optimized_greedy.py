@@ -26,7 +26,7 @@ from dataclasses import dataclass
 
 import requests
 import pandas as pd
-
+added_activities = {}
 
 @dataclass
 class PlannerConfig:
@@ -813,6 +813,28 @@ def _build_base_plan(client: Client,
     return [p[0] for p in plans]
 
 
+def make_multi_day_plan(client: Client, activities: list[Activity]) -> list[PlanDay]:
+    """
+    This function returns a list of plans, one for each day.
+    """
+    result = []
+    current_day = client.trip_start
+
+    # DICTIONARY TO STORE NUMBER OF SATISFACTIONS PER PERSON, USED FOR PRIORITIZATION OF ACTIVITIES.
+    person_satisfaction = {
+        person: 0
+        for person in getattr(client, "partymembers", [])
+    }
+
+    for _ in client.trip_days:
+        result.append(make_day_plan(client, activities, current_day, person_satisfaction))
+        current_day += timedelta(1)
+        client.credits_left = {c["name"]: client.cpm for c in client.party_members}
+    added_activities.clear()    # ONCE DONE MAKING PLAN, RESET
+    return result
+
+
+
 def make_day_plan(
     client: Client,
     activities: List[Activity],
@@ -959,6 +981,9 @@ def make_day_plan(
     # ─────────────────────────────────────────────────────────────────────
     for act in acts_sorted:
         step = choose_step_minutes(act) or 60
+        added_activities.setdefault(act.id, False)
+        if added_activities[act.id]:
+            continue
 
         for start_dt in generate_candidate_times(act, day, step_minutes=step):
             # Basic hard constraints
@@ -986,7 +1011,9 @@ def make_day_plan(
                     net = intrinsic - LAMBDA_BUDGET * over
 
                     if (over == 0.0) or (over > 0.0 and net >= SCORE_THRESHOLD):
+
                         plan.add(PlanEvent(act, start_dt))
+                        added_activities[act.id] = True
                         _bump_tags(tags_encountered, act)  # record tags for this day
                         break
                     # not worth it at this start time → try next candidate
@@ -995,6 +1022,7 @@ def make_day_plan(
                     # No budget logic: just require the intrinsic score to be decent
                     if intrinsic >= SCORE_THRESHOLD:
                         plan.add(PlanEvent(act, start_dt))
+                        added_activities[act.id] = True
                         _bump_tags(tags_encountered, act)
                         break
                     # otherwise, reject this time and try the next start
