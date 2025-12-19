@@ -2,7 +2,7 @@
 import math
 from planner.core.models import Client, Activity, Location
 from datetime import datetime
-from models import PlanDay
+from .models import PlanDay
 
 # TODO: BALANCING TASK -> OVER THE TRIP, YOU SATISFY EACH PERSON'S NEEDS ATLEAST ONCE
 MAX_CREDS_PER_MEMBER = 2  # MAX CREDITS ALLOWED PER MEMBER FOR AN EXTREME ACCOMMODATION
@@ -233,7 +233,6 @@ if __name__ == "__main__":
         print(f"   Tags so far: {tags_count}")
         print(f"   Conflict penalty applied: {conf_pen:.4f}\n")
     pop_bonus = act.popularity * 2.0    # slight nudge for popularity of the acitivity
-    return float(tag_sum) + pop_bonus
 
 
 def _clamp(x, lo=0.0, hi=10.0):

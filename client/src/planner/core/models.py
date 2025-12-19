@@ -67,12 +67,6 @@ class Client:
     ):
         
         self.party_members = party_members
-        early_risers: bool,
-        dietary: Optional[dict],
-        meal_prefs: Optional[dict]
-    ):
-        self.adults_ages = [int(age) for age in adults_ages]
-        self.kids_ages = [int(age) for age in kids_ages]
         self.id = str(id)
         self.party_type = party_type
         self.religion = religion
@@ -106,13 +100,6 @@ class Client:
         self.times_satisfied = {}
         for name in party_members:
             self.times_satisfied[name] = 0
-        self.early_risers = bool(early_risers)
-        self.dietary = dietary or {"restrictions": [], "avoid": [], "cuisine_likes": []}
-        self.meal_prefs = meal_prefs or {
-            "breakfast": {"start": "08:00", "end": "10:00"},
-            "lunch":     {"start": "12:00", "end": "14:00"},
-            "dinner":    {"start": "18:00", "end": "20:00"},
-        }
 
     def size(self) -> int:
         return len(self.party_members)
