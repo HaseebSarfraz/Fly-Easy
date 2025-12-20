@@ -688,17 +688,15 @@ def _hard_feasible_for_anchor(
 ) -> bool:
     cfg = cfg or PlannerConfig()
 
-    # Age / other “hard” checks
-    if cfg.use_hard_constraints and not hc_age_ok(client, act):
+    # Age + opening-hours (same as flex)
+    if cfg.use_hard_constraints and not hard_feasible(client, act, start_dt):
         return False
 
-    # Weather (Open-Meteo + blockers list)
+    # Weather (still treated as hard)
     if cfg.use_weather and not is_weather_suitable(act, start_dt):
         return False
 
     return True
-
-
 
 
 def fits_in_window(activity: Activity, client: Client, start_min: int) -> bool:
@@ -834,8 +832,8 @@ def make_multi_day_plan(client: Client, activities: list[Activity]) -> list[Plan
         for person in getattr(client, "partymembers", [])
     }
 
-    for _ in client.trip_days:
-        result.append(make_day_plan(client, activities, current_day, person_satisfaction))
+    for _ in range(client.trip_days):
+        result.append(make_day_plan(client, activities, current_day))
         current_day += timedelta(1)
         client.credits_left = {c["name"]: client.cpm for c in client.party_members}
     added_activities.clear()    # ONCE DONE MAKING PLAN, RESET
