@@ -1,6 +1,25 @@
-# src/planner/core/optimized_greedy
 from __future__ import annotations
 
+from dotenv import load_dotenv
+load_dotenv()
+
+tz_cache = {}
+weather_cache = {}
+
+from datetime import date, datetime, timedelta
+from typing import List
+from planner.core.models import Client, Activity, PlanDay, PlanEvent, Location
+from planner.core.constraints import hard_feasible, hc_open_window_ok, hc_age_ok
+from planner.core.timegrid import generate_candidate_times, choose_step_minutes
+from planner.core.scoring import interest_score
+from planner.core.utils import to_minutes
+from planner.core.scoring import base_value
+from .utils import place_to_activity
+from .food_filter import cuisine_query, violates_avoid
+from .places import fetch_nearby_food
+from math import cos, radians
+from planner.core.scoring import interest_score, duration_penalty, conflict_penalty
+from typing import Optional
 import re
 from dataclasses import dataclass
 from datetime import date, datetime, timedelta
@@ -8,6 +27,8 @@ from math import cos, radians
 from typing import List
 from typing import Optional
 
+
+import requests
 import pandas as pd
 import requests  # TO MAKE API REQUESTS
 
@@ -56,7 +77,7 @@ def _dbg(cfg: PlannerConfig, *args, **kwargs):
 
 RADIUS_STEPS = [1500, 3000, 4000]  # meters
 
-_DASHES = {"–", "—", "−"}  # common unicode dashes
+_DASHES = {"–","—","−"}
 
 tz_cache = {}
 weather_cache = {}
@@ -185,7 +206,6 @@ def is_weather_suitable(activity: Activity, start_dt: datetime) -> bool:
     dur_min = int(getattr(activity, "duration_min", 0) or 60)
     end_dt = start_dt + timedelta(minutes=dur_min)
 
-    # timezone (you already have _TZ_CACHE)
     try:
         city = getattr(activity, "city", "") or ""
         tz = _TZ_CACHE.get(city)
@@ -207,12 +227,10 @@ def is_weather_suitable(activity: Activity, start_dt: datetime) -> bool:
         print(f"[weather] Geocoding failed: {e}")
         return True
 
-    # fetch hourly once for each date the event touches (handles rare cross-midnight)
     try:
         day1 = start_dt.strftime("%Y-%m-%d")
         times1, codes1 = _fetch_hourly_once(activity.location.lat, activity.location.lng, day1, tz)
 
-        # if event ends the next calendar day, fetch that too
         times_all, codes_all = list(times1), list(codes1)
         if end_dt.date() != start_dt.date():
             day2 = end_dt.strftime("%Y-%m-%d")
@@ -224,7 +242,7 @@ def is_weather_suitable(activity: Activity, start_dt: datetime) -> bool:
             print("[weather] times/codes missing or mismatched; fail-open")
             return True
 
-        # select hours that overlap the event window
+
         s = pd.Timestamp(start_dt)
         e = pd.Timestamp(end_dt)
         event_names = []
@@ -235,7 +253,7 @@ def is_weather_suitable(activity: Activity, start_dt: datetime) -> bool:
                 event_names.append(WEATHER_CODE_MAP.get(int(code), str(code)))
 
         if not event_names:
-            return True  # no samples in window → don't block
+            return True
 
         return not any(name in blockers for name in event_names)
 
@@ -273,7 +291,6 @@ def _window_midpoint(start_hhmm, end_hhmm, duration_min=60, buffer_min=10):
 
 
 def _dist_m(lat1, lng1, lat2, lng2):
-    # Quick-and-cheerful planar distance (meters) for ranking; fine at city scale.
     k = 111_320.0
     dx = (lng2 - lng1) * k * cos(radians(lat1))
     dy = (lat2 - lat1) * k
@@ -453,11 +470,9 @@ def reconcile_meals_with_anchors(plan: PlanDay) -> None:
     # Work per anchor; if multiple anchors exist, this still behaves locally well
     for anchor in anchors:
         for meal in meals:
-            if not _overlaps_ev(meal.start_dt, meal.activity.duration_min, anchor.start_dt,
-                                anchor.activity.duration_min):
-                continue  # no conflict
+            if not _overlaps_ev(meal.start_dt, meal.activity.duration_min, anchor.start_dt, anchor.activity.duration_min):
+                continue
 
-            # Try BEFORE anchor
             buf = _travel_buffer_min(meal.activity, anchor.activity)
             new_end = anchor.start_dt - timedelta(minutes=buf)
             new_start = new_end - timedelta(minutes=meal.activity.duration_min)
@@ -468,9 +483,8 @@ def reconcile_meals_with_anchors(plan: PlanDay) -> None:
                     meal.start_dt = new_start
                     meal.end_dt = new_end
                     meal.activity.tags.append("note:eat before fixed event")
-                    continue  # resolved
+                    continue
 
-            # Try AFTER anchor
             buf2 = _travel_buffer_min(anchor.activity, meal.activity)
             new_start2 = anchor.end_dt + timedelta(minutes=buf2)
             if fits_no_overlap([e for e in plan.events if e is not meal and e is not anchor], new_start2,
@@ -478,9 +492,8 @@ def reconcile_meals_with_anchors(plan: PlanDay) -> None:
                 meal.start_dt = new_start2
                 meal.end_dt = new_start2 + timedelta(minutes=meal.activity.duration_min)
                 meal.activity.tags.append("note:eat after fixed event")
-                continue  # resolved
+                continue
 
-            # Try SHORTEN (quick bite, keep before if possible)
             quick_min = max(30, min(45, meal.activity.duration_min))  # 30–45min quick meal
             new_end3 = anchor.start_dt - timedelta(minutes=buf)
             new_start3 = new_end3 - timedelta(minutes=quick_min)
@@ -490,9 +503,8 @@ def reconcile_meals_with_anchors(plan: PlanDay) -> None:
                 meal.start_dt = new_start3
                 meal.end_dt = new_end3
                 meal.activity.tags.append("note:shortened quick meal")
-                continue  # resolved
+                continue
 
-            # Last resort: convert to grab-and-go snack (15–20 min) immediately before anchor
             snack_min = 15
             new_end4 = anchor.start_dt - timedelta(minutes=buf)
             new_start4 = new_end4 - timedelta(minutes=snack_min)
@@ -540,7 +552,7 @@ def _resolve_meal_conflict(plan, client, meal_ev, anchor_ev) -> bool:
 
     others = [e for e in plan.events if e is not meal_ev and e is not anchor_ev]
 
-    # 1) BEFORE
+
     buf = _travel_buffer_min(meal_ev.activity, anchor_ev.activity)
     new_end = anchor_ev.start_dt - timedelta(minutes=buf)
     new_start = new_end - timedelta(minutes=meal_ev.activity.duration_min)
@@ -549,7 +561,7 @@ def _resolve_meal_conflict(plan, client, meal_ev, anchor_ev) -> bool:
         meal_ev.activity.tags.append("note:eat before event")
         return True
 
-    # 2) AFTER
+
     buf2 = _travel_buffer_min(anchor_ev.activity, meal_ev.activity)
     new_start2 = anchor_ev.end_dt + timedelta(minutes=buf2)
     if fits_no_overlap(others, new_start2, meal_ev.activity):
@@ -558,7 +570,6 @@ def _resolve_meal_conflict(plan, client, meal_ev, anchor_ev) -> bool:
         meal_ev.activity.tags.append("note:eat after event")
         return True
 
-    # 3) SHORTEN before show (quick bite 30–45m)
     quick_min = max(30, min(45, meal_ev.activity.duration_min))
     new_end3 = anchor_ev.start_dt - timedelta(minutes=buf)
     new_start3 = new_end3 - timedelta(minutes=quick_min)
@@ -568,7 +579,6 @@ def _resolve_meal_conflict(plan, client, meal_ev, anchor_ev) -> bool:
         meal_ev.activity.tags.append("note:shortened quick meal")
         return True
 
-    # 4) GRAB-AND-GO immediately before show (15m)
     snack_min = 15
     new_end4 = anchor_ev.start_dt - timedelta(minutes=buf)
     new_start4 = new_end4 - timedelta(minutes=snack_min)
@@ -623,7 +633,6 @@ def _fixed_dt_candidates(act: Activity, day: date) -> list[datetime]:
     out = []
     fts = getattr(act, "fixed_times", []) or []
     for ft in fts:
-        # accept 'HH:MM' or 'HH:MM–HH:MM' (use the first time)
         s = ft
         if isinstance(ft, str) and " " not in ft and "-" in ft:
             s = ft.split("-")[0].strip()
@@ -655,14 +664,12 @@ def _normalize_time_str(s: str) -> str:
 
 def _parse_one_time(s: str, day: date) -> datetime | None:
     s = s.strip()
-    # 24h HH:MM
     if re.match(r"^\d{1,2}:\d{2}$", s):
         hh, mm = s.split(":")
         try:
             return datetime(day.year, day.month, day.day, int(hh), int(mm))
         except ValueError:
             return None
-    # AM/PM variants
     for fmt in ("%I:%M %p", "%I %p", "%I%p"):
         try:
             t = datetime.strptime(s.upper(), fmt).time()
@@ -799,7 +806,6 @@ def _build_base_plan(client: Client,
     """
     candidates: list[tuple[Activity, set, float]] = []
 
-    # Precompute which party members like which activity
     for act in activities:
         interested = set()
         total_score = 0.0
@@ -1469,7 +1475,6 @@ if __name__ == "__main__":
     }
     subset = [e for e in events if e.id in wanted_ids]
 
-    # --- NEW MOCK EVENT: Outdoor walk blocked by rain (PRESERVED) ---
     mock_rain_event = {
         "id": "e_mock_rain_01",
         "name": "Rainy Outdoor Stroll",
@@ -1558,8 +1563,8 @@ if __name__ == "__main__":
     # ─────────────────────────────────────────────────────────────────────────────
 
     # === Meteo forecast horizon handling ===
-    HORIZON_DAYS = 14  # Open-Meteo reliable forecast window
-    BASE_OFFSET_DAYS = 2  # start runs ~2 days from "today"
+    HORIZON_DAYS = 14
+    BASE_OFFSET_DAYS = 2
 
     today = date.today()
     _ROLLED_DAY0 = today + timedelta(days=min(BASE_OFFSET_DAYS, HORIZON_DAYS - 1))
@@ -1743,13 +1748,10 @@ if __name__ == "__main__":
         cp.trip_start, cp.trip_end = day1, day2
         return cp
 
-
-    # Base to clone from
     base_for_clone = client if "client" in locals() else (people[0] if people else None)
     if base_for_clone is None:
         raise RuntimeError("No base client to clone from; ensure load_people() returned at least one entry.")
 
-    # Create family & couple
     family_client = _mk_family(base_for_clone)
     couple_client = _mk_couple(base_for_clone)
 

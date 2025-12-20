@@ -1,5 +1,8 @@
 # src/planner/core/scoring.py
 import math
+from planner.core.models import Client, Activity, Location
+from datetime import datetime
+from .models import PlanDay
 
 from planner.core.models import Client, Activity
 

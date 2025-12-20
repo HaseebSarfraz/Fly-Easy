@@ -3,13 +3,20 @@ from flask_cors import CORS
 from hotel_search_engine import HotelSearchEngine
 from restaurant_search_engine import RestaurantSearchEngine
 from flight_tracker import FlightTracker
+from event_planner_routes import event_planner_bp  # ADD THIS LINE
 import os
 import base64
 import json
 from datetime import datetime
+from dotenv import load_dotenv
+
+load_dotenv()
 
 app = Flask(__name__)
 CORS(app)
+
+# Register event planner blueprint
+app.register_blueprint(event_planner_bp)  # ADD THIS LINE
 
 # Create uploads directory if it doesn't exist
 UPLOAD_FOLDER = "uploads/boarding_passes"
@@ -169,7 +176,6 @@ def get_boarding_passes():
                     metadata["imageUrl"] = f"/boarding_pass_image/{metadata['filename']}"
                     passes.append(metadata)
         
-        # Sort by timestamp (newest first)
         passes.sort(key=lambda x: x.get("timestamp", ""), reverse=True)
         
         return jsonify({
@@ -244,4 +250,5 @@ def airport_tracker(airport_code):
 
 if __name__ == "__main__":
     print("Starting Flask on http://0.0.0.0:5001 …")
+    print("Event Planner endpoints:")
     app.run(host="0.0.0.0", port=5001, debug=True)

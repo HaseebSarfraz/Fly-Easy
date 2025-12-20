@@ -5,6 +5,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { NativeStackScreenProps } from "@react-navigation/native-stack";
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
+const AERODATABOX_API_KEY = process.env.REACT_APP_AERODATABOX_API_KEY || '';
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
 interface FlyingPlaneProps {
@@ -75,7 +76,7 @@ export default function LandingPageScreen({ navigation }: LandingPageScreenProps
         `https://aerodatabox.p.rapidapi.com/flights/number/${flight}/${today}`,
         {
             headers: {
-            'X-RapidAPI-Key': 'a75d212df3msh80b4775bd20989bp1ac458jsn28c53dce7038',
+            'X-RapidAPI-Key': AERODATABOX_API_KEY,
             'X-RapidAPI-Host': 'aerodatabox.p.rapidapi.com'
             }
         }
@@ -99,7 +100,7 @@ export default function LandingPageScreen({ navigation }: LandingPageScreenProps
         `https://aerodatabox.p.rapidapi.com/flights/number/${flightNumber}/${today}`,
         {
             headers: {
-            'X-RapidAPI-Key': 'a75d212df3msh80b4775bd20989bp1ac458jsn28c53dce7038',
+            'X-RapidAPI-Key': AERODATABOX_API_KEY,
             'X-RapidAPI-Host': 'aerodatabox.p.rapidapi.com'
             }
         }

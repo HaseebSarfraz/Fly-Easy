@@ -1,0 +1,6 @@
+{
+  "dependencies": {
+    "pandas": "^0.0.3",
+    "pytest": "^1.0.0"
+  }
+}
