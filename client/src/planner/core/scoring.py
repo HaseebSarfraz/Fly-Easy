@@ -1,8 +1,8 @@
 # src/planner/core/scoring.py
 import math
-from planner.core.models import Client, Activity, Location
 
-# TODO: BALANCING TASK -> OVER THE TRIP, YOU SATISFY EACH PERSON'S NEEDS ATLEAST ONCE
+from planner.core.models import Client, Activity
+
 MAX_CREDS_PER_MEMBER = 2  # MAX CREDITS ALLOWED PER MEMBER FOR AN EXTREME ACCOMMODATION
 HOURS_PER_CREDIT = 2  # EACH CREDIT CAN BE USED FOR A 2-HOUR ACCOMMODATION
 EXTREME_INTEREST_MIN_SCORE = 8.5  # MINIMUM SCORE FOR SOMEONE TO BE CONSIDERED "EXTREMELY INTERESTED"
@@ -37,7 +37,7 @@ def interest_score(client: Client, act: Activity) -> tuple[float, dict, dict]:
     this "extreme interest" event is not added to the planner.
     """
     activity_hrs = act.duration_min / 60
-    creds_required = math.ceil(activity_hrs / 2)  # NUMBER OF CREDITS REQUIRED FOR EXTREME ACCOMODATION
+    creds_required = math.ceil(activity_hrs / 2)  # NUMBER OF CREDITS REQUIRED FOR EXTREME ACCOMMODATION
     interest_scores = {}  # INTEREST SCORES OF THE ENTIRE FAMILY
     not_ext_interested = []  # LIST OF ALL "NOT EXTREMELY INTERESTED" SCORES
     ext_interested = []  # LIST OF ALL "EXTREMELY INTERESTED" SCORES
@@ -46,13 +46,13 @@ def interest_score(client: Client, act: Activity) -> tuple[float, dict, dict]:
 
     for member in client.party_members:  # ITERATES OVER EACH MEMBER IN THE FAMILY
         member_interest = 0  # THE INTEREST SCORE OF THIS MEMBER
-        for tag in act.tags:  # ITERATES OVER THE ACTIVITY "TAGS", USED FOR CALCULATING THE INTEREST SCORE OF THIS MEMBER
+        for tag in act.tags:  # ITERATES OVER THE ACTIVITY TAGS, USED FOR CALCULATING THE INTEREST SCORE OF THIS MEMBER
             # THE LINE BELOW INCREASES THIS MEMBER'S INTEREST SCORE BASED ON THE CURRENT TAG'S INTEREST AND AGE SCORE
             member_interest += client.interest(tag, member)
         interest_scores[member] = member_interest  # STORES THIS MEMBER'S OVERALL INTEREST SCORE FOR THIS EVENT
         if member_interest >= EXTREME_INTEREST_MIN_SCORE:  # LIST OF SCORES FOR THOSE EXTREMELY INTERESTED
             ext_interested.append(member_interest)  # IF THE MEMBER HAS A HIGH INTEREST SCORE, ADD THEM TO THIS LIST
-            # ext_interested_creds[member] = client.credits_left[member]  # STORE THIS PERSON'S "ACCOMOCATION" CREDITS
+            # ext_interested_creds[member] = client.credits_left[member]  # STORE THIS PERSON'S "ACCOMMODATION" CREDITS
             ext_interested_creds[member] = 0
         else:  # LIST OF SCORES FOR THOSE NOT EXTREMELY INTERESTED (INTEREST SCORE COULD STILL BE HIGH)
             not_ext_interested.append(member_interest)  # NOT-SUPER-INTERESTED MEMBERS GET ADDED HERE
@@ -89,20 +89,19 @@ def interest_score(client: Client, act: Activity) -> tuple[float, dict, dict]:
             ext_interested_creds[ext_interest_sorted[i]] = use_creds
             creds_required -= use_creds
             i += 1
-    if creds_required == 0 and extreme_score > average_interest_score:  # EVERYONE IN THE GROUP HAS ENOUGH CREDITS TO DO THIS
+    if creds_required == 0 and extreme_score > average_interest_score:  # EVERYONE IN THE GROUP HAS ENOUGH CREDITS
         return extreme_score, ext_interested_creds, interest_scores  # RETURN THE MAX SCORE
     else:  # OTHERWISE IF THERE IS NOT ENOUGH CREDITS LEFT THEN WE CONSIDER THIS A REGULAR EVENT
         return average_interest_score, {}, interest_scores
 
 
-# FIRST PENALTY APPLIED IN INITIAL SCORING
+# PENALTIES APPLIED ON SOFT CONSTRAINT VIOLATIONS
 def duration_penalty(act: Activity, client: Client, avg_interest_score: float, gamma: float = 1.2) -> float:
     base = max(0, math.ceil(1 - avg_interest_score / 10))  # ensure non-negative
     dur_pen = (act.duration_min / client.total_day_duration) * (base ** gamma)
     return min(10, dur_pen * 10)
 
 
-# SECOND SET OF PENALTIES APPLIED AFTER SECOND WAVE OF PLANNING
 def conflict_penalty(act: Activity, client: Client, tags_count: dict[str, int],
                       gamma: float = 1.1) -> float:
     """
@@ -160,4 +159,3 @@ def base_value(client: Client, act: Activity) -> float:
     v_bonus = _vibe_bonus(client, act)            # usually 0–0.6-ish
 
     return float(i_score + v_bonus)
-
