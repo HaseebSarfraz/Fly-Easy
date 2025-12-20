@@ -292,6 +292,75 @@ Results are ranked and sampled to avoid repetition and preserve diversity.
 
 ---
 
+## 14. Future updates
+
+During the development phase of the project we came up with more ideas
+on what to implement in the future to further extend on this planner's abilities.
+
+### 14.1 Real-time energy-based plan changes
+
+A natural extension is an energy-aware planner. If travelers optionally connect fitness or health trackers (e.g., step count, heart rate variability, sleep quality), the planner could infer real-time fatigue levels to suggest a different plan more suitable to their current energy state. 
+
+This could be done in a number of ways, most notably:
+* Reducing events with considerable energy requirements.
+* Reducing event density, adding longer and/or more frequent breaks in-between activities.
+* Reordering of events to suggest higher-energy events later.
+
+This would allow for a more dynamic activity planner, bringing the planning algorithm's abilities a step closer to a human's mind.
+
+### 14.2 Medical, Physical, and Neurological conditions
+
+Future versions of this planner may consider asking the users for any medical, physical, or neurological conditions so 
+that the planner does not suggest activities that can harm them or anyone in their group. Restrictions include:
+
+* Mobility restrictions
+* Neurological sensitivities (eg. epilepsy)
+* Chronic conditions (eg. cancer, diabetes)
+
+any provided conditions would be treated as hard constraints as a planner must prioritize user safety, making the algorithm
+more ethical.
+
+### 14.3 Trip groupings
+
+This is a feature we really wanted to highlight as part of our future plans. **Trip groupings** involve two or more users
+in the same city/area during overlapping time window to group together and explore activities together.
+
+This enables:
+* Suggesting events popular to socially adjacent families
+* Promoting shared events when two or more groups share common interests
+* Encouraging social interaction during travel or while attending the event(s)
+
+For example, if one family attends a music-focused event that another similar family has not yet planned, the system may recommend it as a socially reinforced suggestion. 
+This improves discovery, shared experiences, and social connectivity without forcing participation.
+
+Together, these future directions highlight the planner’s potential to evolve from a static itinerary generator into a responsive, socially-aware travel companion.
+
+---
+## 15. Future planner optimizations
+
+Towards the end of the project, we wanted to consider more external factors which could influence the results of our planner, these include:
+
+### 15.1 Interest score adjusted by the activity's "age curve"
+
+While the planner is able to filter out activities based on age eligibility, it uses a monotone interest scoring system
+for every person. This means the planner does not take into account which person would *actually* enjoy the activity more than
+the other, even if their interest weights were identical, and it mainly comes down to age. 
+
+Suppose person A is 34 years old, person B is 13 years old, 
+and both love amusement parks equally. If Canada's Wonderland is a candidate activity, people of around age 18 enjoy Canada's Wonderland the most,
+so in that sense, person B should be given a higher interest score than person A. This means each activity should also have a 
+*median* age, representing the age of at least half of its attendees.
+
+### 15.2 Base plan: prioritizing leftover unsatisfied people
+
+When constructing a base plan, there are several factors that can influence the results of the base plan. If weather persists, 
+or all of the activities for a certain person cannot be added to the base plan, then this person should be prioritized on the next
+day for the base plan's construction so one of their activities gets added first to ensure no overlaps with non-anchor activites.
+
+By incorporating factors such as age-adjusted interest scores and prioritization of unsatisfied attendees, the planner can generate schedules that feel more personalized and human-like, while improving fairness and overall satisfaction across all participants.
+
+---
+
 ## Summary
 
 The planner is fundamentally **constraint-first**. Hard constraints guarantee feasibility, while soft constraints guide optimization. The system is intentionally conservative, prioritizing realistic and valid itineraries over perfect preference satisfaction.
