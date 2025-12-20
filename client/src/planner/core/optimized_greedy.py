@@ -1,10 +1,11 @@
 from __future__ import annotations
-# src/planner/core/solver.py
+
+from dotenv import load_dotenv
+load_dotenv()
 
 tz_cache = {}
 weather_cache = {}
 
-# src/planner/core/optimized_greedy
 from datetime import date, datetime, timedelta
 from typing import List
 from planner.core.models import Client, Activity, PlanDay, PlanEvent, Location

@@ -1,7 +1,17 @@
 # src/planner/core/places.py
 import os, math, requests
+from dotenv import load_dotenv
 
-GOOGLE_PLACES_KEY = os.getenv("GOOGLE_PLACES_API_KEY", "")
+load_dotenv()
+
+def _get_google_places_key():
+    """Get the API key, reading from environment each time."""
+    key = os.getenv("GOOGLE_PLACES_API_KEY", "")
+    if not key:
+        print("[places] WARNING: GOOGLE_PLACES_API_KEY not found in environment!")
+    else:
+        print(f"[places] API key loaded: {key[:10]}...{key[-4:]}")  # Debug print
+    return key
 
 def _get(url, params):
     """Make API request and return response data with proper error handling."""
@@ -37,7 +47,8 @@ def _get(url, params):
         return {"status": "UNKNOWN_ERROR", "results": [], "error_message": str(e)}
 
 def fetch_nearby_food(lat, lng, radius_m=1200, query=None, opennow=True):
-    if not GOOGLE_PLACES_KEY:
+    api_key = _get_google_places_key()
+    if not api_key:
         print("[places] ERROR: GOOGLE_PLACES_API_KEY environment variable is not set!")
         return {"status": "NO_KEY", "results": []}
 
@@ -47,18 +58,26 @@ def fetch_nearby_food(lat, lng, radius_m=1200, query=None, opennow=True):
             "query": f"{query} restaurant",
             "location": f"{lat},{lng}",
             "radius": radius_m,
-            "key": GOOGLE_PLACES_KEY,
+            "key": api_key,  # Use the dynamically read key
         }
-        # TextSearch ignores opennow in some cases; acceptable.
     else:
         url = "https://maps.googleapis.com/maps/api/place/nearbysearch/json"
         params = {
             "location": f"{lat},{lng}",
             "radius": radius_m,
             "type": "restaurant",
-            "key": GOOGLE_PLACES_KEY,
+            "key": api_key,
         }
         if opennow:
             params["opennow"] = "true"
 
     return _get(url, params)
+
+if __name__ == "__main__":
+    key = _get_google_places_key()
+    print(f"Key loaded: {'YES' if key else 'NO'}")
+    if key:
+        # Test API call
+        result = fetch_nearby_food(43.653, -79.383, query="pizza")
+        print(f"Status: {result.get('status')}")
+        print(f"Results: {len(result.get('results', []))}")

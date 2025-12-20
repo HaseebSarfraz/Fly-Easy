@@ -8,6 +8,9 @@ import os
 import base64
 import json
 from datetime import datetime
+from dotenv import load_dotenv
+
+load_dotenv()
 
 app = Flask(__name__)
 CORS(app)

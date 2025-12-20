@@ -168,15 +168,27 @@ def generate_schedule():
             use_repairB=True,
             debug_print=False
         )
+
+        scheduled_across_days = set()
         
         while current_day <= client.trip_end:
             print(f"[Event Planner] Planning {current_day}")
+
+            available_for_day = [
+                a for a in city_activities 
+                if a.id not in scheduled_across_days or a.category == 'food'  # Allow food repeats
+            ]
+
             day_plan = make_day_plan(
                 client=client,
-                activities=city_activities,
+                activities=available_for_day,
                 day=current_day,
                 config=config
             )
+            for event in day_plan.events:
+                if event.activity.category != 'food':
+                    scheduled_across_days.add(event.activity.id)
+        
             plan_days.append(day_plan)
             current_day += timedelta(days=1)
         

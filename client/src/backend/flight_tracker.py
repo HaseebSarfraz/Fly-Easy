@@ -4,12 +4,14 @@ import requests
 from typing import Any, Dict, List, Optional, Tuple
 from datetime import datetime, timedelta
 import time
+import os
 
+AERODATABOX_API_KEY = os.getenv("AERODATABOX_API_KEY")
 class FlightTracker:
 
     def __init__(self, airport_data_file: str = "./data/airport_tracker_codes.json"):
         self.airport_code = None
-        self.api_key = "a75d212df3msh80b4775bd20989bp1ac458jsn28c53dce7038"
+        self.api_key = AERODATABOX_API_KEY
         self.api_host = "aerodatabox.p.rapidapi.com"
         
         self.static_airports = self._load_airport_data(airport_data_file)
