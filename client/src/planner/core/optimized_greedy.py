@@ -723,11 +723,11 @@ def _hard_feasible_for_anchor(
 ) -> bool:
     cfg = cfg or PlannerConfig()
 
-    # Age / other “hard” checks
-    if cfg.use_hard_constraints and not hc_age_ok(client, act):
+    # Age + opening-hours (same as flex)
+    if cfg.use_hard_constraints and not hard_feasible(client, act, start_dt):
         return False
 
-    # Weather (Open-Meteo + blockers list)
+    # Weather (still treated as hard)
     if cfg.use_weather and not is_weather_suitable(act, start_dt):
         return False
 
