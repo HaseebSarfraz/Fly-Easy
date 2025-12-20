@@ -1,0 +1,14 @@
+{
+  "client_id": "p_family_youngkids_01",
+  "trip_start": "2025-11-22",
+  "trip_end": "2025-11-26",
+  "num_events_tested": 20,
+  "duplicates": {
+    "improvement_activities": 2,
+    "improvement_restaurants": 0
+  },
+  "energy": {
+    "total_with": 400.25,
+    "total_without": 541.5
+  }
+}

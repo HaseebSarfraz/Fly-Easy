@@ -1,0 +1,13 @@
+{
+  "duplicates": {
+    "with_tracking": 1,
+    "without_tracking": 3,
+    "improvement": 2
+  },
+  "energy": {
+    "total_with": 481.5,
+    "total_without": 541.5,
+    "violations_with": 3,
+    "violations_without": 3
+  }
+}

@@ -103,6 +103,13 @@ class Client:
         self.times_satisfied = {}
         for name in party_members:
             self.times_satisfied[name] = 0
+        
+        # ENERGY TRACKING: Each family member starts with 100 energy points
+        # Energy decreases with activities and restores between days
+        self.energy_levels = {}
+        for name in party_members:
+            self.energy_levels[name] = 100.0  # Start at 100% energy
+        
         self.early_risers = bool(early_risers)
         self.dietary = dietary or {"restrictions": [], "avoid": [], "cuisine_likes": []}
         self.meal_prefs = meal_prefs or {
@@ -169,6 +176,10 @@ class Activity:
         self.weather_blockers = list(weather_blockers or [])
         self.popularity = float(popularity)
         self.vibe_tags = list(vibe_tags or [])
+        
+        # Energy level: inferred from category and tags if not explicitly set
+        # Can be overridden by setting energy_level in JSON
+        self.energy_level = getattr(self, 'energy_level', None)
 
 
   # helpers we might need.

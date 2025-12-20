@@ -13,6 +13,10 @@ from .food_filter import cuisine_query, violates_avoid
 from .places import fetch_nearby_food
 from math import cos, radians
 from planner.core.scoring import interest_score, duration_penalty, conflict_penalty
+from .energy import (
+    has_sufficient_energy, deduct_energy, restore_energy, 
+    get_min_family_energy, calculate_activity_energy_cost
+)
 from typing import Optional
 import re
 from heapq import heappush, heappop
@@ -42,6 +46,9 @@ class PlannerConfig:
 
     # Allow RepairB to nudge events and make room
     use_repairB: bool = True
+
+    # Energy tracking: prevent scheduling high-energy activities when family is tired
+    use_energy: bool = True
 
     # Debug prints inside make_day_plan (anchors, etc)
     debug_print: bool = True
@@ -550,8 +557,12 @@ def _resolve_meal_conflict(plan, client, meal_ev, anchor_ev) -> bool:
     return True
 
 
-def pre_add_rests(plan, client, day, center_loc=None, default_duration_min=60):
+def pre_add_rests(plan, client, day, center_loc=None, default_duration_min=60, added_activities_tracker=None):
     center = center_loc or client.home_base
+    if added_activities_tracker is not None:
+        tracker = added_activities_tracker
+    else:
+        tracker = added_activities
 
     # derive avoid/required terms below (see Issue #2)
     req_terms, avoid_terms = _derive_diet_terms(client.dietary or {})
@@ -585,6 +596,58 @@ def pre_add_rests(plan, client, day, center_loc=None, default_duration_min=60):
                 popularity=0.0,
                 vibe_tags=[],
             )
+        
+        # Check if this restaurant/meal has already been added on a previous day
+        # For Google Places restaurants, check by place_id (rest_{place_id})
+        # For fallback meals, we allow them per day since they're day-specific (meal_{meal}_{date})
+        if meal_act.id.startswith("rest_"):
+            # This is a Google Places restaurant - check if we've already used it
+            max_attempts = 3
+            attempts = 0
+            while tracker.get(meal_act.id, False) and attempts < max_attempts:
+                # Skip this restaurant, try to find a different one
+                # Try with different cuisine preferences or no preferences
+                if attempts == 0:
+                    # Try without cuisine preference
+                    place = _best_restaurant_for_window(center, center.city, [], avoid_terms=avoid_terms, required_terms=req_terms)
+                elif attempts == 1:
+                    # Try with just one cuisine from likes
+                    alt_likes = likes[1:] if len(likes) > 1 else []
+                    place = _best_restaurant_for_window(center, center.city, alt_likes, avoid_terms=avoid_terms, required_terms=req_terms)
+                else:
+                    # Last attempt: any restaurant
+                    place = _best_restaurant_for_window(center, center.city, [], avoid_terms=avoid_terms, required_terms=req_terms)
+                
+                if place:
+                    meal_act = place_to_activity(place, center.city, default_duration_min, 0.0)
+                else:
+                    # No restaurant found, use fallback
+                    break
+                attempts += 1
+            
+            # If we still have a duplicate after attempts, use fallback meal for this day
+            if tracker.get(meal_act.id, False):
+                meal_act = Activity(
+                    id=f"meal_{meal}_{day.isoformat()}",
+                    name=f"{meal.capitalize()} (nearby options)",
+                    category="food",
+                    tags=["food","restaurant"],
+                    venue=center.city,
+                    city=center.city,
+                    location=center,
+                    duration_min=default_duration_min,
+                    cost_cad=0.0,
+                    age_min=0, age_max=99,
+                    opening_hours={"daily":["06:00","23:00"]},
+                    fixed_times=[],
+                    requires_booking=False,
+                    weather_blockers=[],
+                    popularity=0.0,
+                    vibe_tags=[],
+                )
+        
+        # Mark this restaurant/meal as added (fallback meals are day-specific, so duplicates are fine)
+        tracker[meal_act.id] = True
         plan.add(PlanEvent(meal_act, start_dt))
 
 def _fixed_dt_candidates(act: Activity, day: date) -> list[datetime]:
@@ -827,18 +890,41 @@ def make_multi_day_plan(client: Client, activities: list[Activity]) -> list[Plan
     """
     result = []
     current_day = client.trip_start
+    
+    # Track activities and restaurants already added across all days
+    # This dictionary persists across days to prevent duplicates
+    added_activities_multi_day = {}
+    
+    # Calculate number of days in trip
+    trip_days = (client.trip_end - client.trip_start).days + 1
+    
+    # Initialize energy levels if not already set
+    if not hasattr(client, 'energy_levels') or not client.energy_levels:
+        if hasattr(client, 'party_members'):
+            client.energy_levels = {name: 100.0 for name in client.party_members}
 
-    # DICTIONARY TO STORE NUMBER OF SATISFACTIONS PER PERSON, USED FOR PRIORITIZATION OF ACTIVITIES.
-    person_satisfaction = {
-        person: 0
-        for person in getattr(client, "partymembers", [])
-    }
-
-    for _ in client.trip_days:
-        result.append(make_day_plan(client, activities, current_day, person_satisfaction))
-        current_day += timedelta(1)
-        client.credits_left = {c["name"]: client.cpm for c in client.party_members}
-    added_activities.clear()    # ONCE DONE MAKING PLAN, RESET
+    for day_num in range(trip_days):
+        # Restore energy at the start of each day (except the first day)
+        if day_num > 0:
+            restore_energy(client)
+        
+        # Pass the tracking dictionary to make_day_plan so it can check and update it
+        plan = make_day_plan(
+            client, 
+            activities, 
+            current_day, 
+            config=None,
+            added_activities_tracker=added_activities_multi_day
+        )
+        result.append(plan)
+        current_day += timedelta(days=1)
+        # Reset credits per day if needed
+        # Note: party_members is a dict where keys are member names
+        if hasattr(client, 'credits_left') and hasattr(client, 'party_members'):
+            client.credits_left = {name: client.cpm for name in client.party_members}
+    
+    # Clear the global added_activities at the end (for backward compatibility)
+    added_activities.clear()
     return result
 
 
@@ -848,11 +934,17 @@ def make_day_plan(
     activities: List[Activity],
     day: date,
     config: Optional[PlannerConfig] = None,
+    added_activities_tracker: Optional[dict] = None,
 ) -> PlanDay:
     """
     Combined Haseeb + Yash logic with toggles via PlannerConfig.
     """
     cfg = config or PlannerConfig()
+    # Use provided tracker or fall back to global for backward compatibility
+    if added_activities_tracker is not None:
+        tracker = added_activities_tracker
+    else:
+        tracker = added_activities
 
     # ─────────────────────────────────────────────────────────────────────
     # 1) Split into anchors vs flex
@@ -883,7 +975,7 @@ def make_day_plan(
     # ─────────────────────────────────────────────────────────────────────
     plan = PlanDay(day)
     if cfg.use_meals:
-        pre_add_rests(plan, client, day, center_loc=client.home_base)
+        pre_add_rests(plan, client, day, center_loc=client.home_base, added_activities_tracker=tracker)
 
     # ─────────────────────────────────────────────────────────────────────
     # 4) Place anchors first, reshaping meals around them
@@ -910,7 +1002,10 @@ def make_day_plan(
 
             anchor_ev = PlanEvent(act, start_dt)
             plan.add(anchor_ev)
-            _dbg(cfg, f"[anchor] added {act.id} @ {start_dt.time()} (dur {act.duration_min}m)")
+            # Deduct energy for fixed-time activities too (if energy tracking enabled)
+            if cfg.use_energy:
+                deduct_energy(client, act)
+                _dbg(cfg, f"[anchor] added {act.id} @ {start_dt.time()} (dur {act.duration_min}m), energy: {get_min_family_energy(client):.1f}")
 
             ok = True
             meals = [
@@ -989,9 +1084,26 @@ def make_day_plan(
     # ─────────────────────────────────────────────────────────────────────
     for act in acts_sorted:
         step = choose_step_minutes(act) or 60
-        added_activities.setdefault(act.id, False)
-        if added_activities[act.id]:
+        tracker.setdefault(act.id, False)
+        if tracker[act.id]:
             continue
+
+        # ENERGY CHECK: Skip high-energy activities if family is too tired
+        if cfg.use_energy:
+            # Check minimum energy before considering this activity
+            min_energy = get_min_family_energy(client)
+            energy_cost = calculate_activity_energy_cost(act)
+            
+            # If activity requires more energy than available, skip it
+            # (Fixed-time activities are exceptions - they must be scheduled)
+            if not _has_fixed_times(act) and min_energy < energy_cost:
+                _dbg(cfg, f"[energy] Skipping {act.id} ({act.name}): family energy ({min_energy:.1f}) < activity cost ({energy_cost:.1f})")
+                continue
+            
+            # Additional check: ensure family has sufficient energy for activity type
+            if not has_sufficient_energy(client, act):
+                _dbg(cfg, f"[energy] Insufficient energy for {act.id} ({act.name}): min_energy={min_energy:.1f}")
+                continue
 
         for start_dt in generate_candidate_times(act, day, step_minutes=step):
             # Basic hard constraints
@@ -1021,8 +1133,12 @@ def make_day_plan(
                     if (over == 0.0) or (over > 0.0 and net >= SCORE_THRESHOLD):
 
                         plan.add(PlanEvent(act, start_dt))
-                        added_activities[act.id] = True
+                        tracker[act.id] = True
                         _bump_tags(tags_encountered, act)  # record tags for this day
+                        # Deduct energy after adding activity (if energy tracking enabled)
+                        if cfg.use_energy:
+                            deduct_energy(client, act)
+                            _dbg(cfg, f"[energy] Added {act.id}, energy after: {get_min_family_energy(client):.1f}")
                         break
                     # not worth it at this start time → try next candidate
                     continue
@@ -1030,13 +1146,22 @@ def make_day_plan(
                     # No budget logic: just require the intrinsic score to be decent
                     if intrinsic >= SCORE_THRESHOLD:
                         plan.add(PlanEvent(act, start_dt))
-                        added_activities[act.id] = True
+                        tracker[act.id] = True
                         _bump_tags(tags_encountered, act)
+                        # Deduct energy after adding activity (if energy tracking enabled)
+                        if cfg.use_energy:
+                            deduct_energy(client, act)
+                            _dbg(cfg, f"[energy] Added {act.id}, energy after: {get_min_family_energy(client):.1f}")
                         break
                     # otherwise, reject this time and try the next start
                     continue
 
             # Case B: try to repair by nudging existing events (RepairB)
+            # But first check energy again (might have changed)
+            if cfg.use_energy and not has_sufficient_energy(client, act):
+                _dbg(cfg, f"[energy] Insufficient energy for {act.id} in repair attempt")
+                continue
+                
             if not cfg.use_repairB:
                 # not allowed to nudge, just try next time slot
                 continue
@@ -1064,6 +1189,10 @@ def make_day_plan(
 
                     if (over == 0.0) or (over > 0.0 and net >= SCORE_THRESHOLD):
                         _bump_tags(tags_encountered, act)
+                        # Deduct energy after adding activity via repair (if energy tracking enabled)
+                        if cfg.use_energy:
+                            deduct_energy(client, act)
+                            _dbg(cfg, f"[energy] Added {act.id} via repair, energy after: {get_min_family_energy(client):.1f}")
                         break
 
                     # otherwise roll back: remove newly-added act and restore times
@@ -1074,6 +1203,10 @@ def make_day_plan(
                 else:
                     if intrinsic >= SCORE_THRESHOLD:
                         _bump_tags(tags_encountered, act)
+                        # Deduct energy after adding activity via repair (if energy tracking enabled)
+                        if cfg.use_energy:
+                            deduct_energy(client, act)
+                            _dbg(cfg, f"[energy] Added {act.id} via repair, energy after: {get_min_family_energy(client):.1f}")
                         break
 
                     # intrinsic too low → rollback RepairB changes

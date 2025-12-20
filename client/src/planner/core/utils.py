@@ -103,6 +103,9 @@ def load_events(path: Path = DATA_DIR / "events.json") -> List[Activity]:
             # NEW: keep vibe tags you added in events.json
             vibe_tags=d.get("vibe_tags", []),
         )
+        # Set energy_level if provided in JSON (optional)
+        if "energy_level" in d:
+            a.energy_level = float(d["energy_level"])
         out.append(a)
     return out
 
