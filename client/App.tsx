@@ -14,10 +14,9 @@ import AirportTracker from "./src/screens/AirportTracker/AirportTracker";
 import LoginPageScreen from "./src/screens/Login/LoginScreen";
 import LoginPage from "./src/screens/Login/LoginPage";
 import SignUpPageScreen from "./src/screens/Login/SignUpPage";
-import { urlToHttpOptions } from "url";
-import { title } from "process";
 import SplashAnimation from "./src/screens/StartAnimation/SplashAnimation";
-import EventPreferences from "./src/screens/EventPlanner/EventPreferences";
+import EventPreferencesScreen from "./src/screens/EventPlanner/EventPreferences";
+import EventSchedulerScreen from "./src/screens/EventPlanner/EventScheduler";
 
 
 export type RootStackParamList = {
@@ -67,9 +66,13 @@ export type RootStackParamList = {
     onSave?: () => void;
   };
   EventPreferences: undefined;
+  
+  EventScheduler: {
+    preferences: any;
+  };
 };
 
-const Stack = createNativeStackNavigator<RootStackParamList>(); // <-- add the generic
+const Stack = createNativeStackNavigator<RootStackParamList>();
 
 export default function App() {
     const [showSplash, setShowSplash] = useState(true);
@@ -108,8 +111,13 @@ export default function App() {
                 />
                 <Stack.Screen 
                     name="EventPreferences" 
-                    component={EventPreferences}
-                    options={{ title: "Airport Tracker" }}
+                    component={EventPreferencesScreen}
+                    options={{ title: "Event Planner" }}
+                />
+                <Stack.Screen 
+                    name="EventScheduler" 
+                    component={EventSchedulerScreen}
+                    options={{ title: "Your Itinerary" }}
                 />
             </Stack.Navigator>
         </NavigationContainer>

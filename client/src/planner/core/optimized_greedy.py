@@ -587,7 +587,6 @@ def _fixed_dt_candidates(act: Activity, day: date) -> list[datetime]:
     out = []
     fts = getattr(act, "fixed_times", []) or []
     for ft in fts:
-        # accept 'HH:MM' or 'HH:MM–HH:MM' (use the first time)
         s = ft
         if isinstance(ft, str) and " " not in ft and "-" in ft:
             s = ft.split("-")[0].strip()
@@ -1520,8 +1519,8 @@ if __name__ == "__main__":
     # ─────────────────────────────────────────────────────────────────────────────
 
     # === Meteo forecast horizon handling ===
-    HORIZON_DAYS = 14           # Open-Meteo reliable forecast window
-    BASE_OFFSET_DAYS = 2        # start runs ~2 days from "today"
+    HORIZON_DAYS = 14
+    BASE_OFFSET_DAYS = 2
 
     today = date.today()
     _ROLLED_DAY0 = today + timedelta(days=min(BASE_OFFSET_DAYS, HORIZON_DAYS - 1))
@@ -1698,12 +1697,10 @@ if __name__ == "__main__":
         cp.trip_start, cp.trip_end = day1, day2
         return cp
 
-    # Base to clone from
     base_for_clone = client if "client" in locals() else (people[0] if people else None)
     if base_for_clone is None:
         raise RuntimeError("No base client to clone from; ensure load_people() returned at least one entry.")
 
-    # Create family & couple
     family_client = _mk_family(base_for_clone)
     couple_client = _mk_couple(base_for_clone)
 

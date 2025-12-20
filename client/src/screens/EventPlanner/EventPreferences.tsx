@@ -1,11 +1,31 @@
 import React, { useState } from 'react';
-import { Users, X, Minus, Plus, Edit2, Check } from 'lucide-react';
+import { Users, X, Minus, Plus, Edit2, Check, MapPin } from 'lucide-react';
+import { NativeStackScreenProps } from '@react-navigation/native-stack';
+
+type Props = NativeStackScreenProps<any, 'EventPreferences'>;
 
 interface PartyMember {
   age: number;
   interest_weights: {
     [key: string]: number;
   };
+}
+
+interface MealPreference {
+  window: [string, string];
+  cuisines: string[];
+}
+
+interface DietaryRestrictions {
+  vegetarian: boolean;
+  vegan: boolean;
+  halal: boolean;
+  kosher: boolean;
+  gluten_free: boolean;
+  dairy_free: boolean;
+  nut_allergy: boolean;
+  avoid: string[];
+  required_terms: string[];
 }
 
 interface FormData {
@@ -17,11 +37,23 @@ interface FormData {
   budget_total: string;
   trip_start: string;
   trip_end: string;
+  destination_city: string;
+  home_base: {
+    lat: number;
+    lng: number;
+    city: string;
+  };
   avoid_long_transit: number;
   prefer_outdoor: number;
   prefer_cultural: number;
   start_time: string;
   end_time: string;
+  meal_prefs: {
+    breakfast: MealPreference;
+    lunch: MealPreference;
+    dinner: MealPreference;
+  };
+  dietary: DietaryRestrictions;
 }
 
 const INTEREST_CATEGORIES = [
@@ -50,7 +82,24 @@ const VIBES = [
   { value: 'budget', label: 'Budget', emoji: '💰' }
 ];
 
-export default function EventPreferences() {
+const CUISINE_OPTIONS = [
+  'Italian', 'Chinese', 'Japanese', 'Indian', 'Thai', 'Mexican', 
+  'French', 'Mediterranean', 'Korean', 'Vietnamese', 'Greek',
+  'Pizza', 'Burgers', 'Sushi', 'Ramen', 'Tacos', 'Shawarma',
+  'Steak', 'Seafood', 'Vegetarian', 'Vegan', 'Bakery', 'Brunch', 'Coffee'
+];
+
+const GTA_CITIES = [
+  'Toronto', 'Mississauga', 'Brampton', 'Vaughan', 'Markham',
+  'Richmond Hill', 'Oakville', 'Pickering', 'Ajax', 'Whitby',
+  'Etobicoke', 'North York', 'Scarborough', 'York', 'East York'
+];
+
+interface EventPreferencesProps {
+  onComplete?: (data: FormData) => void;
+}
+
+export default function EventPreferences({ navigation }: Props) {
   const [step, setStep] = useState(1);
   const [editingMember, setEditingMember] = useState<string | null>(null);
   const [tempName, setTempName] = useState('');
@@ -61,11 +110,42 @@ export default function EventPreferences() {
     budget_total: '',
     trip_start: '',
     trip_end: '',
+    destination_city: 'Toronto',
+    home_base: {
+      lat: 43.653,
+      lng: -79.383,
+      city: 'Toronto'
+    },
     avoid_long_transit: 5,
     prefer_outdoor: 5,
     prefer_cultural: 5,
-    start_time: '',
-    end_time: ''
+    start_time: '09:00',
+    end_time: '22:00',
+    meal_prefs: {
+      breakfast: {
+        window: ['08:00', '10:00'],
+        cuisines: []
+      },
+      lunch: {
+        window: ['12:00', '14:00'],
+        cuisines: []
+      },
+      dinner: {
+        window: ['18:00', '20:30'],
+        cuisines: []
+      }
+    },
+    dietary: {
+      vegetarian: false,
+      vegan: false,
+      halal: false,
+      kosher: false,
+      gluten_free: false,
+      dairy_free: false,
+      nut_allergy: false,
+      avoid: [],
+      required_terms: []
+    }
   });
 
   const addPartyMember = () => {
@@ -150,24 +230,60 @@ export default function EventPreferences() {
     });
   };
 
+  const toggleCuisine = (meal: 'breakfast' | 'lunch' | 'dinner', cuisine: string) => {
+    const currentCuisines = formData.meal_prefs[meal].cuisines;
+    const newCuisines = currentCuisines.includes(cuisine)
+      ? currentCuisines.filter(c => c !== cuisine)
+      : [...currentCuisines, cuisine];
+    
+    setFormData({
+      ...formData,
+      meal_prefs: {
+        ...formData.meal_prefs,
+        [meal]: {
+          ...formData.meal_prefs[meal],
+          cuisines: newCuisines
+        }
+      }
+    });
+  };
+
+  const updateMealWindow = (meal: 'breakfast' | 'lunch' | 'dinner', index: 0 | 1, value: string) => {
+    const newWindow: [string, string] = [...formData.meal_prefs[meal].window] as [string, string];
+    newWindow[index] = value;
+    
+    setFormData({
+      ...formData,
+      meal_prefs: {
+        ...formData.meal_prefs,
+        [meal]: {
+          ...formData.meal_prefs[meal],
+          window: newWindow
+        }
+      }
+    });
+  };
+
   const canProceedStep1 = formData.party_type !== '';
   const canProceedStep2 = Object.keys(formData.party_members).length > 0;
-  const canProceedStep3 = formData.vibe && formData.budget_total && formData.trip_start && formData.trip_end && formData.start_time && formData.end_time;
+  const canProceedStep3 = formData.vibe && formData.budget_total && formData.trip_start && 
+                          formData.trip_end && formData.start_time && formData.end_time && 
+                          formData.destination_city;
 
   const handleSubmit = () => {
     console.log('Final preferences:', formData);
-    alert('Preferences saved! Check console.');
+    navigation.navigate('EventScheduler', { preferences: formData });
   };
 
-  const totalSteps = 4;
+  const totalSteps = 5;
   const progress = (step / totalSteps) * 100;
 
   return (
     <div style={{
-    height: '100vh', 
-    background: '#ffffff',
-    fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
-    overflow: 'auto' 
+      height: '100vh', 
+      background: '#ffffff',
+      fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+      overflow: 'auto' 
     }}>
       {/* Progress bar */}
       <div style={{
@@ -192,9 +308,9 @@ export default function EventPreferences() {
         maxWidth: '600px',
         margin: '0 auto',
         padding: '60px 20px 40px',
-        height: '100vh',
+        minHeight: '100vh',
         boxSizing: 'border-box'
-        }}>
+      }}>
         {/* Header */}
         <div style={{
           textAlign: 'center',
@@ -598,6 +714,48 @@ export default function EventPreferences() {
                     color: '#333',
                     marginBottom: '8px'
                   }}>
+                    <MapPin size={16} style={{ display: 'inline', marginRight: '4px' }} />
+                    Destination City *
+                  </label>
+                  <select
+                    value={formData.destination_city}
+                    onChange={(e) => {
+                      const city = e.target.value;
+                      setFormData({
+                        ...formData,
+                        destination_city: city,
+                        home_base: {
+                          lat: 43.653,
+                          lng: -79.383,
+                          city: city
+                        }
+                      });
+                    }}
+                    style={{
+                      width: '100%',
+                      height: '48px',
+                      padding: '0 12px',
+                      border: '1.5px solid #CFCFD6',
+                      borderRadius: '12px',
+                      fontSize: '15px',
+                      boxSizing: 'border-box',
+                      background: '#fff'
+                    }}
+                  >
+                    {GTA_CITIES.map(city => (
+                      <option key={city} value={city}>{city}</option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label style={{
+                    display: 'block',
+                    fontSize: '14px',
+                    fontWeight: '600',
+                    color: '#333',
+                    marginBottom: '8px'
+                  }}>
                     Vibe *
                   </label>
                   <div style={{
@@ -680,7 +838,7 @@ export default function EventPreferences() {
                     min={formData.trip_start}
                     max={formData.trip_start ? (() => {
                       const maxDate = new Date(formData.trip_start);
-                      maxDate.setDate(maxDate.getDate() + 16); // Days between start and end change.
+                      maxDate.setDate(maxDate.getDate() + 16);
                       return maxDate.toISOString().split('T')[0];
                     })() : undefined}
                     onChange={(e) => setFormData({...formData, trip_end: e.target.value})}
@@ -741,7 +899,6 @@ export default function EventPreferences() {
                     <input
                       type="time"
                       required
-                      min="00:00"
                       value={formData.start_time}
                       onChange={(e) => setFormData({...formData, start_time: e.target.value})}
                       style={{
@@ -768,7 +925,6 @@ export default function EventPreferences() {
                     <input
                       type="time"
                       required
-                      max="23:59"
                       value={formData.end_time}
                       onChange={(e) => setFormData({...formData, end_time: e.target.value})}
                       style={{
@@ -823,7 +979,7 @@ export default function EventPreferences() {
             </div>
           )}
 
-          {/* Step 4: Preferences */}
+          {/* Step 4: Meal & Dietary Preferences */}
           {step === 4 && (
             <div>
               <h2 style={{
@@ -833,7 +989,212 @@ export default function EventPreferences() {
                 marginTop: 0,
                 marginBottom: '20px'
               }}>
-                Preferences
+                Meal & Dietary Preferences
+              </h2>
+
+              <div style={{ maxHeight: '60vh', overflowY: 'auto', marginBottom: '24px' }}>
+                {/* Dietary Restrictions */}
+                <div style={{
+                  background: '#f9fafb',
+                  borderRadius: '12px',
+                  padding: '20px',
+                  marginBottom: '20px',
+                  border: '1px solid #e5e7eb'
+                }}>
+                  <h3 style={{
+                    fontSize: '16px',
+                    fontWeight: '700',
+                    color: '#333',
+                    marginTop: 0,
+                    marginBottom: '16px'
+                  }}>
+                    Dietary Restrictions
+                  </h3>
+                  
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '12px' }}>
+                    {[
+                      { key: 'vegetarian', label: 'Vegetarian' },
+                      { key: 'vegan', label: 'Vegan' },
+                      { key: 'halal', label: 'Halal' },
+                      { key: 'kosher', label: 'Kosher' },
+                      { key: 'gluten_free', label: 'Gluten Free' },
+                      { key: 'dairy_free', label: 'Dairy Free' },
+                      { key: 'nut_allergy', label: 'Nut Allergy' },
+                    ].map(({ key, label }) => (
+                      <div
+                        key={key}
+                        onClick={() => setFormData({
+                          ...formData,
+                          dietary: {
+                            ...formData.dietary,
+                            [key]: !formData.dietary[key as keyof DietaryRestrictions]
+                          }
+                        })}
+                        style={{
+                          background: formData.dietary[key as keyof DietaryRestrictions] ? '#2F6BFF' : '#ffffff',
+                          border: `1.5px solid ${formData.dietary[key as keyof DietaryRestrictions] ? '#2F6BFF' : '#CFCFD6'}`,
+                          borderRadius: '8px',
+                          padding: '12px',
+                          textAlign: 'center',
+                          color: formData.dietary[key as keyof DietaryRestrictions] ? '#ffffff' : '#333',
+                          fontWeight: '600',
+                          fontSize: '13px',
+                          cursor: 'pointer',
+                          userSelect: 'none'
+                        }}
+                      >
+                        {label}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Meal Preferences */}
+                {(['breakfast', 'lunch', 'dinner'] as const).map(meal => (
+                  <div key={meal} style={{
+                    background: '#f9fafb',
+                    borderRadius: '12px',
+                    padding: '20px',
+                    marginBottom: '16px',
+                    border: '1px solid #e5e7eb'
+                  }}>
+                    <h3 style={{
+                      fontSize: '16px',
+                      fontWeight: '700',
+                      color: '#333',
+                      marginTop: 0,
+                      marginBottom: '12px',
+                      textTransform: 'capitalize'
+                    }}>
+                      {meal}
+                    </h3>
+
+                    <div style={{ marginBottom: '16px' }}>
+                      <label style={{
+                        display: 'block',
+                        fontSize: '13px',
+                        fontWeight: '600',
+                        color: '#555',
+                        marginBottom: '8px'
+                      }}>
+                        Time Window
+                      </label>
+                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
+                        <input
+                          type="time"
+                          value={formData.meal_prefs[meal].window[0]}
+                          onChange={(e) => updateMealWindow(meal, 0, e.target.value)}
+                          style={{
+                            padding: '8px 12px',
+                            border: '1.5px solid #CFCFD6',
+                            borderRadius: '8px',
+                            fontSize: '14px'
+                          }}
+                        />
+                        <input
+                          type="time"
+                          value={formData.meal_prefs[meal].window[1]}
+                          onChange={(e) => updateMealWindow(meal, 1, e.target.value)}
+                          style={{
+                            padding: '8px 12px',
+                            border: '1.5px solid #CFCFD6',
+                            borderRadius: '8px',
+                            fontSize: '14px'
+                          }}
+                        />
+                      </div>
+                    </div>
+
+                    <div>
+                      <label style={{
+                        display: 'block',
+                        fontSize: '13px',
+                        fontWeight: '600',
+                        color: '#555',
+                        marginBottom: '8px'
+                      }}>
+                        Preferred Cuisines
+                      </label>
+                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+                        {CUISINE_OPTIONS.map(cuisine => (
+                          <div
+                            key={cuisine}
+                            onClick={() => toggleCuisine(meal, cuisine)}
+                            style={{
+                              background: formData.meal_prefs[meal].cuisines.includes(cuisine) 
+                                ? '#2F6BFF' 
+                                : '#ffffff',
+                              border: `1px solid ${formData.meal_prefs[meal].cuisines.includes(cuisine) 
+                                ? '#2F6BFF' 
+                                : '#CFCFD6'}`,
+                              borderRadius: '6px',
+                              padding: '6px 12px',
+                              color: formData.meal_prefs[meal].cuisines.includes(cuisine) 
+                                ? '#ffffff' 
+                                : '#333',
+                              fontSize: '12px',
+                              fontWeight: '500',
+                              cursor: 'pointer',
+                              userSelect: 'none'
+                            }}
+                          >
+                            {cuisine}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              <div style={{ display: 'flex', gap: '12px' }}>
+                <button
+                  onClick={() => setStep(3)}
+                  style={{
+                    flex: 1,
+                    height: '50px',
+                    background: '#ffffff',
+                    border: '1.5px solid #CFCFD6',
+                    borderRadius: '12px',
+                    color: '#555',
+                    fontSize: '16px',
+                    fontWeight: '600',
+                    cursor: 'pointer'
+                  }}
+                >
+                  Back
+                </button>
+                <button
+                  onClick={() => setStep(5)}
+                  style={{
+                    flex: 2,
+                    height: '50px',
+                    background: '#2F6BFF',
+                    border: 'none',
+                    borderRadius: '12px',
+                    color: '#ffffff',
+                    fontSize: '16px',
+                    fontWeight: '600',
+                    cursor: 'pointer'
+                  }}
+                >
+                  Continue
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* Step 5: General Preferences */}
+          {step === 5 && (
+            <div>
+              <h2 style={{
+                fontSize: '20px',
+                fontWeight: '700',
+                color: '#333',
+                marginTop: 0,
+                marginBottom: '20px'
+              }}>
+                General Preferences
               </h2>
 
               <div style={{ display: 'grid', gap: '24px', marginBottom: '24px' }}>
@@ -951,7 +1312,7 @@ export default function EventPreferences() {
 
               <div style={{ display: 'flex', gap: '12px' }}>
                 <button
-                  onClick={() => setStep(3)}
+                  onClick={() => setStep(4)}
                   style={{
                     flex: 1,
                     height: '50px',

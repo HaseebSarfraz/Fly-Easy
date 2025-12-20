@@ -25,8 +25,8 @@ class Location:
 
 class Client: 
     id: str
-    party_type: str                 # "family", "couple", "solo", ...
-    party_members: Dict[str, Union[str, Dict]]       # Each family member's age and their weighted interests.
+    party_type: str
+    party_members: Dict[str, Union[str, Dict]]
     religion: Optional[str]
     ethnicity_culture: List[str]
     vibe: str
@@ -34,14 +34,14 @@ class Client:
     trip_start: date
     trip_end: date
     home_base: Location
-    avoid_long_transit: int         # 0–10 in your data
-    prefer_outdoor: int             # 0–10
-    prefer_cultural: int            # 0–10
+    avoid_long_transit: int
+    prefer_outdoor: int
+    prefer_cultural: int
     day_start_time: time
     day_end_time: time
-    day_start_min: int              # STARTING TIME FOR THEIR DAY (IN MINUTES)
-    day_end_min: int                # ENDING TIME FOR THEIR DAY (IN MINUTES)
-    credits_left: Dict[str, int]    # KEEPS A COUNT OF THE NUMBER OF ACCOMMODATION CREDITS LEFT FOR EVERY MEMBER
+    day_start_min: int
+    day_end_min: int
+    credits_left: Dict[str, int]
     early_risers: bool
     dietary: Optional[dict]
     meal_prefs: Optional[dict]
@@ -50,7 +50,7 @@ class Client:
     def __init__(
         self,
         id: str,
-        party_type: str,                 # "family", "couple", "solo", ...
+        party_type: str,
         party_members: Dict[str, Union[str, Dict]],
         religion: Optional[str],
         ethnicity_culture: List[str],
@@ -59,9 +59,9 @@ class Client:
         trip_start: date,
         trip_end: date,
         home_base: Location,
-        avoid_long_transit: int,         # 0–10
-        prefer_outdoor: int,             # 0–10
-        prefer_cultural: int,            # 0–10
+        avoid_long_transit: int,
+        prefer_outdoor: int,
+        prefer_cultural: int,
         day_start_time: str,
         day_end_time: str
     ):
@@ -84,20 +84,17 @@ class Client:
         self.day_start_min, self.day_end_min = _window_to_minutes(_to_minutes(day_start_time), _to_minutes(day_end_time))
         
         self.credits_left = {}
-        # CODE BELOW GETS THE NUMBER OF CREDITS PER MEMBER
         self.trip_days = (trip_end - trip_start).days
         self.cpm = math.floor(self.trip_days // len(self.party_members))
         for name in self.party_members:
             self.credits_left[name] = self.cpm
 
-        # THE NUMBER OF HOURS EACH MEMBER CAN GET PER EVENT IN THE DAY (ASSUMING RIGHT NOW THAT IT IS EQUAL PER PERSON)
         self.total_day_duration = self.day_end_min - self.day_start_min
         self.daily_act_time_per_member = self.total_day_duration / len(self.party_members)
         self.engagement_time = {}
         for name in self.party_members:
             self.engagement_time[name] = 0
 
-        # STORES THE NUMBER OF TIMES EACH MEMBER WAS SATISFIED.
         self.times_satisfied = {}
         for name in party_members:
             self.times_satisfied[name] = 0
@@ -135,8 +132,8 @@ class Activity:
         cost_cad: float,
         age_min: int,
         age_max: int,
-        opening_hours: dict,         # {} or {"daily":["09:00","21:00"]} or {"Wed":["10:00","21:00"], ...}
-        fixed_times: list[dict],     # [{"date":"YYYY-MM-DD","start":"HH:MM"}, ...]
+        opening_hours: dict,
+        fixed_times: list[dict],
         requires_booking: bool,
         weather_blockers: list[str],
         popularity: float,
@@ -273,7 +270,7 @@ if __name__ == "__main__":
         id="p1",
         party_type="family",
         adults_ages=[30, 29],
-        kids_ages=[9],                        # min age = 9
+        kids_ages=[9],
         religion=None,
         ethnicity_culture=[],
         interest_weights={"concerts": 8, "museum": 5},
@@ -288,7 +285,6 @@ if __name__ == "__main__":
         early_risers=True,
     )
 
-    # Fixed-time concert (from your JSON style)
     concert = Activity(
         id="e_concert_southasian_01",
         name="Arijit Singh Live",
@@ -308,7 +304,6 @@ if __name__ == "__main__":
         popularity=0.95,
     )
 
-    # Opening-hours museum (daily 10:00–17:30, 150 mins)
     rom = Activity(
         id="e_rom_01",
         name="Royal Ontario Museum",
@@ -340,12 +335,12 @@ if __name__ == "__main__":
     print("Concert — next day 17:00 fits:", hc_open_window_ok(concert, start_bad2))  # False
 
     # 2) ROM windows
-    rom_15 = datetime(2025, 8, 4, 15, 0)   # 15:00 + 150 = 17:30 -> fits
-    rom_1601 = datetime(2025, 8, 4, 16, 1) # 16:01 + 150 = 18:31 -> past close
+    rom_15 = datetime(2025, 8, 4, 15, 0)
+    rom_1601 = datetime(2025, 8, 4, 16, 1)
 
-    print("ROM — age ok:", hc_age_ok(client, rom))                         # True
-    print("ROM — 15:00 fits:", hc_open_window_ok(rom, rom_15))             # True
-    print("ROM — 16:01 fits:", hc_open_window_ok(rom, rom_1601))           # False
+    print("ROM — age ok:", hc_age_ok(client, rom))
+    print("ROM — 15:00 fits:", hc_open_window_ok(rom, rom_15))
+    print("ROM — 16:01 fits:", hc_open_window_ok(rom, rom_1601))
 
     # Optional asserts to fail fast during development
     assert hc_age_ok(client, concert)
