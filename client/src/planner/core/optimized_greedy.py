@@ -1,50 +1,52 @@
 # src/planner/core/optimized_greedy
 from __future__ import annotations
-from datetime import date, datetime, timedelta
-from typing import List
-from planner.core.models import Client, Activity, PlanDay, PlanEvent, Location
-from planner.core.constraints import hard_feasible, hc_open_window_ok, hc_age_ok
-from planner.core.timegrid import generate_candidate_times, choose_step_minutes
-from planner.core.scoring import interest_score
-from planner.core.utils import to_minutes
-from planner.core.scoring import base_value
-from .utils import place_to_activity
-from .food_filter import cuisine_query, violates_avoid
-from .places import fetch_nearby_food
-from math import cos, radians
-from planner.core.scoring import interest_score, duration_penalty, conflict_penalty
-from typing import Optional
+
 import re
-from heapq import heappush, heappop
 from dataclasses import dataclass
+from datetime import date, datetime, timedelta
+from math import cos, radians
+from typing import List
+from typing import Optional
 
-
-import requests                 # TO MAKE API REQUESTS
 import pandas as pd
+import requests  # TO MAKE API REQUESTS
+
+from planner.core.constraints import hard_feasible, hc_age_ok
+from planner.core.food_filter import violates_avoid
+from planner.core.models import Client, Activity, PlanDay, PlanEvent
+from planner.core.places import fetch_nearby_food
+from planner.core.scoring import base_value
+from planner.core.scoring import interest_score, duration_penalty, conflict_penalty
+from planner.core.timegrid import generate_candidate_times, choose_step_minutes
+from planner.core.utils import place_to_activity
+
 added_activities = {}
+
 
 @dataclass
 class PlannerConfig:
-    # Hard constraints (age, opening hours, etc. via hard_feasible)
+    # Hard constraints (age, opening hours, weather, etc.)
     use_hard_constraints: bool = True
 
-    # Weather constraints (Open-Meteo + blockers list)
+    # Weather constraints (Open-Meteo + blockers list, can cause discrepancies in results due to changing weather)
     use_weather: bool = True
 
+    # SOFT CONSTRAINTS BELOW
     # Daily budget soft cap + over-budget penalty
     use_budget: bool = True
 
     # Pre-add meals (restaurant advisor)
     use_meals: bool = True
 
-    # Use Yash beam-search base-plan as “primary_acts”
+    # Option to implement a base-plan first
     use_base_plan: bool = True
 
-    # Allow RepairB to nudge events and make room
+    # Allow RepairB to attempt adjusting the plan to fit the activity
     use_repairB: bool = True
 
     # Debug prints inside make_day_plan (anchors, etc)
     debug_print: bool = True
+
 
 def _dbg(cfg: PlannerConfig, *args, **kwargs):
     """Conditional debug printing."""
@@ -54,11 +56,10 @@ def _dbg(cfg: PlannerConfig, *args, **kwargs):
 
 RADIUS_STEPS = [1500, 3000, 4000]  # meters
 
-_DASHES = {"–","—","−"}  # common unicode dashes
+_DASHES = {"–", "—", "−"}  # common unicode dashes
 
 tz_cache = {}
 weather_cache = {}
-
 
 WEATHER_CODE_MAP = {
     0: "Clear sky",
@@ -83,19 +84,22 @@ WEATHER_CODE_MAP = {
     99: "Heavy hail thunderstorm",
 }
 
-LAMBDA_BUDGET = 0.03      # penalty $→points (e.g., 0.03 pts per $1 over)
-SCORE_THRESHOLD = 0.10    # minimum net score to accept when over budget
+LAMBDA_BUDGET = 0.03  # penalty $→points (e.g., 0.03 pts per $1 over)
+SCORE_THRESHOLD = 0.10  # minimum net score to accept when over budget
 
 WEATHER_CACHE: dict[tuple, tuple] = {}  # (lat3,lng3,day_iso,tz) -> (pd.DatetimeIndex, list[int])
+
 
 def _bump_tags(tags_encountered: dict[str, int], act: Activity) -> None:
     """Increment tag counts for this activity in the given dict."""
     for tag in getattr(act, "tags", []) or []:
         tags_encountered[tag] = tags_encountered.get(tag, 0) + 1
 
+
 def _cache_key(lat: float, lng: float, day_iso: str, tz: str):
     # round to collapse tiny lat/lng differences at city scale
-    return (round(float(lat), 3), round(float(lng), 3), day_iso, tz)
+    return round(float(lat), 3), round(float(lng), 3), day_iso, tz
+
 
 def _fetch_hourly_once(lat: float, lng: float, day_iso: str, tz: str):
     """Fetch hourly weathercode for a single date; cached."""
@@ -123,22 +127,27 @@ def _fetch_hourly_once(lat: float, lng: float, day_iso: str, tz: str):
     WEATHER_CACHE[key] = (times, codes)
     return WEATHER_CACHE[key]
 
+
 def _days_in_trip(client: Client) -> int:
     # Guard against 0
     return max(1, (client.trip_end - client.trip_start).days + 1)
 
+
 def _soft_cap_per_day(client: Client) -> float:
     return float(client.budget_total) / _days_in_trip(client)
+
 
 def _spent_today(plan: PlanDay) -> float:
     return float(sum(ev.activity.cost_cad for ev in plan.events))
 
+
 def _net_score_with_budget(client, act, plan, soft_cap_day, already_added=False):
     base = base_value(client, act)
     spent = _spent_today(plan) + (0.0 if already_added else float(act.cost_cad))
-    over  = max(0.0, spent - soft_cap_day)
+    over = max(0.0, spent - soft_cap_day)
     penalty = LAMBDA_BUDGET * over
     return base - penalty
+
 
 def overlaps(a_start, a_end, b_start, b_end) -> bool:
     return not (a_end <= b_start or b_end <= a_start)
@@ -165,7 +174,9 @@ def get_timezone(city: str) -> str:
 
 _TZ_CACHE: dict[str, str] = {}
 
+
 def is_weather_suitable(activity: Activity, start_dt: datetime) -> bool:
+    current_date = date.today()
     blockers = getattr(activity, "weather_blockers", None) or []
     if not blockers:
         return True
@@ -233,15 +244,16 @@ def is_weather_suitable(activity: Activity, start_dt: datetime) -> bool:
         return True
 
 
-
 def _to_minutes(hhmm):
     h, m = hhmm.split(":")
     return int(h) * 60 + int(m)
+
 
 def _from_minutes(day, minutes_from_midnight):
     h = minutes_from_midnight // 60
     m = minutes_from_midnight % 60
     return datetime(day.year, day.month, day.day, h, m)
+
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Restaurant advisor 
@@ -259,27 +271,30 @@ def _window_midpoint(start_hhmm, end_hhmm, duration_min=60, buffer_min=10):
     mid = (s + e - duration_min) // 2
     return max(s, min(mid, e - duration_min))
 
+
 def _dist_m(lat1, lng1, lat2, lng2):
     # Quick-and-cheerful planar distance (meters) for ranking; fine at city scale.
     k = 111_320.0
     dx = (lng2 - lng1) * k * cos(radians(lat1))
     dy = (lat2 - lat1) * k
-    return (dx*dx + dy*dy) ** 0.5
+    return (dx * dx + dy * dy) ** 0.5
+
 
 def _google_places_candidates(center_loc, cuisine_query_str: Optional[str]):
     """Return (status, results_list). Keeps status for debugging."""
+    data = None
     # try 1: cuisine-biased search (TextSearch)
     if cuisine_query_str:
         for r in RADIUS_STEPS:
             data = fetch_nearby_food(center_loc.lat, center_loc.lng, radius_m=r, query=cuisine_query_str)
             if data.get("results"):
-                return data.get("status","OK"), data["results"]
+                return data.get("status", "OK"), data["results"]
     # try 2: any restaurant (Nearby)
     for r in RADIUS_STEPS:
         data = fetch_nearby_food(center_loc.lat, center_loc.lng, radius_m=r, query=None)
         if data.get("results"):
-            return data.get("status","OK"), data["results"]
-    return data.get("status","ZERO_RESULTS"), []
+            return data.get("status", "OK"), data["results"]
+    return data.get("status", "ZERO_RESULTS"), []
 
 
 def _positive_keywords_ok(place, positives):
@@ -287,8 +302,8 @@ def _positive_keywords_ok(place, positives):
     if not positives:
         return True
     text = " ".join([
-        place.get("name",""),
-        place.get("vicinity",""),
+        place.get("name", ""),
+        place.get("vicinity", ""),
         " ".join(place.get("types", []))
     ]).lower()
     return all(p.lower() in text for p in positives)
@@ -310,12 +325,12 @@ def _best_restaurant_for_window(center_loc, city, likes, avoid_terms, required_t
         loc = (p.get("geometry") or {}).get("location") or {}
         plat, plng = float(loc.get("lat", center_loc.lat)), float(loc.get("lng", center_loc.lng))
         dist = _dist_m(center_loc.lat, center_loc.lng, plat, plng)
-        return (rating, reviews, -dist)
+        return rating, reviews, -dist
 
     # Try each cuisine on its own
     for q in liked_queries:
         status, results = _google_places_candidates(center_loc, q)
-        tried_statuses.append(("q:"+q, status, len(results)))
+        tried_statuses.append(("q:" + q, status, len(results)))
         filtered = [p for p in results if not violates_avoid(p, avoid_terms)]
         if required_terms:
             filtered = [p for p in filtered if _positive_keywords_ok(p, required_terms)]
@@ -341,9 +356,10 @@ def _best_restaurant_for_window(center_loc, city, likes, avoid_terms, required_t
     if filtered:
         return max(filtered, key=_rank_key)
 
-    # Last resort: We coudln't find any restauntants near by. 
+    # Last resort: We could not find any restaurants nearby.
     print("[places] no candidates:", tried_statuses)
     return None
+
 
 def _meal_window(client: Client, meal: str) -> tuple[str, str]:
     """
@@ -365,6 +381,7 @@ def _meal_window(client: Client, meal: str) -> tuple[str, str]:
 
     raise KeyError(f"Meal window missing for '{meal}'")
 
+
 def _meal_cuisines(client: Client, meal: str) -> list[str]:
     """
     Returns cuisine likes for a given meal if present; else [].
@@ -373,6 +390,7 @@ def _meal_cuisines(client: Client, meal: str) -> list[str]:
     if hasattr(client, "meal_prefs") and client.meal_prefs and meal in client.meal_prefs:
         return client.meal_prefs[meal].get("cuisines", []) or []
     return []
+
 
 def _derive_diet_terms(diet: dict) -> tuple[list[str], list[str]]:
     """
@@ -398,26 +416,30 @@ def _derive_diet_terms(diet: dict) -> tuple[list[str], list[str]]:
         avoid.extend(["peanut", "peanuts", "almond", "walnut", "cashew", "tree nut", "nuts"])
 
     # Dedup + normalize
-    req   = sorted({t.lower() for t in req})
+    req = sorted({t.lower() for t in req})
     avoid = sorted({t.lower() for t in avoid})
     return req, avoid
+
 
 def _dist_m(lat1, lng1, lat2, lng2):
     k = 111_320.0
     dx = (lng2 - lng1) * k * cos(radians(lat1))
     dy = (lat2 - lat1) * k
-    return (dx*dx + dy*dy) ** 0.5
+    return (dx * dx + dy * dy) ** 0.5
+
 
 def _travel_buffer_min(a_act: Activity, b_act: Activity) -> int:
     """Very light travel estimate for padding between events."""
     d_m = _dist_m(a_act.location.lat, a_act.location.lng, b_act.location.lat, b_act.location.lng)
     # ~12 min/km walk, clamp [5, 35]
-    return max(5, min(int((d_m/1000.0)*12), 35))
+    return max(5, min(int((d_m / 1000.0) * 12), 35))
+
 
 def _overlaps_ev(a_start, a_dur_min, b_start, b_dur_min) -> bool:
     a_end = a_start + timedelta(minutes=a_dur_min)
     b_end = b_start + timedelta(minutes=b_dur_min)
     return not (a_end <= b_start or b_end <= a_start)
+
 
 def reconcile_meals_with_anchors(plan: PlanDay) -> None:
     """If a meal overlaps a fixed event, prefer moving meal before, else after,
@@ -431,7 +453,8 @@ def reconcile_meals_with_anchors(plan: PlanDay) -> None:
     # Work per anchor; if multiple anchors exist, this still behaves locally well
     for anchor in anchors:
         for meal in meals:
-            if not _overlaps_ev(meal.start_dt, meal.activity.duration_min, anchor.start_dt, anchor.activity.duration_min):
+            if not _overlaps_ev(meal.start_dt, meal.activity.duration_min, anchor.start_dt,
+                                anchor.activity.duration_min):
                 continue  # no conflict
 
             # Try BEFORE anchor
@@ -440,18 +463,20 @@ def reconcile_meals_with_anchors(plan: PlanDay) -> None:
             new_start = new_end - timedelta(minutes=meal.activity.duration_min)
             if new_start.date() == meal.start_dt.date() and new_start < new_end:
                 # also avoid colliding with anything else
-                if fits_no_overlap([e for e in plan.events if e is not meal and e is not anchor], new_start, meal.activity):
+                if fits_no_overlap([e for e in plan.events if e is not meal and e is not anchor], new_start,
+                                   meal.activity):
                     meal.start_dt = new_start
-                    meal.end_dt   = new_end
+                    meal.end_dt = new_end
                     meal.activity.tags.append("note:eat before fixed event")
                     continue  # resolved
 
             # Try AFTER anchor
             buf2 = _travel_buffer_min(anchor.activity, meal.activity)
             new_start2 = anchor.end_dt + timedelta(minutes=buf2)
-            if fits_no_overlap([e for e in plan.events if e is not meal and e is not anchor], new_start2, meal.activity):
+            if fits_no_overlap([e for e in plan.events if e is not meal and e is not anchor], new_start2,
+                               meal.activity):
                 meal.start_dt = new_start2
-                meal.end_dt   = new_start2 + timedelta(minutes=meal.activity.duration_min)
+                meal.end_dt = new_start2 + timedelta(minutes=meal.activity.duration_min)
                 meal.activity.tags.append("note:eat after fixed event")
                 continue  # resolved
 
@@ -459,10 +484,11 @@ def reconcile_meals_with_anchors(plan: PlanDay) -> None:
             quick_min = max(30, min(45, meal.activity.duration_min))  # 30–45min quick meal
             new_end3 = anchor.start_dt - timedelta(minutes=buf)
             new_start3 = new_end3 - timedelta(minutes=quick_min)
-            if new_start3 < new_end3 and fits_no_overlap([e for e in plan.events if e is not meal and e is not anchor], new_start3, meal.activity):
+            if new_start3 < new_end3 and fits_no_overlap([e for e in plan.events if e is not meal and e is not anchor],
+                                                         new_start3, meal.activity):
                 meal.activity.duration_min = quick_min
                 meal.start_dt = new_start3
-                meal.end_dt   = new_end3
+                meal.end_dt = new_end3
                 meal.activity.tags.append("note:shortened quick meal")
                 continue  # resolved
 
@@ -474,7 +500,7 @@ def reconcile_meals_with_anchors(plan: PlanDay) -> None:
             meal.activity.duration_min = snack_min
             meal.activity.tags += ["note:grab-and-go", "note:anchor overlap"]
             meal.start_dt = new_start4
-            meal.end_dt   = new_end4
+            meal.end_dt = new_end4
 
 
 def _overlaps_ev(a_start, a_dur_min, b_start, b_dur_min) -> bool:
@@ -482,18 +508,21 @@ def _overlaps_ev(a_start, a_dur_min, b_start, b_dur_min) -> bool:
     b_end = b_start + timedelta(minutes=b_dur_min)
     return not (a_end <= b_start or b_end <= a_start)
 
+
 def _dist_m(lat1, lng1, lat2, lng2):
     # quick planar distance (meters)
     from math import cos, radians
     k = 111_320.0
     dx = (lng2 - lng1) * k * cos(radians(lat1))
     dy = (lat2 - lat1) * k
-    return (dx*dx + dy*dy) ** 0.5
+    return (dx * dx + dy * dy) ** 0.5
+
 
 def _travel_buffer_min(a_act, b_act) -> int:
     d_m = _dist_m(a_act.location.lat, a_act.location.lng,
                   b_act.location.lat, b_act.location.lng)
-    return max(5, min(int((d_m/1000.0)*12), 35))  # ~12 min/km, clamp [5,35]
+    return max(5, min(int((d_m / 1000.0) * 12), 35))  # ~12 min/km, clamp [5,35]
+
 
 def _resolve_meal_conflict(plan, client, meal_ev, anchor_ev) -> bool:
     """
@@ -562,7 +591,8 @@ def pre_add_rests(plan, client, day, center_loc=None, default_duration_min=60):
         start_dt = _from_minutes(day, start_minute)
 
         likes = _meal_cuisines(client, meal)
-        place = _best_restaurant_for_window(center, center.city, likes, avoid_terms=avoid_terms, required_terms=req_terms)
+        place = _best_restaurant_for_window(center, center.city, likes, avoid_terms=avoid_terms,
+                                            required_terms=req_terms)
 
         if place:
             meal_act = place_to_activity(place, center.city, default_duration_min, 0.0)
@@ -571,14 +601,14 @@ def pre_add_rests(plan, client, day, center_loc=None, default_duration_min=60):
                 id=f"meal_{meal}_{day.isoformat()}",
                 name=f"{meal.capitalize()} (nearby options)",
                 category="food",
-                tags=["food","restaurant"],
+                tags=["food", "restaurant"],
                 venue=center.city,
                 city=center.city,
                 location=center,
                 duration_min=default_duration_min,
                 cost_cad=0.0,
                 age_min=0, age_max=99,
-                opening_hours={"daily":["06:00","23:00"]},
+                opening_hours={"daily": ["06:00", "23:00"]},
                 fixed_times=[],
                 requires_booking=False,
                 weather_blockers=[],
@@ -586,6 +616,7 @@ def pre_add_rests(plan, client, day, center_loc=None, default_duration_min=60):
                 vibe_tags=[],
             )
         plan.add(PlanEvent(meal_act, start_dt))
+
 
 def _fixed_dt_candidates(act: Activity, day: date) -> list[datetime]:
     """Turn act.fixed_times (like ['17:00']) into datetime starts on `day`."""
@@ -604,6 +635,7 @@ def _fixed_dt_candidates(act: Activity, day: date) -> list[datetime]:
                 pass
     return out
 
+
 def _has_fixed_times(a: Activity) -> bool:
     ft = getattr(a, "fixed_times", None)
     # treat any non-empty list/str/dict as "has fixed times"
@@ -619,6 +651,7 @@ def _normalize_time_str(s: str) -> str:
     for d in _DASHES:
         s = s.replace(d, "-")
     return s
+
 
 def _parse_one_time(s: str, day: date) -> datetime | None:
     s = s.strip()
@@ -637,6 +670,7 @@ def _parse_one_time(s: str, day: date) -> datetime | None:
         except ValueError:
             pass
     return None
+
 
 def _fixed_dt_candidates(act: Activity, day: date) -> list[datetime]:
     fts = getattr(act, "fixed_times", []) or []
@@ -680,11 +714,12 @@ def _fixed_dt_candidates(act: Activity, day: date) -> list[datetime]:
 
     return out
 
+
 def _hard_feasible_for_anchor(
-    client: Client,
-    act: Activity,
-    start_dt: datetime,
-    cfg: Optional[PlannerConfig] = None,
+        client: Client,
+        act: Activity,
+        start_dt: datetime,
+        cfg: Optional[PlannerConfig] = None,
 ) -> bool:
     cfg = cfg or PlannerConfig()
 
@@ -775,9 +810,9 @@ def _build_base_plan(client: Client,
                 max_possible = 10 * max(1, len(act.tags))
                 # per-activity threshold & sanity check w.r.t. day length
                 if (
-                    iw / max_possible >= threshold
-                    and act.duration_min / max(1, client.total_day_duration)
-                    <= getattr(client, "daily_act_time_per_member", 1.0)
+                        iw / max_possible >= threshold
+                        and act.duration_min / max(1, client.total_day_duration)
+                        <= getattr(client, "daily_act_time_per_member", 1.0)
                 ):
                     interested.add(person)
                     total_score += iw
@@ -835,17 +870,16 @@ def make_multi_day_plan(client: Client, activities: list[Activity]) -> list[Plan
     for _ in range(client.trip_days):
         result.append(make_day_plan(client, activities, current_day))
         current_day += timedelta(1)
-        client.credits_left = {c["name"]: client.cpm for c in client.party_members}
-    added_activities.clear()    # ONCE DONE MAKING PLAN, RESET
+        client.credits_left = {c: client.cpm for c in client.party_members}
+    added_activities.clear()  # ONCE DONE MAKING PLAN, RESET
     return result
 
 
-
 def make_day_plan(
-    client: Client,
-    activities: List[Activity],
-    day: date,
-    config: Optional[PlannerConfig] = None,
+        client: Client,
+        activities: List[Activity],
+        day: date,
+        config: Optional[PlannerConfig] = None,
 ) -> PlanDay:
     """
     Combined Haseeb + Yash logic with toggles via PlannerConfig.
@@ -856,7 +890,7 @@ def make_day_plan(
     # 1) Split into anchors vs flex
     # ─────────────────────────────────────────────────────────────────────
     anchors = [a for a in activities if _has_fixed_times(a)]
-    flex    = [a for a in activities if not _has_fixed_times(a)]
+    flex = [a for a in activities if not _has_fixed_times(a)]
 
     _dbg(cfg, "ANCHORS:", [
         (a.id, type(getattr(a, "fixed_times", None)).__name__,
@@ -917,8 +951,8 @@ def make_day_plan(
             ]
             for m in meals:
                 if _overlaps_ev(
-                    m.start_dt, m.activity.duration_min,
-                    anchor_ev.start_dt, anchor_ev.activity.duration_min
+                        m.start_dt, m.activity.duration_min,
+                        anchor_ev.start_dt, anchor_ev.activity.duration_min
                 ):
                     moved = _resolve_meal_conflict(plan, client, m, anchor_ev)
                     _dbg(cfg, f"[anchor] meal conflict with {m.activity.name}: moved={moved}")
@@ -934,7 +968,6 @@ def make_day_plan(
             # rollback and try next start_dt
             plan.events.remove(anchor_ev)
             _dbg(cfg, f"[anchor] ROLLBACK {act.id} @ {start_dt.time()}")
-
 
     # ─────────────────────────────────────────────────────────────────────
     # 5) Track tag frequencies for conflict_penalty
@@ -1017,7 +1050,6 @@ def make_day_plan(
                     net = intrinsic - LAMBDA_BUDGET * over
 
                     if (over == 0.0) or (over > 0.0 and net >= SCORE_THRESHOLD):
-
                         plan.add(PlanEvent(act, start_dt))
                         added_activities[act.id] = True
                         _bump_tags(tags_encountered, act)  # record tags for this day
@@ -1080,13 +1112,11 @@ def make_day_plan(
                         ev.start_dt, ev.end_dt = s, e
                     continue
 
-
     # ─────────────────────────────────────────────────────────────────────
     # 7) Finalize
     # ─────────────────────────────────────────────────────────────────────
     plan.events.sort(key=lambda e: e.start_dt)
     return plan
-
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -1129,11 +1159,11 @@ def _future_candidates(activity: Activity,
 
 
 def _can_place_against(
-    events: List[PlanEvent],
-    client: Client,
-    act: Activity,
-    when: datetime,
-    cfg: Optional[PlannerConfig] = None,
+        events: List[PlanEvent],
+        client: Client,
+        act: Activity,
+        when: datetime,
+        cfg: Optional[PlannerConfig] = None,
 ) -> bool:
     """Hard checks + no-overlap against `events`."""
     cfg = cfg or PlannerConfig()
@@ -1148,7 +1178,6 @@ def _can_place_against(
     if not fits_in_window(act, client, when.hour * 60 + when.minute):
         return False
     return True
-
 
 
 def _time_to_minutes(dt):
@@ -1202,7 +1231,6 @@ def _try_nudge_forward(plan: PlanDay,
     return False
 
 
-
 def _flexibility_now(plan: PlanDay,
                      client: Client,
                      ev: PlanEvent,
@@ -1222,7 +1250,6 @@ def _flexibility_now(plan: PlanDay,
         if _can_place_against(others, client, ev.activity, t2, cfg):
             count += 1
     return count
-
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -1276,9 +1303,8 @@ def repairB(plan: PlanDay,
     return False
 
 
-
 if __name__ == "__main__":
-    from datetime import date, datetime, time
+    from datetime import date, datetime
     from copy import deepcopy
     from .utils import load_people, load_events
 
@@ -1329,7 +1355,7 @@ if __name__ == "__main__":
                 use_weather=True,
                 use_budget=True,
                 use_meals=True,
-                use_base_plan=False,   # Yash beam search OFF
+                use_base_plan=False,  # Yash beam search OFF
                 use_repairB=True,
                 debug_print=False,
             ),
@@ -1342,11 +1368,12 @@ if __name__ == "__main__":
                 use_budget=True,
                 use_meals=True,
                 use_base_plan=True,
-                use_repairB=False,     # RepairB OFF
+                use_repairB=False,  # RepairB OFF
                 debug_print=False,
             ),
         ),
     ]
+
 
     def _print_plan(plan: PlanDay, cfg_name: str, day: date, client_name: str):
         print(f"\n[{client_name}] Plan for {day}  (config={cfg_name})")
@@ -1356,6 +1383,7 @@ if __name__ == "__main__":
                 f"{ev.activity.name} ({ev.activity.category})  "
                 f"${ev.activity.cost_cad}"
             )
+
 
     # ─────────────────────────────────────────────────────────────────────────────
     # Helpers: read / clamp party ages to satisfy an activity's (amin..amax)
@@ -1378,9 +1406,11 @@ if __name__ == "__main__":
                     ages.append(int(a))
         return ages
 
+
     def _all_within_bounds(c, lo: int, hi: int) -> bool:
         ages = _party_ages(c)
         return bool(ages) and all(lo <= a <= hi for a in ages)
+
 
     def _clamp_party_ages(c, lo: int, hi: int):
         # Single traveler
@@ -1414,6 +1444,7 @@ if __name__ == "__main__":
                         p["age"] = max(lo, min(int(pa), hi))
                     else:
                         p["age"] = max(lo, min(25, hi))
+
 
     # ─────────────────────────────────────────────────────────────────────────────
     # Setup (PRESERVED): load data
@@ -1527,12 +1558,13 @@ if __name__ == "__main__":
     # ─────────────────────────────────────────────────────────────────────────────
 
     # === Meteo forecast horizon handling ===
-    HORIZON_DAYS = 14           # Open-Meteo reliable forecast window
-    BASE_OFFSET_DAYS = 2        # start runs ~2 days from "today"
+    HORIZON_DAYS = 14  # Open-Meteo reliable forecast window
+    BASE_OFFSET_DAYS = 2  # start runs ~2 days from "today"
 
     today = date.today()
     _ROLLED_DAY0 = today + timedelta(days=min(BASE_OFFSET_DAYS, HORIZON_DAYS - 1))
     _ROLLED_DAY1 = min(_ROLLED_DAY0 + timedelta(days=1), today + timedelta(days=HORIZON_DAYS - 1))
+
 
     def _parse_dt_str_maybe(s: str) -> tuple[date | None, str | None]:
         s = s.strip()
@@ -1552,6 +1584,7 @@ if __name__ == "__main__":
             return date(y, m, d_), None
         except Exception:
             return None, None
+
 
     def _retarget_fixed_times_into_horizon(evts: list[Activity], base_start: date):
         """
@@ -1628,10 +1661,11 @@ if __name__ == "__main__":
                         new_list.append(it)
                 setattr(a, "fixed_times", new_list)
 
+
     GTA_CITIES = {
-        "Toronto","Etobicoke","North York","Scarborough","York","East York",
-        "Mississauga","Brampton","Vaughan","Markham","Richmond Hill",
-        "Oakville","Pickering","Ajax","Whitby"
+        "Toronto", "Etobicoke", "North York", "Scarborough", "York", "East York",
+        "Mississauga", "Brampton", "Vaughan", "Markham", "Richmond Hill",
+        "Oakville", "Pickering", "Ajax", "Whitby"
     }
 
     # Use every event in GTA so the new activities are in play
@@ -1657,6 +1691,7 @@ if __name__ == "__main__":
     day1 = _ROLLED_DAY0
     day2 = _ROLLED_DAY1
 
+
     def _mk_family(base_client):
         fam = deepcopy(base_client)
         fam.name = getattr(fam, "name", "Family (Demo)")
@@ -1665,13 +1700,14 @@ if __name__ == "__main__":
         fam.budget_total = getattr(fam, "budget_total", 400.0) or 400.0
         if not getattr(fam, "home_base", None):
             class _Loc: ...
+
             fam.home_base = _Loc()
             fam.home_base.lat, fam.home_base.lng = 43.653, -79.383
             fam.home_base.city = "Toronto"
         fam.meal_prefs = {
-            "breakfast": {"window": ["08:00","10:00"], "cuisines": ["bakery","brunch","coffee"]},
-            "lunch":     {"window": ["12:00","14:00"], "cuisines": ["pizza","burgers","shawarma"]},
-            "dinner":    {"window": ["18:00","20:30"], "cuisines": ["italian","indian","chinese"]},
+            "breakfast": {"window": ["08:00", "10:00"], "cuisines": ["bakery", "brunch", "coffee"]},
+            "lunch": {"window": ["12:00", "14:00"], "cuisines": ["pizza", "burgers", "shawarma"]},
+            "dinner": {"window": ["18:00", "20:30"], "cuisines": ["italian", "indian", "chinese"]},
         }
         fam.dietary = {
             "vegetarian": False, "vegan": False, "halal": False, "kosher": False,
@@ -1681,6 +1717,7 @@ if __name__ == "__main__":
         fam.trip_start, fam.trip_end = day1, day2
         return fam
 
+
     def _mk_couple(base_client):
         cp = deepcopy(base_client)
         cp.name = getattr(cp, "name", "Couple (Demo)")
@@ -1689,13 +1726,14 @@ if __name__ == "__main__":
         cp.budget_total = getattr(cp, "budget_total", 300.0) or 300.0
         if not getattr(cp, "home_base", None):
             class _Loc: ...
+
             cp.home_base = _Loc()
             cp.home_base.lat, cp.home_base.lng = 43.653, -79.383
             cp.home_base.city = "Toronto"
         cp.meal_prefs = {
-            "breakfast": {"window": ["09:00","10:30"], "cuisines": ["coffee","brunch"]},
-            "lunch":     {"window": ["12:30","14:00"], "cuisines": ["sushi","ramen","tacos"]},
-            "dinner":    {"window": ["19:00","21:00"], "cuisines": ["steak","italian","thai"]},
+            "breakfast": {"window": ["09:00", "10:30"], "cuisines": ["coffee", "brunch"]},
+            "lunch": {"window": ["12:30", "14:00"], "cuisines": ["sushi", "ramen", "tacos"]},
+            "dinner": {"window": ["19:00", "21:00"], "cuisines": ["steak", "italian", "thai"]},
         }
         cp.dietary = {
             "vegetarian": False, "vegan": False, "halal": False, "kosher": False,
@@ -1705,6 +1743,7 @@ if __name__ == "__main__":
         cp.trip_start, cp.trip_end = day1, day2
         return cp
 
+
     # Base to clone from
     base_for_clone = client if "client" in locals() else (people[0] if people else None)
     if base_for_clone is None:
@@ -1713,6 +1752,7 @@ if __name__ == "__main__":
     # Create family & couple
     family_client = _mk_family(base_for_clone)
     couple_client = _mk_couple(base_for_clone)
+
 
     # Helper to plan + print for a given client and day under all configs
     def _run_plan_for(client_obj, acts, d):
@@ -1739,6 +1779,7 @@ if __name__ == "__main__":
                 )
             plans[cfg_name] = planX
         return plans
+
 
     # FAMILY: consider ALL GTA events under all configs
     print("\n========== FAMILY (ALL GTA EVENTS) ==========")
@@ -1794,9 +1835,11 @@ if __name__ == "__main__":
 
     print(f"[test] Using client age(s)={_party_ages(client)} (allowed {amin}-{amax})")
 
+
     def _show_fixed(a):
         ft = getattr(a, "fixed_times", None)
         return ft if ft is not None else []
+
 
     print(
         "ANCHORS:",
@@ -1812,4 +1855,3 @@ if __name__ == "__main__":
         print(f"\n========== SCENARIO 3: ROLLED SUBSET (config={cfg_name}) ==========")
         plan = make_day_plan(client, subset, day, config=cfg)
         _print_plan(plan, cfg_name, day, getattr(client, "name", "Client"))
-

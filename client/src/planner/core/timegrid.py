@@ -1,6 +1,5 @@
 # src/planner/core/timegrid.py
 from datetime import date, datetime
-from typing import List
 from .models import Activity
 
 
@@ -13,6 +12,7 @@ def choose_step_minutes(act: Activity) -> int:
     if d >= 60:
         return 30
     return 15  # if the activity is < 60 minutes long then 15 min gap sounds reasonable. 
+
 
 def generate_candidate_times(act: Activity, day: date, step_minutes: int = 60) -> list[datetime]:
     """
@@ -38,7 +38,7 @@ def generate_candidate_times(act: Activity, day: date, step_minutes: int = 60) -
     start_min, end_min = window
     # last feasible start is end_min - duration
     last_start = end_min - act.duration_min  # So the latest user can explore this activity 
-    candidates = [] # other timeslots
+    candidates = []  # other timeslots
     curr = start_min
     while curr <= last_start:
         hh, mm = divmod(curr, 60)
