@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import math
-from datetime import time, timedelta
+from datetime import time, timedelta, datetime
 from typing import Dict, List, Optional, Union
 
 
@@ -252,6 +252,7 @@ def _window_to_minutes(w_start: int, w_end: int) -> tuple[int, int]:
     if w_end < w_start:
         w_end += (24 * 60)
     return w_start, w_end
+
 if __name__ == "__main__":
     from datetime import date, datetime
 
