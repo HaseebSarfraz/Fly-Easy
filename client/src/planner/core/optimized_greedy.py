@@ -357,7 +357,7 @@ def _best_restaurant_for_window(center_loc, city, likes, avoid_terms, required_t
         return max(filtered, key=_rank_key)
 
     # Last resort: We could not find any restaurants nearby.
-    print("[places] no candidates:", tried_statuses)
+    print("[places] no candidates:", tried_statuses)  # COMMENT THIS OUT DURING TESTING TO SIMPLIFY OUTPUTS
     return None
 
 

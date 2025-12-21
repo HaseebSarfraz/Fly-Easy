@@ -9,8 +9,8 @@ from planner.core.optimized_greedy import (
     _to_minutes,
     _meal_window,
     _soft_cap_per_day,
-    interest_score
 )
+from planner.core.scoring import interest_score
 from planner.core.utils import *
 
 
@@ -150,6 +150,7 @@ def run_16_combination_test(client, activities):
     print("=" * 70, "\n")
 
 # --- Usage ---
+# SIDE NOTE: FOR CLEANER OUTPUTS, COMMENT OUT LINE 360 INSIDE PLANNER/CORE/OPTIMIZED_GREEDY.PY LINE 360
 clients = load_people()
 for c in range(len(clients)):
     print(f"RUNNING THE 16 TOGGLE CONFIGURATIONS ON CLIENT {c + 1}")
